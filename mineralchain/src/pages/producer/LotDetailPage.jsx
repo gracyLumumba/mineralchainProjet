@@ -9,6 +9,7 @@ import {
 import { CertificateCard } from '../../components/common/Certificate';
 import { uploadCertificateViaBackend, buildCertificatePayload, pinExistingHash, ipfsGatewayUrl, shortIpfsHash } from '../../services/ipfs';
 import { fmt } from '../../contexts/AppContext';
+import { CONTRACT_ADDRESS } from '../../config/blockchain';
 
 import { Ic } from '../../components/common/Icons';
 
@@ -180,7 +181,7 @@ export default function LotDetailPage() {
                 <InfoRow label={t('label.token_id')} value={`#${lot.token_id}`} highlight/>
                 <InfoRow label={t('label.network')} value="Ganache · localhost:7545"/>
                 <InfoRow label={t('label.owner')} value={fmt.hash(token?.owner)} mono/>
-                <InfoRow label={t('label.contract')} value={fmt.hash('0xE7A51a1136968A33fE06bAc07B5794757E349Fbb', 10)} mono/>
+                <InfoRow label={t('label.contract')} value={fmt.hash(CONTRACT_ADDRESS, 10)} mono/>
               </div>
               {lot.tx_hash && (
                 <div style={{ marginTop: 14 }}>

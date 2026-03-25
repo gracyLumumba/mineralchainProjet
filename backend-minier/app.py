@@ -15,6 +15,7 @@ from flask_cors import CORS
 from routes.analyze import analyze_bp
 from routes.lots import lots_bp
 from routes.certify import certify_bp
+from routes.blockchain import blockchain_bp
 from models.load_models import model_loader
 from routes.ipfs import ipfs_bp
 
@@ -38,6 +39,7 @@ app.register_blueprint(analyze_bp, url_prefix='/api')
 app.register_blueprint(lots_bp, url_prefix='/api')
 app.register_blueprint(certify_bp, url_prefix='/api')
 app.register_blueprint(ipfs_bp, url_prefix='/api')
+app.register_blueprint(blockchain_bp, url_prefix='/api/blockchain')
 @app.route('/', methods=['GET'])
 def home():
     return jsonify({

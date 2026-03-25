@@ -8,6 +8,7 @@ import { apiService, simulateAnalysis } from '../../services/api';
 import { ConfidenceGauge, Loader, PageHeader, StatusBadge, MineralBadge } from '../../components/common/UI';
 import { CertificateCard } from '../../components/common/Certificate';
 import { uploadCertificateViaBackend, buildCertificatePayload } from '../../services/ipfs';
+import { DEFAULT_OWNER_ADDRESS } from '../../config/blockchain';
 
 const DEFAULT_VALS = {
   site: 'KAMOA',
@@ -135,7 +136,7 @@ export default function NewLotPage() {
           contract:   res.blockchain.contract_address,
           block:      res.blockchain.block_number,
           gas_used:   res.blockchain.gas_used,
-          owner:      '0xdb5745DeeDcF8e6e0099460bf94c96b56804EC70',
+          owner:      DEFAULT_OWNER_ADDRESS,
           timestamp:  res.blockchain.timestamp || Math.floor(Date.now() / 1000),
         });
       }
@@ -143,7 +144,7 @@ export default function NewLotPage() {
       const tokenObj = hasBlockchain ? {
           token_id:  normalizedTokenId,
         tx_hash:   res.blockchain.transaction_hash,
-        owner:     '0xdb5745DeeDcF8e6e0099460bf94c96b56804EC70',
+        owner:     DEFAULT_OWNER_ADDRESS,
         timestamp: res.blockchain.timestamp,
       } : null;
 

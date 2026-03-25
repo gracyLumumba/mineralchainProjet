@@ -4,7 +4,6 @@ from web3 import Web3
 import json
 import hashlib
 from datetime import datetime
-from pathlib import Path
 import sys
 import os
 import traceback
@@ -16,6 +15,7 @@ load_dotenv()
 
 sys.path.append(os.path.dirname(os.path.dirname(__file__)))
 from models.load_models import model_loader
+from utils.blockchain_config import load_contract_config, GANACHE_URL, DEFAULT_CONTRACT_ADDRESS
 
 certify_bp = Blueprint('certify', __name__)
 AUTO_CERT_THRESHOLD = 0.00  # Demo mode: any non-fraud lot can be certified
@@ -24,7 +24,6 @@ AUTO_CERT_THRESHOLD = 0.00  # Demo mode: any non-fraud lot can be certified
 # CONNEXION À LA BLOCKCHAIN (Ganache)
 # ============================================================
 print("[BLOCKCHAIN] Connexion a la blockchain...")
-GANACHE_URL = os.getenv('GANACHE_URL', 'http://127.0.0.1:7545')
 w3 = Web3(Web3.HTTPProvider(GANACHE_URL))
 
 if w3.is_connected():
@@ -40,36 +39,20 @@ else:
 # ============================================================
 # CONFIGURATION DU CONTRAT
 # ============================================================
-BASE_DIR = Path(__file__).resolve().parents[1]
-PROJECT_DIR = BASE_DIR.parent
-
-CONTRACT_JSON_PATH = PROJECT_DIR / 'nft-minier' / 'build' / 'contracts' / 'MineralNFT.json'
-DEFAULT_CONTRACT_ADDRESS = '0x3Bff0f7B1f4f3558F83FAd968bF3eAeB82A236A4'
-CONTRACT_ADDRESS = (os.getenv('CONTRACT_ADDRESS') or '').strip()
-
 # Charger l'ABI du contrat
 try:
-    with open(CONTRACT_JSON_PATH, 'r', encoding='utf-8') as f:
-        contract_json = json.load(f)
-        CONTRACT_ABI = contract_json['abi']
-    if not CONTRACT_ADDRESS:
-        CONTRACT_ADDRESS = (
-            contract_json.get('networks', {})
-            .get('5777', {})
-            .get('address')
-            or DEFAULT_CONTRACT_ADDRESS
-        )
+    contract_config = load_contract_config()
+    CONTRACT_ABI = contract_config['abi']
+    CONTRACT_ADDRESS = contract_config['address']
     print(f"[OK] ABI du contrat chargee ({len(CONTRACT_ABI)} entrees)")
 except FileNotFoundError:
-    print(f"[ERROR] Fichier ABI non trouve: {CONTRACT_JSON_PATH}")
+    print("[ERROR] Fichier ABI non trouve")
     CONTRACT_ABI = None
-    if not CONTRACT_ADDRESS:
-        CONTRACT_ADDRESS = DEFAULT_CONTRACT_ADDRESS
+    CONTRACT_ADDRESS = DEFAULT_CONTRACT_ADDRESS
 except Exception as e:
     print(f"[ERROR] Erreur chargement ABI: {str(e)}")
     CONTRACT_ABI = None
-    if not CONTRACT_ADDRESS:
-        CONTRACT_ADDRESS = DEFAULT_CONTRACT_ADDRESS
+    CONTRACT_ADDRESS = DEFAULT_CONTRACT_ADDRESS
 
 # Initialiser le contrat
 if CONTRACT_ABI:
@@ -93,13 +76,13 @@ if PRIVATE_KEY:
     try:
         ACCOUNT = w3.eth.account.from_key(PRIVATE_KEY).address
     except Exception:
-        ACCOUNT = w3.eth.accounts[0] if w3.eth.accounts else None
+        ACCOUNT = w3.eth.accounts[0] if w3.is_connected() and w3.eth.accounts else None
         PRIVATE_KEY = ''
 else:
-    ACCOUNT = w3.eth.accounts[0] if w3.eth.accounts else None
+    ACCOUNT = w3.eth.accounts[0] if w3.is_connected() and w3.eth.accounts else None
 
 print(f"[ACCOUNT] Compte de deploiement : {ACCOUNT}")
-if ACCOUNT:
+if ACCOUNT and w3.is_connected():
     balance = w3.from_wei(w3.eth.get_balance(ACCOUNT), 'ether')
     print(f"   • Balance: {balance} ETH")
 

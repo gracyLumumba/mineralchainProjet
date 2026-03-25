@@ -11,8 +11,10 @@
  * Réseau   : Ganache localhost:7545
  */
 
+import { CONTRACT_ADDRESS, DEFAULT_OWNER_ADDRESS } from '../config/blockchain';
+
 const BACKEND_URL  = process.env.REACT_APP_BACKEND_URL   || 'http://localhost:5000';
-const CONTRACT_ADDR = '0xE7A51a1136968A33fE06bAc07B5794757E349Fbb';
+const CONTRACT_ADDR = CONTRACT_ADDRESS;
 
 // ════════════════════════════════════════════════════════════════════════════
 //  ÉTAT DU CONTRAT
@@ -63,7 +65,7 @@ export async function mintNFTOnChain(lot, ipfsHash = '', certHash = '', userWall
     co_grade:         lot.co_grade_percent || 0,
     fe_grade:         lot.fe_percent       || 0,
     weight:           lot.weight_tonnes    || 0,
-    recipient:        userWallet           || '0xdb5745DeeDcF8e6e0099460bf94c96b56804EC70',
+    recipient:        userWallet           || DEFAULT_OWNER_ADDRESS,
   };
 
   try {

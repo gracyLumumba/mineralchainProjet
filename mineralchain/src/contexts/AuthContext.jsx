@@ -1,4 +1,5 @@
 import React, { createContext, useContext, useState, useCallback, useEffect } from 'react';
+import { DEFAULT_OWNER_ADDRESS } from '../config/blockchain';
 
 const AuthContext = createContext(null);
 
@@ -44,7 +45,7 @@ const DEMO_USERS = [
     role: 'producer',
     organization: 'KAMOA-KANSOKO Mining',
     site: 'KAMOA',
-    wallet: '0xdb5745DeeDcF8e6e0099460bf94c96b56804EC70',
+    wallet: DEFAULT_OWNER_ADDRESS,
     avatar: 'mine',
     account_status: 'approved',
     approved_by: 'admin',

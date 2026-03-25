@@ -1,82 +1,98 @@
-# routes/blockchain.py
 from flask import Blueprint, request, jsonify
 from web3 import Web3
-import json
-import os
+import traceback
+
+from utils.blockchain_config import load_contract_config
+
 
 blockchain_bp = Blueprint('blockchain', __name__)
 
-# Connexion à Ganache
-w3 = Web3(Web3.HTTPProvider('http://127.0.0.1:7545'))
-
-# Adresse du contrat (À REMPLACER par la vôtre !)
-CONTRACT_ADDRESS = '0x3Bff0f7B1f4f3558F83FAd968bF3eAeB82A236A4'
-
-# Charger l'ABI du contrat
-contract_path = os.path.join(os.path.dirname(__file__), '..', '..', 'nft-minier', 'build', 'contracts', 'MineralNFT.json')
-with open(contract_path, 'r') as f:
-    contract_json = json.load(f)
-    CONTRACT_ABI = contract_json['abi']
-
-# Initialiser le contrat
+contract_config = load_contract_config()
+w3 = Web3(Web3.HTTPProvider(contract_config['ganache_url']))
+CONTRACT_ADDRESS = contract_config['address']
+CONTRACT_ABI = contract_config['abi']
 contract = w3.eth.contract(address=CONTRACT_ADDRESS, abi=CONTRACT_ABI)
+
+
+def _account():
+    return w3.eth.accounts[0] if w3.is_connected() and w3.eth.accounts else None
+
+
+def _contract_ready():
+    try:
+        contract.functions.name().call()
+        return True
+    except Exception:
+        return False
+
+
+@blockchain_bp.route('/status', methods=['GET'])
+def blockchain_status():
+    account = _account()
+    return jsonify({
+        "connected": w3.is_connected(),
+        "ganache_url": contract_config['ganache_url'],
+        "contract_address": CONTRACT_ADDRESS,
+        "contract_loaded": _contract_ready(),
+        "account": account,
+        "block_number": w3.eth.block_number if w3.is_connected() else None,
+        "account_balance": float(w3.from_wei(w3.eth.get_balance(account), 'ether')) if account else None,
+    })
+
 
 @blockchain_bp.route('/mint', methods=['POST'])
 def mint_token():
-    """Crée un NFT à partir des résultats IA"""
     try:
-        data = request.get_json()
-        
-        # Comptes disponibles sur Ganache
-        account = w3.eth.accounts[0]
-        
-        # Convertir les valeurs (pour éviter les décimales)
-        cu_grade = int(float(data.get('cu_grade_percent', 0)) * 100)
-        co_grade = int(float(data.get('co_grade_percent', 0)) * 100)
-        fe_grade = int(float(data.get('fe_percent', 0)) * 100)
-        weight = int(float(data.get('weight_tonnes', 0)) * 100)
-        
-        # Appeler le contrat
+        data = request.get_json() or {}
+        account = _account()
+        if not account:
+            return jsonify({"error": "Aucun compte Ganache disponible"}), 503
+
         tx_hash = contract.functions.mintMineralToken(
-            account,
+            Web3.to_checksum_address(data.get('recipient') or account),
             data.get('lot_id', ''),
             data.get('site', ''),
             data.get('mineral_type', ''),
             data.get('impurity_level', ''),
-            int(float(data.get('confidence', 0)) * 100),
+            int(float(data.get('confidence', 0)) * 100 if float(data.get('confidence', 0)) <= 1 else float(data.get('confidence', 0))),
             data.get('ia_signature', ''),
-            data.get('is_authentic', True),
+            bool(data.get('is_authentic', True)),
             data.get('certificate_hash', ''),
             data.get('ipfs_hash', ''),
-            cu_grade,
-            co_grade,
-            fe_grade,
-            weight
-        ).transact({'from': account})
-        
-        # Attendre la confirmation
-        receipt = w3.eth.wait_for_transaction_receipt(tx_hash)
-        
-        # Récupérer le tokenId depuis les logs
-        logs = contract.events.MineralCertified().process_receipt(receipt)
-        token_id = logs[0]['args']['tokenId'] if logs else None
-        
+            int(float(data.get('cu_grade', 0)) * 100),
+            int(float(data.get('co_grade', 0)) * 100),
+            int(float(data.get('fe_grade', 0)) * 100),
+            int(float(data.get('weight', 0)) * 100),
+        ).transact({
+            'from': account,
+            'gas': 3000000,
+            'gasPrice': w3.eth.gas_price,
+        })
+
+        receipt = w3.eth.wait_for_transaction_receipt(tx_hash, timeout=60)
+        token_id = contract.functions.getTokenByLot(data.get('lot_id', '')).call()
+
         return jsonify({
             "success": True,
             "token_id": token_id,
             "transaction_hash": tx_hash.hex(),
-            "block_number": receipt.blockNumber
+            "block_number": receipt.blockNumber,
+            "gas_used": receipt.gasUsed,
+            "contract_address": CONTRACT_ADDRESS,
+            "timestamp": w3.eth.get_block(receipt.blockNumber).timestamp,
+            "simulated": False,
         })
-        
     except Exception as e:
+        traceback.print_exc()
         return jsonify({"error": str(e)}), 500
+
 
 @blockchain_bp.route('/token/<int:token_id>', methods=['GET'])
 def get_token(token_id):
-    """Récupère les données d'un token"""
     try:
         data = contract.functions.getMineralData(token_id).call()
-        
+        owner = contract.functions.ownerOf(token_id).call()
+        token_uri = contract.functions.tokenURI(token_id).call()
         return jsonify({
             "token_id": token_id,
             "lot_id": data[0],
@@ -85,36 +101,101 @@ def get_token(token_id):
             "impurity_level": data[3],
             "confidence": data[4] / 100,
             "ia_signature": data[5],
-            "timestamp": data[6],
-            "is_authentic": data[7],
-            "certificate_hash": data[8],
-            "ipfs_hash": data[9],
-            "cu_grade": data[10] / 100,
-            "co_grade": data[11] / 100,
-            "fe_grade": data[12] / 100,
-            "weight": data[13] / 100
+            "is_authentic": data[6],
+            "ipfs_hash": data[7],
+            "cu_grade": data[8] / 100,
+            "co_grade": data[9] / 100,
+            "fe_grade": data[10] / 100,
+            "weight": data[11] / 100,
+            "timestamp": data[12],
+            "dgmr_validated": data[13],
+            "dgmr_status": data[14],
+            "owner": owner,
+            "token_uri": token_uri,
+            "contract": CONTRACT_ADDRESS,
         })
-        
     except Exception as e:
-        return jsonify({"error": str(e)}), 500
+        return jsonify({"error": str(e)}), 404
+
 
 @blockchain_bp.route('/lot/<lot_id>', methods=['GET'])
 def get_token_by_lot(lot_id):
-    """Trouve un token par son lotId"""
     try:
-        token_id = contract.functions.getTokenByLotId(lot_id).call()
-        return get_token(token_id)
+        token_id = contract.functions.getTokenByLot(lot_id).call()
+        if not token_id:
+            return jsonify({"error": "Lot non trouve"}), 404
+        return get_token(int(token_id))
     except Exception as e:
-        return jsonify({"error": "Lot non trouvé"}), 404
+        return jsonify({"error": str(e)}), 404
 
-@blockchain_bp.route('/owner/<address>', methods=['GET'])
-def get_tokens_of_owner(address):
-    """Récupère tous les tokens d'un propriétaire"""
+
+@blockchain_bp.route('/validate-dgmr', methods=['POST'])
+def validate_dgmr():
     try:
-        tokens = contract.functions.tokensOfOwner(address).call()
+        payload = request.get_json() or {}
+        account = _account()
+        tx_hash = contract.functions.validateByDGMR(
+            int(payload.get('token_id')),
+            payload.get('status', 'AUTHENTIQUE'),
+            Web3.to_checksum_address(payload.get('validator_address') or account),
+        ).transact({
+            'from': account,
+            'gas': 500000,
+            'gasPrice': w3.eth.gas_price,
+        })
+        receipt = w3.eth.wait_for_transaction_receipt(tx_hash, timeout=60)
         return jsonify({
-            "owner": address,
-            "tokens": tokens
+            "success": receipt.status == 1,
+            "transaction_hash": tx_hash.hex(),
+            "block_number": receipt.blockNumber,
         })
     except Exception as e:
+        traceback.print_exc()
         return jsonify({"error": str(e)}), 500
+
+
+@blockchain_bp.route('/update-ipfs', methods=['POST'])
+def update_ipfs():
+    try:
+        payload = request.get_json() or {}
+        account = _account()
+        tx_hash = contract.functions.updateIPFSHash(
+            int(payload.get('token_id')),
+            payload.get('ipfs_hash', ''),
+            payload.get('certificate_hash', ''),
+        ).transact({
+            'from': account,
+            'gas': 500000,
+            'gasPrice': w3.eth.gas_price,
+        })
+        receipt = w3.eth.wait_for_transaction_receipt(tx_hash, timeout=60)
+        return jsonify({
+            "success": receipt.status == 1,
+            "transaction_hash": tx_hash.hex(),
+            "block_number": receipt.blockNumber,
+        })
+    except Exception as e:
+        traceback.print_exc()
+        return jsonify({"error": str(e)}), 500
+
+
+@blockchain_bp.route('/transactions', methods=['GET'])
+def get_transactions():
+    try:
+        latest = w3.eth.block_number
+        start = max(0, latest - 20)
+        txs = []
+        for block_no in range(start, latest + 1):
+            block = w3.eth.get_block(block_no, full_transactions=True)
+            for tx in block.transactions:
+                if tx.to and tx.to.lower() == CONTRACT_ADDRESS.lower():
+                    txs.append({
+                        "hash": tx.hash.hex(),
+                        "block_number": block_no,
+                        "from": tx["from"],
+                        "to": tx.to,
+                        "value": str(tx.value),
+                    })
+        return jsonify({"connected": True, "transactions": txs})
+    except Exception as e:
+        return jsonify({"connected": False, "transactions": [], "error": str(e)})

@@ -13,8 +13,9 @@ import {
   ipfsGatewayUrl,
   shortIpfsHash,
 } from '../../services/ipfs';
+import { CONTRACT_ADDRESS, DEFAULT_OWNER_ADDRESS } from '../../config/blockchain';
 
-const CONTRACT = '0xE7A51a1136968A33fE06bAc07B5794757E349Fbb';
+const CONTRACT = CONTRACT_ADDRESS;
 const BACKEND_URL = process.env.REACT_APP_BACKEND_URL || 'http://localhost:5000';
 
 //  Badge IPFS 
@@ -168,7 +169,7 @@ export function CertificateCard({ lot, token, onClose }) {
           token_id: resolvedTokenId, lot_id: lot.lot_id,
           mineral_type: lot.mineral_type,
           confidence: lot.confidence > 1 ? lot.confidence : Math.round(lot.confidence * 100),
-          owner: token?.owner || '0xdb5745DeeDcF8e6e0099460bf94c96b56804EC70',
+          owner: token?.owner || DEFAULT_OWNER_ADDRESS,
           contract: CONTRACT,
         }});
       } else {

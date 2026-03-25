@@ -3,6 +3,8 @@
 //  Stockage décentralisé et permanent des certificats
 // ═══════════════════════════════════════════════════════════════════════════
 
+import { CONTRACT_ADDRESS } from '../config/blockchain';
+
 const PINATA_JWT   = process.env.REACT_APP_PINATA_JWT || '';
 const PINATA_GW    = process.env.REACT_APP_PINATA_GATEWAY || 'https://gateway.pinata.cloud';
 const BACKEND_URL  = process.env.REACT_APP_BACKEND_URL || 'http://localhost:5000';
@@ -57,7 +59,7 @@ export function buildCertificatePayload(lot, token) {
     blockchain: token ? {
       token_id:          token.token_id,
       transaction_hash:  token.tx_hash,
-      contract_address:  token.contract || '0xE7A51a1136968A33fE06bAc07B5794757E349Fbb',
+      contract_address:  token.contract || CONTRACT_ADDRESS,
       block_number:      token.block,
       timestamp:         token.timestamp,
     } : null,

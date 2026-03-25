@@ -24,12 +24,9 @@ def upload_to_ipfs():
     """
     try:
         data = request.get_json() or {}
-        
-        if 'data' not in data:
-            return jsonify({'error': 'Champ "data" manquant'}), 400
-        
-        certificate_data = data['data']
-        lot_id = data.get('lot_id', 'unknown')
+
+        certificate_data = data.get('data') if 'data' in data else data
+        lot_id = data.get('lot_id') or certificate_data.get('lot_id', 'unknown')
         name = data.get('name', f'certificate-{lot_id}')
         
         print(f"\n📤 Upload vers IPFS pour le lot: {lot_id}")
@@ -127,6 +124,7 @@ def get_from_ipfs(ipfs_hash):
             return jsonify({
                 'success': True,
                 'data': LOCAL_IPFS_STORAGE[clean_hash],
+                'content': LOCAL_IPFS_STORAGE[clean_hash],
                 'ipfs_hash': clean_hash,
                 'source': 'local'
             }), 200
@@ -141,6 +139,7 @@ def get_from_ipfs(ipfs_hash):
                 return jsonify({
                     'success': True,
                     'data': response.json(),
+                    'content': response.json(),
                     'ipfs_hash': clean_hash,
                     'source': 'gateway'
                 }), 200

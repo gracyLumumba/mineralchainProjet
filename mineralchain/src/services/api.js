@@ -1,4 +1,5 @@
 import axios from 'axios';
+import { CONTRACT_ADDRESS } from '../config/blockchain';
 
 const BACKEND_URL = process.env.REACT_APP_BACKEND_URL || 'http://localhost:5000';
 
@@ -51,7 +52,7 @@ export function simulateCertification(formData, iaResult) {
     blockchain: {
       token_id:          tokenId,
       transaction_hash:  `0x${Array.from({length:64}, () => '0123456789abcdef'[Math.floor(Math.random()*16)]).join('')}`,
-      contract_address:  '0xE7A51a1136968A33fE06bAc07B5794757E349Fbb',
+      contract_address:  CONTRACT_ADDRESS,
       block_number:      Math.floor(Math.random() * 100000) + 1800000,
       gas_used:          Math.floor(Math.random() * 50000) + 120000,
       timestamp:         Math.floor(Date.now() / 1000),
