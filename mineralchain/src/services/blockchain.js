@@ -11,7 +11,7 @@
  * Réseau   : Ganache localhost:7545
  */
 
-const BACKEND_URL  = process.env.REACT_APP_BACKEND_URL   || 'http://localhost:5001';
+const BACKEND_URL  = process.env.REACT_APP_BACKEND_URL   || 'http://localhost:5000';
 const CONTRACT_ADDR = '0xE7A51a1136968A33fE06bAc07B5794757E349Fbb';
 
 // ════════════════════════════════════════════════════════════════════════════

@@ -15,6 +15,7 @@ import {
 } from '../../services/ipfs';
 
 const CONTRACT = '0xE7A51a1136968A33fE06bAc07B5794757E349Fbb';
+const BACKEND_URL = process.env.REACT_APP_BACKEND_URL || 'http://localhost:5000';
 
 //  Badge IPFS 
 function IpfsBadge({ hash, loading, small }) {
@@ -153,7 +154,7 @@ export function CertificateCard({ lot, token, onClose }) {
   const handleBlockchainVerify = async () => {
     setVerifying(true); setVerifyResult(null);
     try {
-      const res  = await fetch(`http://localhost:5001/api/blockchain/token/${resolvedTokenId}`, {
+      const res  = await fetch(`${BACKEND_URL}/api/blockchain/token/${resolvedTokenId}`, {
         method: 'GET',
         headers: { 'Content-Type': 'application/json' },
       });

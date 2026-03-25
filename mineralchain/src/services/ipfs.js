@@ -5,7 +5,7 @@
 
 const PINATA_JWT   = process.env.REACT_APP_PINATA_JWT || '';
 const PINATA_GW    = process.env.REACT_APP_PINATA_GATEWAY || 'https://gateway.pinata.cloud';
-const BACKEND_URL  = 'http://localhost:5001';
+const BACKEND_URL  = process.env.REACT_APP_BACKEND_URL || 'http://localhost:5000';
 
 //  Helpers 
 
