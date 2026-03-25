@@ -224,7 +224,7 @@ def upload_to_pinata(certificate_data, lot_id):
         }
         
         print(f"   [IPFS] Envoi a Pinata...")
-        response = requests.post(url, json=payload, headers=headers, timeout=30)
+        response = requests.post(url, json=payload, headers=headers, timeout=8)
         
         if response.status_code == 200:
             result = response.json()
