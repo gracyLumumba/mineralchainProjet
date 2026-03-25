@@ -155,10 +155,10 @@ export default function NewLotPage() {
           lot.ipfs_hash = ipfsResult.ipfs_hash;
           lot.ipfs_url  = ipfsResult.gateway_url;
           updateLot(lot.lot_id, { ipfs_hash: ipfsResult.ipfs_hash, ipfs_url: ipfsResult.gateway_url });
-          addToast(`⬡ Certificat épinglé sur IPFS · ${ipfsResult.ipfs_hash.slice(0, 16)}…`, 'success');
+          addToast(`Certificat épinglé sur IPFS · ${ipfsResult.ipfs_hash.slice(0, 16)}…`, 'success');
         } catch (ipfsErr) {
           console.warn('[IPFS] Auto-upload échoué (non bloquant):', ipfsErr.message);
-          addToast('⬡ Upload IPFS non disponible — vous pourrez le faire manuellement', 'warning');
+          addToast('Upload IPFS non disponible — vous pourrez le faire manuellement', 'warning');
         }
       } else if (backendIpfsHash) {
         updateLot(lot.lot_id, { ipfs_hash: backendIpfsHash, ipfs_url: backendIpfsUrl });

@@ -211,7 +211,7 @@ export function NotifProvider({ children }) {
       },
       [NOTIF_TYPES.LOT_DELIVERED]: {
         title: `Lot livré à destination`,
-        body:  `${lotId} → ${destination}`,
+        body:  `${lotId} vers ${destination}`,
         type:  NOTIF_TYPES.LOT_DELIVERED,
       },
       // Régulateur
@@ -238,7 +238,7 @@ export function NotifProvider({ children }) {
       },
       [NOTIF_TYPES.TRANSPORT_STARTED]: {
         title: `Transport démarré`,
-        body:  `${lotId} → ${destination}`,
+        body:  `${lotId} vers ${destination}`,
         type:  NOTIF_TYPES.TRANSPORT_STARTED,
       },
       [NOTIF_TYPES.DELIVERY_CONFIRMED]: {

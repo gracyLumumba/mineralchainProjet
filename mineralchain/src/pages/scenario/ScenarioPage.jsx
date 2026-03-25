@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { useI18n } from '../../contexts/i18nContext';
 import { useApp } from '../../contexts/AppContext';
 import { StatusBadge, MineralBadge } from '../../components/common/UI';
+import { Ic } from '../../components/common/Icons';
 
 const STEPS = [
   {
@@ -57,8 +58,8 @@ const STEPS = [
     descEn: "If both analyses are consistent (within CEEC/DGMR tolerances), the regulator validates the lot. The system mints an immutable ERC-721 NFT token on the Ethereum blockchain.",
     details: [
       { actor:'Régulateur', action:'Valide le lot si cohérence confirmée (ou marque SUSPECT)',   icon:'scale' },
-      { actor:'Blockchain', action:'Mint NFT ERC-721 : token unique, immuable, vérifiable',      icon:'◎' },
-      { actor:'IPFS',       action:'Certificat JSON v2.0 épinglé sur Pinata (hash permanent)',   icon:'⬡' },
+      { actor:'Blockchain', action:'Mint NFT ERC-721 : token unique, immuable, vérifiable',      icon:'certificate' },
+      { actor:'IPFS',       action:'Certificat JSON v2.0 épinglé sur Pinata (hash permanent)',   icon:'cloud' },
       { actor:'Système',    action:'Transport débloqué — transporteur peut voir le lot',          icon:'unlock' },
     ],
     security: "Sans validation régulateur : NFT non minté, transport bloqué, lot invisible au transporteur.",
@@ -74,7 +75,7 @@ const STEPS = [
       { actor:'Transporteur', action:'Voit les lots validés par le régulateur dans son interface', icon:'clipboard' },
       { actor:'Transporteur', action:'Scanne le QR code du certificat (pointe vers IPFS)',         icon:'camera' },
       { actor:'Transporteur', action:'Démarre le transport avec destination déclarée',             icon:'truck' },
-      { actor:'Transporteur', action:'Confirme la livraison à l\'usine → blockchain mise à jour', icon:'factory' },
+      { actor:'Transporteur', action:'Confirme la livraison à l\'usine, blockchain mise à jour', icon:'factory' },
     ],
     security: "Chaque étape (départ, livraison) est enregistrée dans le journal d'audit immuable.",
     status: 'done',
@@ -131,7 +132,7 @@ function StepCard({ step, isActive, onClick, lang }) {
           </div>
         </div>
         <div style={{ fontSize:16, color:isActive?c:'var(--text-muted)' }}>
-          {isActive ? '▶' : '›'}
+          <Ic name="chevron_right" size={14}/>
         </div>
       </div>
       {isActive && (
@@ -271,9 +272,9 @@ export default function ScenarioPage() {
           {/* Nav buttons */}
           <div style={{ display:'flex', gap:8, marginTop:8 }}>
             <button className="btn btn-outline btn-sm" style={{ flex:1, justifyContent:'center' }}
-              disabled={activeStep===1} onClick={()=>setActiveStep(p=>p-1)}>← Précédent</button>
+              disabled={activeStep===1} onClick={()=>setActiveStep(p=>p-1)}><Ic name="arrow_left" size={14}/> Précédent</button>
             <button className="btn btn-gold btn-sm" style={{ flex:1, justifyContent:'center' }}
-              disabled={activeStep===STEPS.length} onClick={()=>setActiveStep(p=>p+1)}>Suivant →</button>
+              disabled={activeStep===STEPS.length} onClick={()=>setActiveStep(p=>p+1)}>Suivant <Ic name="arrow_right" size={14}/></button>
           </div>
         </div>
 
@@ -296,7 +297,7 @@ export default function ScenarioPage() {
               <div style={{ fontSize:'0.88rem', fontWeight:700, color:r.color, marginBottom:10 }}>{r.role}</div>
               {r.perms.map(p => (
                 <div key={p} style={{ display:'flex', gap:6, alignItems:'flex-start', marginBottom:5, fontSize:'0.75rem', color:'var(--text-secondary)' }}>
-                  <span style={{ color:r.color, flexShrink:0, marginTop:1 }}>›</span>
+                  <span style={{ color:r.color, flexShrink:0, marginTop:1 }}><Ic name="chevron_right" size={12}/></span>
                   {p}
                 </div>
               ))}

@@ -1,6 +1,7 @@
 import React, { useRef, useState, useEffect, useCallback } from 'react';
 import QRCode from 'react-qr-code';
 import { StatusBadge, MineralBadge, InfoRow } from './UI';
+import { Ic } from './Icons';
 import { fmt } from '../../contexts/AppContext';
 import { useI18n } from '../../contexts/i18nContext';
 import { useApp } from '../../contexts/AppContext';
@@ -25,7 +26,7 @@ function IpfsBadge({ hash, loading, small }) {
   );
   if (hash) return (
     <span className="badge badge-ipfs" title={hash}>
-      ⬡ IPFS {!small && shortIpfsHash(hash)}
+      <Ic name="cloud" size={12}/> IPFS {!small && shortIpfsHash(hash)}
     </span>
   );
   return null;
@@ -196,7 +197,7 @@ export function CertificateCard({ lot, token, onClose }) {
                 <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', alignItems: 'center' }}>
                   <StatusBadge status={lot.status}/>
                   <MineralBadge type={lot.mineral_type}/>
-                  {hasToken && <span className="badge badge-certified">◎ NFT #{resolvedTokenId}</span>}
+                  {hasToken && <span className="badge badge-certified"><Ic name="certificate" size={12}/> NFT #{resolvedTokenId}</span>}
                   {/* Badge IPFS dans le header */}
                   <IpfsBadge hash={currentIpfsHash} loading={uploadingIpfs || loadingIpfs}/>
                 </div>
@@ -206,7 +207,7 @@ export function CertificateCard({ lot, token, onClose }) {
               <div style={{ background: 'white', padding: 12, borderRadius: 12, boxShadow: '0 4px 20px rgba(0,0,0,0.5)', flexShrink: 0, textAlign: 'center' }}>
                 <QRCode value={qrValue} size={100} bgColor="#ffffff" fgColor="#0c1118"/>
                 <div style={{ marginTop: 6, fontSize: '0.52rem', color: currentIpfsHash ? '#7c3aed' : '#666', textAlign: 'center', fontFamily: 'monospace', fontWeight: currentIpfsHash ? 700 : 400 }}>
-                  {currentIpfsHash ? '⬡ IPFS Verified' : 'Scan to verify'}
+                  {currentIpfsHash ? 'IPFS Verified' : 'Scan to verify'}
                 </div>
               </div>
             </div>
@@ -255,7 +256,7 @@ export function CertificateCard({ lot, token, onClose }) {
             {/* ── Section IPFS ─────────────────────────────────────────── */}
             <div style={{ gridColumn: '1 / -1' }}>
               <div className="label" style={{ marginBottom: 12, display: 'block', color: 'var(--violet)' }}>
-                ⬡ IPFS — Stockage Décentralisé
+                <Ic name="cloud" size={14}/> IPFS — Stockage Décentralisé
               </div>
 
               {/* Cas 1 : Chargement depuis IPFS */}
@@ -270,7 +271,7 @@ export function CertificateCard({ lot, token, onClose }) {
               {currentIpfsHash && !loadingIpfs && (
                 <div style={{ background: 'var(--violet-dim)', border: '1px solid rgba(139,92,246,0.25)', borderRadius: 'var(--r-md)', padding: '16px 20px' }}>
                   <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 14 }}>
-                    <span style={{ fontSize: 18 }}>⬡</span>
+                    <Ic name="cloud" size={18}/>
                     <span style={{ fontWeight: 700, color: 'var(--violet)', fontSize: '0.9rem' }}>Certificat stocké sur IPFS</span>
                     <span className="badge badge-ipfs" style={{ marginLeft: 'auto' }}> Permanent</span>
                   </div>
@@ -311,7 +312,7 @@ export function CertificateCard({ lot, token, onClose }) {
               {/* Cas 3 : Pas de hash → bouton upload */}
               {!currentIpfsHash && !loadingIpfs && (
                 <div style={{ background: 'var(--bg-raised)', border: '1px dashed rgba(139,92,246,0.3)', borderRadius: 'var(--r-md)', padding: '20px', textAlign: 'center' }}>
-                  <div style={{ fontSize: 28, marginBottom: 8, opacity: 0.5 }}>⬡</div>
+                  <div style={{ marginBottom: 8, opacity: 0.5 }}><Ic name="cloud" size={28} color="currentColor"/></div>
                   <div style={{ fontSize: '0.85rem', color: 'var(--text-secondary)', marginBottom: 6 }}>
                     Certificat non encore stocké sur IPFS
                   </div>
@@ -326,7 +327,7 @@ export function CertificateCard({ lot, token, onClose }) {
                   >
                     {uploadingIpfs
                       ? <><span className="ipfs-spinner" style={{ width: 14, height: 14 }}/> Upload en cours…</>
-                      : '⬡ Upload vers IPFS'
+                      : <><Ic name="cloud" size={14}/> Upload vers IPFS</>
                     }
                   </button>
                 </div>
@@ -351,7 +352,7 @@ export function CertificateCard({ lot, token, onClose }) {
             <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
               {currentIpfsHash && (
                 <span style={{ fontFamily: 'var(--font-mono)', fontSize: '0.62rem', color: 'var(--violet)', opacity: 0.8 }}>
-                  ⬡ {shortIpfsHash(currentIpfsHash, 10)}
+                  <Ic name="cloud" size={12}/> {shortIpfsHash(currentIpfsHash, 10)}
                 </span>
               )}
               <span style={{ fontSize: '0.68rem', color: 'var(--text-muted)', fontFamily: 'var(--font-mono)' }}>
@@ -397,7 +398,7 @@ export function CertificateCard({ lot, token, onClose }) {
           {/* Upload IPFS si pas encore fait */}
           {!currentIpfsHash && hasToken && (
             <button className="btn btn-ipfs" onClick={handleUploadIpfs} disabled={uploadingIpfs} style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-              {uploadingIpfs ? <><span className="ipfs-spinner" style={{ width: 14, height: 14 }}/> Upload…</> : '⬡ Upload IPFS'}
+              {uploadingIpfs ? <><span className="ipfs-spinner" style={{ width: 14, height: 14 }}/> Upload…</> : <><Ic name="cloud" size={14}/> Upload IPFS</>}
             </button>
           )}
 

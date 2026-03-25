@@ -187,7 +187,7 @@ export function AuthProvider({ children }) {
       site:           formData.site || null,
       phone:          formData.phone?.trim() || '',
       wallet:         `0x${Array.from({length:40}, () => '0123456789abcdef'[Math.floor(Math.random()*16)]).join('')}`,
-      avatar:         ROLE_AVATARS[formData.role] || '◎',
+      avatar:         ROLE_AVATARS[formData.role] || 'users',
       //  Statut PENDING — doit être approuvé 
       account_status: 'pending',
       approved_by:    null,

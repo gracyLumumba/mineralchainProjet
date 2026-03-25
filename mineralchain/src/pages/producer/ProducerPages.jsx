@@ -215,9 +215,9 @@ export function MyLotsPage() {
           { v:'À VÉRIFIER',l:`? ${t('status.À VÉRIFIER')}` },
         ]}/>
         <SI value={fType} onChange={setFType} placeholder={t('mylots.filter.all_types')} options={[
-          { v:'copper',l:`⬡ ${t('mineral.copper')}` },
-          { v:'cobalt',l:`◈ ${t('mineral.cobalt')}` },
-          { v:'mixed', l:`◎ ${t('mineral.mixed')}` },
+          { v:'copper',l:t('mineral.copper') },
+          { v:'cobalt',l:t('mineral.cobalt') },
+          { v:'mixed', l:t('mineral.mixed') },
         ]}/>
         {(search || fStatus !== 'all' || fType !== 'all') && (
           <button className="btn btn-ghost btn-sm" onClick={() => { setSearch(''); setFStatus('all'); setFType('all'); setPage(1); }}>{t('action.clear')}</button>
@@ -277,11 +277,11 @@ export function MyLotsPage() {
           </div>
           {pages > 1 && (
             <div style={{ display: 'flex', justifyContent: 'center', gap: 8 }}>
-              <button className="btn btn-ghost btn-sm" onClick={() => setPage(p => Math.max(1,p-1))} disabled={page===1}>←</button>
+              <button className="btn btn-ghost btn-sm" onClick={() => setPage(p => Math.max(1,p-1))} disabled={page===1}><Ic name="arrow_left" size={14}/></button>
               {Array.from({length:pages},(_,i)=>i+1).map(p => (
                 <button key={p} className={`btn btn-sm ${p===page?'btn-gold':'btn-ghost'}`} onClick={() => setPage(p)} style={{ minWidth: 36 }}>{p}</button>
               ))}
-              <button className="btn btn-ghost btn-sm" onClick={() => setPage(p => Math.min(pages,p+1))} disabled={page===pages}>→</button>
+              <button className="btn btn-ghost btn-sm" onClick={() => setPage(p => Math.min(pages,p+1))} disabled={page===pages}><Ic name="arrow_right" size={14}/></button>
             </div>
           )}
         </>

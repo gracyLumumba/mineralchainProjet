@@ -51,7 +51,7 @@ export function RegulatorDashboard() {
           </div>
           <Link to="/regulator/analysis" style={{ textDecoration:'none' }}>
             <button className="btn btn-outline btn-sm" style={{ color:'var(--amber)', borderColor:'rgba(245,158,11,0.4)' }}>
-               Valider →
+              <Ic name="arrow_right" size={14}/> Valider
             </button>
           </Link>
         </div>
@@ -120,7 +120,7 @@ export function RegulatorDashboard() {
               ))}
             </div>
           ) : (
-            <EmptyState icon="○" title={t('empty.no_activity')} subtitle={t('empty.after_first')}/>
+            <EmptyState icon="clock" title={t('empty.no_activity')} subtitle={t('empty.after_first')}/>
           )}
         </div>
       </div>
@@ -220,7 +220,7 @@ export function RegulatorLotsPage() {
           {v:'AUTHENTIQUE',l:`ok ${t('status.AUTHENTIQUE')}`},{v:'SUSPECT',l:`! ${t('status.SUSPECT')}`},{v:'À VÉRIFIER',l:`? ${t('status.À VÉRIFIER')}`}
         ]}/>
         <SI value={fType}   onChange={setFType}   placeholder={t('mylots.filter.all_types')} options={[
-          {v:'copper',l:`⬡ ${t('mineral.copper')}`},{v:'cobalt',l:`◈ ${t('mineral.cobalt')}`},{v:'mixed',l:`◎ ${t('mineral.mixed')}`}
+          {v:'copper',l:t('mineral.copper')},{v:'cobalt',l:t('mineral.cobalt')},{v:'mixed',l:t('mineral.mixed')}
         ]}/>
         <SI value={fValid}  onChange={setFValid}  placeholder="Toutes validations" options={[
           {v:'validated',l:'Validés'},{v:'pending',l:t('trans.awaiting_dgmr')},{v:'suspect',l:'SUSPECT'}
@@ -270,11 +270,11 @@ export function RegulatorLotsPage() {
           </div>
           {pages > 1 && (
             <div style={{ display:'flex', justifyContent:'center', gap:8 }}>
-              <button className="btn btn-ghost btn-sm" onClick={()=>setPage(p=>Math.max(1,p-1))} disabled={page===1}>←</button>
+              <button className="btn btn-ghost btn-sm" onClick={()=>setPage(p=>Math.max(1,p-1))} disabled={page===1}><Ic name="arrow_left" size={14}/></button>
               {Array.from({length:pages},(_,i)=>i+1).filter(p=>Math.abs(p-page)<3).map(p=>(
                 <button key={p} className={`btn btn-sm ${p===page?'btn-gold':'btn-ghost'}`} onClick={()=>setPage(p)} style={{ minWidth:36 }}>{p}</button>
               ))}
-              <button className="btn btn-ghost btn-sm" onClick={()=>setPage(p=>Math.min(pages,p+1))} disabled={page===pages}>→</button>
+              <button className="btn btn-ghost btn-sm" onClick={()=>setPage(p=>Math.min(pages,p+1))} disabled={page===pages}><Ic name="arrow_right" size={14}/></button>
             </div>
           )}
         </>

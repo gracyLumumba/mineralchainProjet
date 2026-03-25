@@ -45,9 +45,9 @@ export default function LotDetailPage() {
       const certPayload = buildCertificatePayload(lot, token);
       const ipfsResult  = await uploadCertificateViaBackend(certPayload);
       updateLot(lot.lot_id, { ipfs_hash: ipfsResult.ipfs_hash, ipfs_url: ipfsResult.gateway_url });
-      addToast(`⬡ Certificat épinglé sur IPFS · ${ipfsResult.ipfs_hash.slice(0, 16)}…`, 'success');
+      addToast(`Certificat épinglé sur IPFS · ${ipfsResult.ipfs_hash.slice(0, 16)}…`, 'success');
     } catch (err) {
-      addToast(`⬡ IPFS non disponible : ${err.message}`, 'warning');
+      addToast(`IPFS non disponible : ${err.message}`, 'warning');
     } finally { setUploadingIpfs(false); }
   };
 
@@ -58,17 +58,17 @@ export default function LotDetailPage() {
       await pinExistingHash(lot.ipfs_hash, lot.lot_id);
       addToast('Hash re-pinné sur IPFS', 'success');
     } catch (err) {
-      addToast(`⬡ Re-pin échoué : ${err.message}`, 'warning');
+      addToast(`Re-pin échoué : ${err.message}`, 'warning');
     } finally { setPinning(false); }
   };
 
   const timelineEvents = [
     { icon: 'mine', label: t('timeline.extraction'),   date: fmt.date(lot.extraction_date), done: true },
-    { icon: '◈', label: t('timeline.analysis'),      date: fmt.date(lot.analyzed_at), done: true, detail: lot.status },
-    { icon: '◎', label: t('timeline.certification'), date: lot.token_id != null ? fmt.date(lot.analyzed_at) : null, done: lot.token_id != null, detail: lot.token_id != null ? `Token #${lot.token_id}` : null },
+    { icon: 'activity', label: t('timeline.analysis'),      date: fmt.date(lot.analyzed_at), done: true, detail: lot.status },
+    { icon: 'certificate', label: t('timeline.certification'), date: lot.token_id != null ? fmt.date(lot.analyzed_at) : null, done: lot.token_id != null, detail: lot.token_id != null ? `Token #${lot.token_id}` : null },
     { icon: 'truck', label: t('timeline.transit'),       date: lot.transferred_at ? fmt.date(lot.transferred_at) : null, done: !!lot.transport_status, detail: lot.destination || null },
     { icon: 'scale', label: t('timeline.validation_dgmr'), date: lot.regulator_validated_at ? fmt.date(lot.regulator_validated_at) : null, done: !!lot.regulator_validated, detail: lot.regulator_validated ? `${t('trans.validated_dgmr')}` : lot.status === 'SUSPECT' ? `${t('status.SUSPECT')}` : `${t('trans.awaiting_dgmr')}` },
-    { icon: '⬡', label: 'IPFS', date: lot.ipfs_hash ? 'Permanent' : null, done: !!lot.ipfs_hash, detail: lot.ipfs_hash ? shortIpfsHash(lot.ipfs_hash) : null },
+    { icon: 'cloud', label: 'IPFS', date: lot.ipfs_hash ? 'Permanent' : null, done: !!lot.ipfs_hash, detail: lot.ipfs_hash ? shortIpfsHash(lot.ipfs_hash) : null },
     { icon: 'factory', label: t('timeline.delivery'),      date: lot.delivered_at ? fmt.date(lot.delivered_at) : null, done: lot.transport_status === 'delivered' },
   ];
 
@@ -118,7 +118,7 @@ export default function LotDetailPage() {
               <ConfidenceGauge value={lot.confidence || 0} size={130}/>
               <div style={{ flex: 1, minWidth: 220, display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0 20px' }}>
                 {[
-                  [t('label.mineral_type'), lot.mineral_type === 'copper' ? `⬡ ${t('mineral.copper')}` : lot.mineral_type === 'cobalt' ? `◈ ${t('mineral.cobalt')}` : `◎ ${t('mineral.mixed')}`],
+                  [t('label.mineral_type'), lot.mineral_type === 'copper' ? t('mineral.copper') : lot.mineral_type === 'cobalt' ? t('mineral.cobalt') : t('mineral.mixed')],
                   [t('label.impurities'), impLabel],
                   [t('label.fraud'), lot.is_fraud ? t('fraud.yes') : t('fraud.no')],
                   [t('label.site'), lot.site],
@@ -201,7 +201,7 @@ export default function LotDetailPage() {
             <div className="card" style={{ border: '1px solid rgba(139,92,246,0.25)', background: 'var(--violet-dim)' }}>
               <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 14, flexWrap: 'wrap', gap: 10 }}>
                 <h3 style={{ fontFamily: 'var(--font-display)', fontSize: '1.1rem', color: 'var(--violet)' }}>
-                  ⬡ IPFS — Stockage Décentralisé
+                  <Ic name="cloud" size={16}/> IPFS — Stockage Décentralisé
                 </h3>
                 {lot.ipfs_hash
                   ? <span className="badge badge-ipfs">ok Épinglé</span>
@@ -220,7 +220,7 @@ export default function LotDetailPage() {
                   <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap' }}>
                     <a href={ipfsGatewayUrl(lot.ipfs_hash)} target="_blank" rel="noopener noreferrer" className="btn btn-ipfs btn-sm">↗ Voir sur Gateway</a>
                     <button className="btn btn-ghost btn-sm" onClick={handleRepin} disabled={pinning}>
-                      {pinning ? '⬡ Pinning…' : 'Re-pinner'}
+                      {pinning ? 'Pinning…' : 'Re-pinner'}
                     </button>
                   </div>
                 </>
@@ -230,7 +230,7 @@ export default function LotDetailPage() {
                     Stockez ce certificat sur IPFS pour une conservation permanente et décentralisée.
                   </p>
                   <button className="btn btn-ipfs" onClick={handleUploadIpfs} disabled={uploadingIpfs} style={{ display: 'inline-flex', alignItems: 'center', gap: 8 }}>
-                    {uploadingIpfs ? <><div className="loader" style={{ width: 14, height: 14, borderTopColor: '#fff' }}/> Upload…</> : '⬡ Upload vers IPFS'}
+                    {uploadingIpfs ? <><div className="loader" style={{ width: 14, height: 14, borderTopColor: '#fff' }}/> Upload…</> : <><Ic name="cloud" size={14}/> Upload vers IPFS</>}
                   </button>
                 </div>
               )}
@@ -260,7 +260,7 @@ export default function LotDetailPage() {
                   return (
                     <div key={i} style={{ display:'flex', gap:12, padding:'10px 0', borderBottom: i < lot.audit_trail.length-1 ? '1px solid var(--border-dim)' : 'none', alignItems:'flex-start' }}>
                       <div style={{ width:28, height:28, borderRadius:'50%', background:`${c}22`, border:`1px solid ${c}44`, display:'flex', alignItems:'center', justifyContent:'center', flexShrink:0, fontSize:13 }}>
-                        {icons[entry.event] || '○'}
+                        <Ic name={icons[entry.event] || 'gem'} size={14}/>
                       </div>
                       <div style={{ flex:1 }}>
                         <div style={{ display:'flex', justifyContent:'space-between', alignItems:'center', marginBottom:2 }}>
@@ -273,7 +273,7 @@ export default function LotDetailPage() {
                           </span>
                         </div>
                         <div style={{ fontSize:'0.72rem', color:'var(--text-muted)', display:'flex', gap:12, flexWrap:'wrap' }}>
-                          {entry.destination && <span>→ {entry.destination}</span>}
+                          {entry.destination && <span>{t('label.destination')}: {entry.destination}</span>}
                           {entry.token_id != null && <span>NFT #{entry.token_id}</span>}
                           {entry.signature   && <span style={{ fontFamily:'var(--font-mono)' }}>sig: {entry.signature}</span>}
                           {entry.params_compared != null && <span>{entry.conformes}/{entry.params_compared} params conformes</span>}

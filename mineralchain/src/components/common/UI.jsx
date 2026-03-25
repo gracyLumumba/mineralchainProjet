@@ -162,7 +162,7 @@ export function PageHeader({ title, subtitle, actions }) {
 }
 
 //  EmptyState 
-export function EmptyState({ icon = '◎', title, subtitle, action }) {
+export function EmptyState({ icon = 'gem', title, subtitle, action }) {
   return (
     <div style={{ textAlign: 'center', padding: '48px 32px', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 10 }}>
       <div style={{ fontSize: 48, marginBottom: 8, opacity: 0.35, color: 'var(--text-muted)' }}>{typeof icon === 'string' && /^[a-z_]+$/.test(icon) ? <Ic name={icon} size={48} color="var(--text-muted)"/> : icon}</div>

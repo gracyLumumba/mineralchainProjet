@@ -758,7 +758,7 @@ function renderAuth() {
         h('div',{style:'width:60px;height:60px;border-radius:50%;background:var(--amber-dim);border:2px solid rgba(200,125,10,0.3);display:flex;align-items:center;justify-content:center;margin:0 auto 14px',html:icon('clock',28,'var(--amber)')}),
         h('h2',{style:'font-size:1.2rem;font-weight:700;margin-bottom:8'},t('pending_title')),
         h('p',{style:'font-size:0.88rem;color:var(--text2);line-height:1.6;margin-bottom:24'},t('pending_msg')),
-        h('button',{class:'btn btn-outline btn-full',onclick:()=>setState({authMode:'login'})},'← '+t('login'))
+        h('button',{class:'btn btn-outline btn-full',onclick:()=>setState({authMode:'login'})},t('login'))
       )
     ));
     container.appendChild(formWrap);
@@ -941,7 +941,7 @@ function renderLotDetail(lot) {
       ));
       lot.validation_comparison.filter(r=>!r.ok).forEach(r=>{
         reasonCard.appendChild(h('div',{style:'font-size:0.75rem;color:var(--crimson);margin-top:4'},
-          `✗ ${r.label}: prod=${r.prodVal?.toFixed(3)} reg=${r.regVal?.toFixed(3)} Δ${r.diff?.toFixed(3)}`
+          `${r.label}: prod=${r.prodVal?.toFixed(3)} reg=${r.regVal?.toFixed(3)} diff=${r.diff?.toFixed(3)}`
         ));
       });
     } else if (!lot.regulator_validated) {
@@ -966,7 +966,7 @@ function renderLotDetail(lot) {
       const con = div('timeline-content');
       con.appendChild(h('div',{style:'font-size:0.82rem;font-weight:600;color:'+c},evLabels[e.event]||e.event));
       con.appendChild(h('div',{style:'font-size:0.7rem;color:var(--text3);margin-top:1'},fmtDateTime(e.at)));
-      if (e.destination) con.appendChild(h('div',{style:'font-size:0.72rem;color:var(--text3)'},'→ '+e.destination));
+      if (e.destination) con.appendChild(h('div',{style:'font-size:0.72rem;color:var(--text3)'},'Destination: '+e.destination));
       item.appendChild(dot); item.appendChild(con);
       timeline.appendChild(item);
     });
@@ -1087,7 +1087,8 @@ function renderNewLotForm() {
   for (let i=1;i<=3;i++) {
     const dot = div('step-dot');
     dot.style.cssText=`width:30px;height:30px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:0.72rem;font-weight:700;transition:all 0.2s;flex-shrink:0;background:${i<=stepN?'var(--teal)':'var(--border2)'};color:${i<=stepN?'#fff':'var(--text3)'}`;
-    dot.textContent = i<stepN?'✓':i;
+    if (i < stepN) dot.innerHTML = icon('check',12,'#fff');
+    else dot.textContent = i;
     steps.appendChild(dot);
     if (i<3) {
       const line = div('step-line');
@@ -1559,7 +1560,7 @@ function renderTransportHistory(inRoute, delivered) {
           </div>
           <div style="flex:1">
             <div style="font-weight:700;font-size:0.88rem">${lot.lot_id}</div>
-            <div style="font-size:0.72rem;color:var(--text3);margin-top:1">${lot.site} → ${lot.destination||'—'}</div>
+            <div style="font-size:0.72rem;color:var(--text3);margin-top:1">${lot.site} | ${lot.destination||'—'}</div>
           </div>
         </div>
         <div style="display:flex;gap:12;font-size:0.72rem;color:var(--text3)">

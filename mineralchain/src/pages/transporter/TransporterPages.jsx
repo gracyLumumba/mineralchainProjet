@@ -34,7 +34,7 @@ function LotTransportCard({ lot, tokens, updateLot, addToast }) {
       destination,
       transferred_at: new Date().toISOString(),
     });
-    addToast(`${lot.lot_id} → ${destination}`, 'success');
+    addToast(`${lot.lot_id} vers ${destination}`, 'success');
     setConfirming(false);
   };
 
@@ -68,7 +68,7 @@ function LotTransportCard({ lot, tokens, updateLot, addToast }) {
             <span>{t('label.site')}: <strong>{lot.site}</strong></span>
             <span>{t('label.weight')}: <strong>{lot.weight_tonnes?`${lot.weight_tonnes} t`:'—'}</strong></span>
             {lot.token_id != null && <span>NFT: <strong style={{ color:'var(--gold)' }}>#{lot.token_id}</strong></span>}
-            {lot.destination && <span>→ <strong>{lot.destination}</strong></span>}
+            {lot.destination && <span>{t('label.destination')}: <strong>{lot.destination}</strong></span>}
             {lot.transport_status==='delivered' && <span style={{ color:'var(--emerald)' }}>Livré le {fmt.date(lot.delivered_at)}</span>}
           </div>
           {/* Validation régulateur */}
@@ -80,7 +80,7 @@ function LotTransportCard({ lot, tokens, updateLot, addToast }) {
         </div>
 
         <div style={{ display:'flex', gap:10, alignItems:'center', flexShrink:0, flexWrap:'wrap' }}>
-          {lot.token_id != null && <button className="btn btn-ghost btn-sm" onClick={()=>setShowCert(true)}>◎ Certificat</button>}
+          {lot.token_id != null && <button className="btn btn-ghost btn-sm" onClick={()=>setShowCert(true)}><Ic name="certificate" size={14}/> Certificat</button>}
 
           {!isTransportReady(lot) && !lot.transport_status && (
             <div style={{ padding:'8px 12px', background:'var(--crimson-dim)', border:'1px solid rgba(239,68,68,0.2)', borderRadius:'var(--r-md)', fontSize:'0.75rem', color:'var(--crimson)' }}>
@@ -276,7 +276,7 @@ export function QRScannerPage() {
             })}
             {scanAnim && <div style={{ position:'absolute', left:0, right:0, height:2, background:'linear-gradient(90deg,transparent,var(--brand),transparent)', animation:'scanLine 1s linear infinite', boxShadow:'0 0 10px var(--brand)' }}/>}
             <div style={{ position:'absolute', inset:0, display:'flex', flexDirection:'column', alignItems:'center', justifyContent:'center', gap:8 }}>
-              <span style={{ fontSize:48, opacity:scanAnim?0.3:0.5 }}>⬡</span>
+              <Ic name="qr" size={48} color="var(--text-muted)"/>
               <div style={{ fontSize:'0.75rem', color:'var(--text-muted)' }}>{scanAnim?t('scanner.scanning'):t('scanner.click')}</div>
             </div>
           </div>
@@ -320,7 +320,7 @@ export function QRScannerPage() {
                 <>
                   <div style={{ fontSize:'0.82rem', color:'var(--text-secondary)', marginBottom:12 }}>
                     {result.lot.site} · {fmt.date(result.lot.analyzed_at)}
-                    {result.lot.destination && ` → ${result.lot.destination}`}
+                    {result.lot.destination && ` | ${result.lot.destination}`}
                   </div>
                   <div style={{ fontSize:'0.72rem', color:'var(--emerald)', marginBottom:12 }}>
                     <Ic name="scale" size={12}/> Validé DGMR: {fmt.date(result.lot.regulator_validated_at)}
@@ -396,9 +396,9 @@ export function TransportHistoryPage() {
 
             const events = [
               { icon:'mine', label:'Extraction', date:fmt.date(lot.extraction_date), done:true },
-              { icon:'◈', label:'Analyse IA & Certification', date:fmt.date(lot.analyzed_at), done:true, detail: lot.token_id?`NFT #${lot.token_id}`:null },
+              { icon:'activity', label:'Analyse IA & Certification', date:fmt.date(lot.analyzed_at), done:true, detail: lot.token_id?`NFT #${lot.token_id}`:null },
               { icon:'scale', label:t('timeline.validation_dgmr'), date:fmt.date(lot.regulator_validated_at), done:!!lot.regulator_validated, detail:lot.regulator_validated?'Approuvé':null },
-              { icon:'package', label:'Prise en charge transporteur', date:fmt.date(lot.transferred_at), done:!!lot.transferred_at, detail:lot.destination?`→ ${lot.destination}`:null },
+              { icon:'package', label:'Prise en charge transporteur', date:fmt.date(lot.transferred_at), done:!!lot.transferred_at, detail:lot.destination?`${t('label.destination')}: ${lot.destination}`:null },
               { icon:'truck', label:t('stat.in_transit'), date:fmt.date(lot.transferred_at), done:lot.transport_status==='en_route'||lot.transport_status==='delivered', detail:lot.destination },
               { icon:'factory', label:'Livraison usine', date:fmt.date(lot.delivered_at), done:isDel, detail:isDel?`ok Livré à ${lot.destination}`:null },
             ];
@@ -425,10 +425,10 @@ export function TransportHistoryPage() {
                   <div style={{ display:'flex', gap:12, alignItems:'center' }}>
                     {lot.token_id != null && (
                       <button className="btn btn-ghost btn-sm" onClick={e=>{e.stopPropagation();setShowCert({lot,token});}}>
-                        ◎ Certificat
+                        <Ic name="certificate" size={14}/> Certificat
                       </button>
                     )}
-                    <span style={{ fontSize:14, color:'var(--text-muted)', transition:'transform 0.2s', transform:isExp?'rotate(180deg)':'rotate(0)' }}>▾</span>
+                    <span style={{ fontSize:14, color:'var(--text-muted)', transition:'transform 0.2s', transform:isExp?'rotate(180deg)':'rotate(0)' }}><Ic name="chevron_down" size={14}/></span>
                   </div>
                 </div>
 
@@ -497,7 +497,7 @@ export function TransportHistoryPage() {
                               </span>
                               <span style={{ flex:1, color: e.event==='DELIVERED'?'var(--emerald)':e.event==='MARKED_SUSPECT'?'var(--crimson)':e.event==='REGULATOR_VALIDATED'?'var(--emerald)':'var(--text-secondary)', fontWeight:500 }}>
                                 {({'LOT_CREATED':t('audit.event.LOT_CREATED'),'NFT_MINTED':t('audit.event.NFT_MINTED'),'REGULATOR_VALIDATED':t('audit.event.REGULATOR_VALIDATED'),'TRANSPORT_STARTED':t('audit.event.TRANSPORT_STARTED'),'DELIVERED':t('audit.event.DELIVERED'),'MARKED_SUSPECT':t('audit.event.MARKED_SUSPECT'),'IPFS_PINNED':t('audit.event.IPFS_PINNED')}[e.event] || e.event.replace(/_/g,' '))}
-                                {e.destination && ` → ${e.destination}`}
+                                {e.destination && ` | ${e.destination}`}
                                 {e.forced && <span style={{ color:'var(--amber)', marginLeft:4 }}>(Forcé)</span>}
                               </span>
                             </div>

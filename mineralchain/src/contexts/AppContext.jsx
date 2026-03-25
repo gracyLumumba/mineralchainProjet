@@ -226,9 +226,9 @@ export const STATUS_CONFIG = {
 };
 
 export const MINERAL_CONFIG = {
-  copper: { icon: '⬡', cls: 'badge-copper', color: '#b87333' },
-  cobalt: { icon: '◈', cls: 'badge-cobalt', color: '#3a7bd5' },
-  mixed:  { icon: '◎', cls: 'badge-mixed',  color: '#8b5cf6' },
+  copper: { icon: 'gem', cls: 'badge-copper', color: '#b87333' },
+  cobalt: { icon: 'activity', cls: 'badge-cobalt', color: '#3a7bd5' },
+  mixed:  { icon: 'gem', cls: 'badge-mixed',  color: '#8b5cf6' },
 };
 
 //  Formatters 

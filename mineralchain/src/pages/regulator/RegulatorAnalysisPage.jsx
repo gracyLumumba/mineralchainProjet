@@ -395,7 +395,7 @@ export default function RegulatorAnalysisPage() {
       <PageHeader
         title={t('analysis.title')}
         subtitle={t('analysis.subtitle')}
-        actions={step > 1 && <button className="btn btn-ghost btn-sm" onClick={reset}>↺ Recommencer</button>}
+        actions={step > 1 && <button className="btn btn-ghost btn-sm" onClick={reset}><Ic name="history" size={14}/> Recommencer</button>}
       />
 
       {/* Barre de progression */}
@@ -568,11 +568,11 @@ export default function RegulatorAnalysisPage() {
                   </span>
                 </div>
                 <button className="btn btn-gold btn-sm" onClick={()=>setStep(3)}>
-                  Voir la comparaison →
+                  Voir la comparaison <Ic name="arrow_right" size={14}/>
                 </button>
               </div>
             )}
-            <button className="btn btn-ghost btn-sm" onClick={()=>{setStep(1);setFoundLot(null);setParsedRows([]);}} style={{ marginTop:12 }}>← Retour</button>
+            <button className="btn btn-ghost btn-sm" onClick={()=>{setStep(1);setFoundLot(null);setParsedRows([]);}} style={{ marginTop:12 }}><Ic name="arrow_left" size={14}/> Retour</button>
           </div>
         </div>
       )}
@@ -664,7 +664,7 @@ export default function RegulatorAnalysisPage() {
           </div>
 
           <div style={{ display:'flex', gap:10, marginTop:14, alignItems:'center' }}>
-            <button className="btn btn-ghost btn-sm" onClick={()=>setStep(2)}>← Changer le fichier</button>
+            <button className="btn btn-ghost btn-sm" onClick={()=>setStep(2)}><Ic name="arrow_left" size={14}/> Changer le fichier</button>
             <span style={{ flex:1 }}/>
             <span style={{ fontSize:'0.75rem', color:'var(--text-muted)', fontStyle:'italic' }}>Normes CEEC/DGMR</span>
           </div>
