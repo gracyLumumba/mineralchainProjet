@@ -213,4 +213,3 @@ const langs = [
   { code: 'sw', flag: '🇹🇿', label: 'SW' }, // Swahili
 ];
 ```
-GRACY
