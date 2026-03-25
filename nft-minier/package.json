@@ -1,0 +1,24 @@
+{
+  "name": "nft-minier",
+  "version": "2.0.0",
+  "description": "MineralNFT — Smart contract ERC-721 pour la certification minière (Katanga, DRC)",
+  "main": "index.js",
+  "scripts": {
+    "compile":  "truffle compile",
+    "migrate":  "truffle migrate --reset --network development",
+    "test":     "truffle test --network development",
+    "console":  "truffle console --network development",
+    "deploy":   "npm run compile && npm run migrate",
+    "test-tx":  "python test_transaction.py"
+  },
+  "keywords": ["blockchain", "nft", "erc721", "mining", "katanga", "drc"],
+  "author": "MineralChain",
+  "license": "MIT",
+  "dependencies": {
+    "@openzeppelin/contracts": "^4.8.0"
+  },
+  "devDependencies": {
+    "truffle": "^5.11.5",
+    "@truffle/hdwallet-provider": "^2.1.15"
+  }
+}

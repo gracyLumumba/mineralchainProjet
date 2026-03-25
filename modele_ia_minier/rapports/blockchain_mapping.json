@@ -1,0 +1,17 @@
+{
+  "mineral_type_mapping": {
+    "copper": 0,
+    "cobalt": 1,
+    "mixed": 2
+  },
+  "impurity_mapping": {
+    "low": 0,
+    "medium": 1,
+    "high": 2
+  },
+  "status_mapping": {
+    "AUTHENTIQUE": 0,
+    "SUSPECT": 1,
+    "FRAUDULEUX": 2
+  }
+}
