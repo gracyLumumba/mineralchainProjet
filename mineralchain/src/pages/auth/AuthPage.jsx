@@ -104,7 +104,7 @@ function Field({ label, type = 'text', value, onChange, placeholder, required, e
 // ── RoleSelector ──────────────────────────────────────────────────────────────
 function RoleSelector({ value, onChange, t }) {
   const roles = [
-    { id: 'producer',    icon: 'mine',  label: t('nav.role.producer'),    desc: 'KAMOA · KANSOKO · KCC', color: '#c9a84c' },
+    { id: 'producer',    icon: 'mine',  label: t('nav.role.producer'),    desc: 'KAMOA / KANSOKO', color: '#c9a84c' },
     { id: 'regulator',   icon: 'scale', label: t('nav.role.regulator'),   desc: 'DGMR · CEEC',           color: '#3a7bd5' },
     { id: 'transporter', icon: 'truck', label: t('nav.role.transporter'),  desc: 'Transit & Logistique',  color: '#10b981' },
   ];
@@ -385,9 +385,8 @@ function RegisterForm({ onSwitch }) {
               borderRadius:'var(--r-md)', color:'var(--text-primary)',
               fontSize:'0.88rem', fontFamily:'var(--font-body)', outline:'none',
             }}>
-              <option value="KAMOA">KAMOA-KANSOKO</option>
-              <option value="KANSOKO">KANSOKO Mine</option>
-              <option value="KCC">KCC — Kamoto</option>
+              <option value="KAMOA">KAMOA</option>
+              <option value="KANSOKO">KAMOA-KANSOKO</option>
             </select>
           </div>
         )}

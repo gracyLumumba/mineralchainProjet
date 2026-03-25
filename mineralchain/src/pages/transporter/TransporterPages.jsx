@@ -9,7 +9,7 @@ import { Ic } from '../../components/common/Icons';
 
 // Site badge component
 function SiteBadge({ site }) {
-  const cls = site === 'KAMOA' ? 'site-kamoa' : site === 'KCC' ? 'site-kcc' : 'site-kansoko';
+  const cls = site === 'KAMOA' ? 'site-kamoa' : 'site-kansoko';
   return <span className={`site-badge ${cls}`}>{site}</span>;
 }
 

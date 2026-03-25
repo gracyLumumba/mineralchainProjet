@@ -27,7 +27,7 @@ const STEPS = [
     descFr: "Le producteur extrait le minerai, effectue ses analyses en laboratoire interne, puis soumet les données physico-chimiques du lot sur MineralChain.",
     descEn: "The producer mines the ore, performs internal laboratory analysis, then submits the physicochemical data of the lot on MineralChain.",
     details: [
-      { actor:'Producteur', action:'Extrait le minerai sur site KAMOA ou KCC',                           icon:'mine' },
+      { actor:'Producteur', action:'Extrait le minerai sur site KAMOA ou KAMOA-KANSOKO',                icon:'mine' },
       { actor:'Producteur', action:'Analyse interne : Cu, Co, Fe, densité, humidité, poids…',           icon:'lab' },
       { actor:'Producteur', action:'Soumet le lot (10 variables) sur MineralChain via le formulaire',   icon:'pen' },
       { actor:'IA',         action:'Analyse automatique : type, impureté, détection fraude (3 modèles)',icon:'robot' },

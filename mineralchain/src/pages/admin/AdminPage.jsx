@@ -405,7 +405,7 @@ function TransactionsTab() {
   const [search, setSearch] = useState('');
   const [siteFilter, setSiteFilter] = useState('all');
 
-  const siteColors = { KAMOA: '#b87333', KANSOKO: '#1a5fa0', KCC: TEAL };
+  const siteColors = { KAMOA: '#b87333', KANSOKO: '#1a5fa0' };
 
   const filters = [
     { id: 'all', label: t('admin.lots.all'), count: lots.length },
@@ -467,7 +467,7 @@ function TransactionsTab() {
         </div>
 
         <div style={{ display: 'flex', gap: 4 }}>
-          {['all', 'KAMOA', 'KANSOKO', 'KCC'].map((site) => (
+          {['all', 'KAMOA', 'KANSOKO'].map((site) => (
             <button
               key={site}
               onClick={() => setSiteFilter(site)}

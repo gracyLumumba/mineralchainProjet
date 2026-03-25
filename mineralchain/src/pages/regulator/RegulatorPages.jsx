@@ -26,7 +26,7 @@ export function RegulatorDashboard() {
 
   const barData = [
     { site: 'KAMOA', [t('regulator.bar.authentic')]: lots.filter(l => l.site==='KAMOA' && l.status==='AUTHENTIQUE').length, [t('regulator.bar.suspects')]: lots.filter(l => l.site==='KAMOA' && l.status==='SUSPECT').length },
-    { site: 'KCC',   [t('regulator.bar.authentic')]: lots.filter(l => l.site==='KCC'   && l.status==='AUTHENTIQUE').length, [t('regulator.bar.suspects')]: lots.filter(l => l.site==='KCC'   && l.status==='SUSPECT').length },
+    { site: 'KANSOKO', [t('regulator.bar.authentic')]: lots.filter(l => l.site==='KANSOKO' && l.status==='AUTHENTIQUE').length, [t('regulator.bar.suspects')]: lots.filter(l => l.site==='KANSOKO' && l.status==='SUSPECT').length },
   ];
 
   return (
@@ -215,7 +215,7 @@ export function RegulatorLotsPage() {
       <div style={{ display:'flex', gap:10, marginBottom:20, flexWrap:'wrap', alignItems:'center' }}>
         <input className="form-input" placeholder={t('mylots.filter.search')} value={search}
           onChange={e=>{ setSearch(e.target.value); setPage(1); }} style={{ width:200 }}/>
-        <SI value={fSite}   onChange={setFSite}   placeholder={t('reglots.filter.all_sites')} options={[{v:'KAMOA',l:'KAMOA'},{v:'KCC',l:'KCC'}]}/>
+        <SI value={fSite}   onChange={setFSite}   placeholder={t('reglots.filter.all_sites')} options={[{v:'KAMOA',l:'KAMOA'},{v:'KANSOKO',l:'KAMOA-KANSOKO'}]}/>
         <SI value={fStatus} onChange={setFStatus} placeholder={t('mylots.filter.all_status')} options={[
           {v:'AUTHENTIQUE',l:`ok ${t('status.AUTHENTIQUE')}`},{v:'SUSPECT',l:`! ${t('status.SUSPECT')}`},{v:'À VÉRIFIER',l:`? ${t('status.À VÉRIFIER')}`}
         ]}/>

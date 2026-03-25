@@ -236,8 +236,8 @@ export default function NewLotPage() {
             <div className="form-group">
               <label className="form-label">{t('label.site')} <span style={{ color: 'var(--crimson)' }}>*</span></label>
               <select className="form-input" {...register('site', { required: true })}>
-                <option value="KANSOKO">KAMOA-kansoko </option>
-                <option value="KCC">KCC - Kamoto Copper</option>
+                <option value="KAMOA">KAMOA</option>
+                <option value="KANSOKO">KAMOA-KANSOKO</option>
               </select>
             </div>
             <Field labelKey="label.extraction_date" name="extraction_date" type="date" required/>
