@@ -1,9 +1,11 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
+import { ActivityIndicator, StyleSheet, Text, View } from 'react-native';
 import { NavigationContainer } from '@react-navigation/native';
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
 import { StatusBar } from 'expo-status-bar';
 import { useDashboardViewModel } from '../viewmodels/useDashboardViewModel';
 import { ROUTES } from '../navigation/routes';
+import { clearSession, loadSession, saveSession } from '../services/storage/sessionStorage';
 import LoginScreen from './screens/LoginScreen';
 import DashboardScreen from './screens/DashboardScreen';
 import LotsListScreen from './screens/LotsListScreen';
@@ -12,9 +14,61 @@ import CertificationScreen from './screens/CertificationScreen';
 
 const Stack = createNativeStackNavigator();
 
+function BootScreen() {
+  return (
+    <View style={styles.bootScreen}>
+      <ActivityIndicator size="large" color="#1d6b57" />
+      <Text style={styles.bootText}>Ouverture...</Text>
+    </View>
+  );
+}
+
 export default function AppView() {
   const [session, setSession] = useState(null);
+  const [isBooting, setIsBooting] = useState(true);
   const dashboard = useDashboardViewModel();
+
+  useEffect(() => {
+    let active = true;
+
+    const restore = async () => {
+      try {
+        const storedSession = await loadSession();
+        if (active && storedSession) {
+          setSession(storedSession);
+        }
+      } finally {
+        if (active) {
+          setIsBooting(false);
+        }
+      }
+    };
+
+    restore();
+
+    return () => {
+      active = false;
+    };
+  }, []);
+
+  const handleLogin = async (nextSession) => {
+    setSession(nextSession);
+    await saveSession(nextSession);
+  };
+
+  const handleLogout = async () => {
+    setSession(null);
+    await clearSession();
+  };
+
+  if (isBooting) {
+    return (
+      <>
+        <StatusBar style="dark" />
+        <BootScreen />
+      </>
+    );
+  }
 
   return (
     <NavigationContainer>
@@ -34,7 +88,7 @@ export default function AppView() {
       >
         {!session ? (
           <Stack.Screen name={ROUTES.LOGIN} options={{ headerShown: false }}>
-            {() => <LoginScreen onLogin={setSession} />}
+            {() => <LoginScreen onLogin={handleLogin} />}
           </Stack.Screen>
         ) : (
           <>
@@ -48,6 +102,7 @@ export default function AppView() {
                   isRefreshing={dashboard.isRefreshing}
                   error={dashboard.error}
                   refresh={dashboard.refresh}
+                  onLogout={handleLogout}
                   onOpenLots={() => navigation.navigate(ROUTES.LOTS)}
                   onOpenCertification={() => navigation.navigate(ROUTES.CERTIFY)}
                 />
@@ -77,3 +132,17 @@ export default function AppView() {
     </NavigationContainer>
   );
 }
+
+const styles = StyleSheet.create({
+  bootScreen: {
+    alignItems: 'center',
+    backgroundColor: '#f3efe5',
+    flex: 1,
+    gap: 12,
+    justifyContent: 'center',
+  },
+  bootText: {
+    color: '#516160',
+    fontSize: 14,
+  },
+});

@@ -11,12 +11,13 @@ export default function DashboardScreen({
   isRefreshing,
   error,
   refresh,
+  onLogout,
   onOpenLots,
   onOpenCertification,
 }) {
   return (
     <ScreenShell>
-      <TopBar onRefresh={refresh} isRefreshing={isRefreshing} />
+      <TopBar onRefresh={refresh} onLogout={onLogout} isRefreshing={isRefreshing} />
 
       <View style={styles.userCard}>
         <Text style={styles.userTitle}>{session.name}</Text>
