@@ -20,10 +20,10 @@ export default function OverviewScreen({ health, lots, isLoading }) {
   return (
     <View style={styles.container}>
       <View style={styles.hero}>
-        <Text style={styles.heroLabel}>Systeme</Text>
+        <Text style={styles.heroLabel}>Centre de supervision</Text>
         <Text style={styles.heroTitle}>{health.status.toUpperCase()}</Text>
         <Text style={styles.heroText}>
-          PostgreSQL {health.databaseConnected ? 'connectee' : 'indisponible'} - {health.databaseUrl}
+          PostgreSQL {health.databaseConnected ? 'connectee' : 'indisponible'} · {health.databaseUrl}
         </Text>
       </View>
 
@@ -39,7 +39,8 @@ export default function OverviewScreen({ health, lots, isLoading }) {
       </View>
 
       <View style={styles.panel}>
-        <Text style={styles.panelTitle}>Indicateurs</Text>
+        <Text style={styles.panelEyebrow}>Resume</Text>
+        <Text style={styles.panelTitle}>Indicateurs actifs</Text>
         <Text style={styles.panelText}>
           {health.features.length ? health.features.join(', ') : 'Aucune donnee disponible'}
         </Text>
@@ -50,27 +51,34 @@ export default function OverviewScreen({ health, lots, isLoading }) {
 
 const styles = StyleSheet.create({
   container: {
-    gap: 16,
+    gap: 18,
   },
   hero: {
-    backgroundColor: '#17312d',
-    borderRadius: 24,
+    backgroundColor: '#183632',
+    borderRadius: 30,
     gap: 8,
-    padding: 20,
+    padding: 22,
+    shadowColor: '#183632',
+    shadowOffset: { width: 0, height: 14 },
+    shadowOpacity: 0.18,
+    shadowRadius: 22,
+    elevation: 5,
   },
   heroLabel: {
-    color: '#a5d0bc',
-    fontSize: 12,
-    fontWeight: '700',
+    color: '#ccb58c',
+    fontSize: 11,
+    fontWeight: '800',
+    letterSpacing: 1.3,
     textTransform: 'uppercase',
   },
   heroTitle: {
     color: '#ffffff',
-    fontSize: 26,
-    fontWeight: '800',
+    fontSize: 29,
+    fontWeight: '900',
+    letterSpacing: -0.5,
   },
   heroText: {
-    color: '#d9ede6',
+    color: '#d8ebe4',
     fontSize: 14,
     lineHeight: 20,
   },
@@ -80,25 +88,34 @@ const styles = StyleSheet.create({
     gap: 12,
   },
   panel: {
-    backgroundColor: '#fffaf2',
-    borderRadius: 24,
+    backgroundColor: '#fcf8ef',
+    borderColor: '#dfcfb6',
+    borderRadius: 28,
+    borderWidth: 1,
     gap: 10,
-    padding: 18,
+    padding: 20,
+  },
+  panelEyebrow: {
+    color: '#8e6a3f',
+    fontSize: 11,
+    fontWeight: '800',
+    letterSpacing: 1.3,
+    textTransform: 'uppercase',
   },
   panelTitle: {
     color: '#1d2c2b',
-    fontSize: 17,
-    fontWeight: '800',
+    fontSize: 20,
+    fontWeight: '900',
   },
   panelText: {
     color: '#516160',
     fontSize: 14,
-    lineHeight: 20,
+    lineHeight: 21,
   },
   placeholder: {
     alignItems: 'center',
     gap: 12,
-    paddingVertical: 40,
+    paddingVertical: 48,
   },
   placeholderText: {
     color: '#516160',

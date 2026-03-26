@@ -3,7 +3,9 @@ import { SafeAreaView, ScrollView, StyleSheet, View } from 'react-native';
 export default function ScreenShell({ children }) {
   return (
     <SafeAreaView style={styles.safeArea}>
-      <ScrollView contentContainerStyle={styles.content}>
+      <View style={styles.bgOrbOne} />
+      <View style={styles.bgOrbTwo} />
+      <ScrollView contentContainerStyle={styles.content} showsVerticalScrollIndicator={false}>
         <View style={styles.inner}>{children}</View>
       </ScrollView>
     </SafeAreaView>
@@ -13,7 +15,27 @@ export default function ScreenShell({ children }) {
 const styles = StyleSheet.create({
   safeArea: {
     flex: 1,
-    backgroundColor: '#f3efe5',
+    backgroundColor: '#efe6d5',
+  },
+  bgOrbOne: {
+    position: 'absolute',
+    top: -70,
+    right: -30,
+    width: 220,
+    height: 220,
+    borderRadius: 999,
+    backgroundColor: '#d7b487',
+    opacity: 0.22,
+  },
+  bgOrbTwo: {
+    position: 'absolute',
+    bottom: 110,
+    left: -80,
+    width: 240,
+    height: 240,
+    borderRadius: 999,
+    backgroundColor: '#9fc3b3',
+    opacity: 0.18,
   },
   content: {
     flexGrow: 1,
@@ -21,7 +43,8 @@ const styles = StyleSheet.create({
   inner: {
     flex: 1,
     paddingHorizontal: 20,
-    paddingVertical: 16,
-    gap: 16,
+    paddingTop: 18,
+    paddingBottom: 28,
+    gap: 18,
   },
 });
