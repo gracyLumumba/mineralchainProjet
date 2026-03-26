@@ -46,6 +46,7 @@ venv/
 __pycache__/
 *.py[cod]
 backend-minier/lots_data.json
+backend-minier/users_data.json
 
 # Snowpack dependency directory (https://snowpack.dev/)
 web_modules/

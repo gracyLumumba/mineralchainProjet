@@ -1,21 +1,32 @@
 import { Pressable, StyleSheet, Text, View } from 'react-native';
+import { usePreferences } from '../../contexts/PreferencesContext';
 
 export default function TopBar({ onRefresh, onLogout, isRefreshing }) {
+  const { colors, language, theme, toggleLanguage, toggleTheme, t } = usePreferences();
+
   return (
     <View style={styles.row}>
       <View style={styles.brandBlock}>
-        <Text style={styles.kicker}>MineralChain</Text>
-        <Text style={styles.title}>Kamoa-Kansoko</Text>
+        <Text style={[styles.kicker, { color: colors.accent }]}>MineralChain</Text>
+        <Text style={[styles.title, { color: colors.text }]}>Kamoa-Kansoko</Text>
       </View>
       <View style={styles.actions}>
-        <Pressable onPress={onRefresh} style={styles.primaryButton}>
+        <View style={styles.switches}>
+          <Pressable onPress={toggleLanguage} style={[styles.pill, { backgroundColor: colors.card, borderColor: colors.border }]}>
+            <Text style={[styles.pillText, { color: colors.text }]}>{language.toUpperCase()}</Text>
+          </Pressable>
+          <Pressable onPress={toggleTheme} style={[styles.pill, { backgroundColor: colors.card, borderColor: colors.border }]}>
+            <Text style={[styles.pillText, { color: colors.text }]}>{theme === 'light' ? t('light') : t('dark')}</Text>
+          </Pressable>
+        </View>
+        <Pressable onPress={onRefresh} style={[styles.primaryButton, { backgroundColor: colors.brand }]}>
           <Text style={styles.primaryText}>
-            {isRefreshing ? 'Mise a jour...' : 'Actualiser'}
+            {isRefreshing ? t('refreshing') : t('refresh')}
           </Text>
         </Pressable>
         {onLogout ? (
-          <Pressable onPress={onLogout} style={styles.secondaryButton}>
-            <Text style={styles.secondaryText}>Quitter</Text>
+          <Pressable onPress={onLogout} style={[styles.secondaryButton, { backgroundColor: colors.card, borderColor: colors.border }]}>
+            <Text style={[styles.secondaryText, { color: colors.text }]}>{t('logout')}</Text>
           </Pressable>
         ) : null}
       </View>
@@ -37,29 +48,36 @@ const styles = StyleSheet.create({
     alignItems: 'flex-end',
     gap: 8,
   },
+  switches: {
+    flexDirection: 'row',
+    gap: 8,
+  },
   kicker: {
-    color: '#8e6a3f',
     fontSize: 11,
     fontWeight: '800',
     letterSpacing: 1.6,
     textTransform: 'uppercase',
   },
   title: {
-    color: '#1b2f2d',
     fontSize: 30,
     fontWeight: '900',
     letterSpacing: -0.6,
   },
+  pill: {
+    borderRadius: 999,
+    borderWidth: 1,
+    paddingHorizontal: 12,
+    paddingVertical: 8,
+  },
+  pillText: {
+    fontSize: 11,
+    fontWeight: '800',
+    textTransform: 'uppercase',
+  },
   primaryButton: {
-    backgroundColor: '#1c5f53',
     borderRadius: 999,
     paddingHorizontal: 16,
     paddingVertical: 10,
-    shadowColor: '#1c5f53',
-    shadowOffset: { width: 0, height: 10 },
-    shadowOpacity: 0.18,
-    shadowRadius: 18,
-    elevation: 4,
   },
   primaryText: {
     color: '#ffffff',
@@ -67,15 +85,12 @@ const styles = StyleSheet.create({
     fontWeight: '800',
   },
   secondaryButton: {
-    backgroundColor: '#f8f0e2',
-    borderColor: '#d8c5a8',
     borderRadius: 999,
     borderWidth: 1,
     paddingHorizontal: 16,
     paddingVertical: 10,
   },
   secondaryText: {
-    color: '#6d5435',
     fontSize: 13,
     fontWeight: '800',
   },

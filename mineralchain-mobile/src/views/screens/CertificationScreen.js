@@ -1,114 +1,125 @@
 import { Linking, Pressable, StyleSheet, Text, View } from 'react-native';
 import ScreenShell from '../components/ScreenShell';
 import FormField from '../components/FormField';
+import AnimatedEntrance from '../components/AnimatedEntrance';
+import { usePreferences } from '../../contexts/PreferencesContext';
 import { useCertificationViewModel } from '../../viewmodels/useCertificationViewModel';
 
 export default function CertificationScreen({ session }) {
+  const { t } = usePreferences();
   const { form, result, error, isSubmitting, updateField, submit } =
     useCertificationViewModel(session);
 
   return (
     <ScreenShell>
-      <View style={styles.header}>
-        <Text style={styles.eyebrow}>Emission</Text>
-        <Text style={styles.title}>Certification</Text>
-        <Text style={styles.subtitle}>Creation et emission du certificat mineral.</Text>
-      </View>
+      <AnimatedEntrance delay={0}>
+        <View style={styles.header}>
+          <Text style={styles.eyebrow}>{t('issuance')}</Text>
+          <Text style={styles.title}>{t('certification')}</Text>
+          <Text style={styles.subtitle}>{t('cert_subtitle')}</Text>
+        </View>
+      </AnimatedEntrance>
 
-      <View style={styles.card}>
-        <View style={styles.ribbon} />
-        <FormField
-          label="Lot ID"
-          value={form.lot_id}
-          onChangeText={(value) => updateField('lot_id', value)}
-          placeholder="MOB-XXXXXX"
-        />
-        <FormField
-          label="Producteur"
-          value={form.producer}
-          onChangeText={(value) => updateField('producer', value)}
-          placeholder="Nom operateur"
-        />
-        <FormField
-          label="Site"
-          value={form.site}
-          onChangeText={(value) => updateField('site', value)}
-          placeholder="Kamoa-Kansoko"
-        />
-        <FormField
-          label="Poids (t)"
-          value={form.weight_tonnes}
-          onChangeText={(value) => updateField('weight_tonnes', value)}
-          keyboardType="decimal-pad"
-        />
-        <FormField
-          label="Cu %"
-          value={form.cu_grade_percent}
-          onChangeText={(value) => updateField('cu_grade_percent', value)}
-          keyboardType="decimal-pad"
-        />
-        <FormField
-          label="Co %"
-          value={form.co_grade_percent}
-          onChangeText={(value) => updateField('co_grade_percent', value)}
-          keyboardType="decimal-pad"
-        />
-        <FormField
-          label="Fe %"
-          value={form.fe_percent}
-          onChangeText={(value) => updateField('fe_percent', value)}
-          keyboardType="decimal-pad"
-        />
-        <FormField
-          label="S %"
-          value={form.s_percent}
-          onChangeText={(value) => updateField('s_percent', value)}
-          keyboardType="decimal-pad"
-        />
-        <FormField
-          label="Densite"
-          value={form.density_t_m3}
-          onChangeText={(value) => updateField('density_t_m3', value)}
-          keyboardType="decimal-pad"
-        />
-        <FormField
-          label="Date extraction"
-          value={form.extraction_date}
-          onChangeText={(value) => updateField('extraction_date', value)}
-          placeholder="YYYY-MM-DD"
-        />
+      <AnimatedEntrance delay={80}>
+        <View style={styles.card}>
+          <View style={styles.ribbon} />
+          <FormField
+            label="Lot ID"
+            value={form.lot_id}
+            onChangeText={(value) => updateField('lot_id', value)}
+            placeholder="MOB-XXXXXX"
+          />
+          <FormField
+            label="Producteur"
+            value={form.producer}
+            onChangeText={(value) => updateField('producer', value)}
+            placeholder="Nom operateur"
+          />
+          <FormField
+            label="Site"
+            value={form.site}
+            onChangeText={(value) => updateField('site', value)}
+            placeholder="Kamoa-Kansoko"
+          />
+          <FormField
+            label="Poids (t)"
+            value={form.weight_tonnes}
+            onChangeText={(value) => updateField('weight_tonnes', value)}
+            keyboardType="decimal-pad"
+          />
+          <FormField
+            label="Cu %"
+            value={form.cu_grade_percent}
+            onChangeText={(value) => updateField('cu_grade_percent', value)}
+            keyboardType="decimal-pad"
+          />
+          <FormField
+            label="Co %"
+            value={form.co_grade_percent}
+            onChangeText={(value) => updateField('co_grade_percent', value)}
+            keyboardType="decimal-pad"
+          />
+          <FormField
+            label="Fe %"
+            value={form.fe_percent}
+            onChangeText={(value) => updateField('fe_percent', value)}
+            keyboardType="decimal-pad"
+          />
+          <FormField
+            label="S %"
+            value={form.s_percent}
+            onChangeText={(value) => updateField('s_percent', value)}
+            keyboardType="decimal-pad"
+          />
+          <FormField
+            label="Densite"
+            value={form.density_t_m3}
+            onChangeText={(value) => updateField('density_t_m3', value)}
+            keyboardType="decimal-pad"
+          />
+          <FormField
+            label="Date extraction"
+            value={form.extraction_date}
+            onChangeText={(value) => updateField('extraction_date', value)}
+            placeholder="YYYY-MM-DD"
+          />
 
-        <Pressable onPress={submit} style={styles.button}>
-          <Text style={styles.buttonText}>
-            {isSubmitting ? 'Traitement...' : 'Lancer la certification'}
-          </Text>
-        </Pressable>
-      </View>
+          <Pressable onPress={submit} style={styles.button}>
+            <Text style={styles.buttonText}>
+              {isSubmitting ? t('processing') : t('launch_certification')}
+            </Text>
+          </Pressable>
+        </View>
+      </AnimatedEntrance>
 
       {error ? (
-        <View style={styles.errorBox}>
-          <Text style={styles.errorTitle}>Erreur</Text>
-          <Text style={styles.errorText}>{error}</Text>
-        </View>
+        <AnimatedEntrance delay={130}>
+          <View style={styles.errorBox}>
+            <Text style={styles.errorTitle}>{t('error')}</Text>
+            <Text style={styles.errorText}>{error}</Text>
+          </View>
+        </AnimatedEntrance>
       ) : null}
 
       {result ? (
-        <View style={styles.resultCard}>
-          <Text style={styles.resultEyebrow}>Certificat emis</Text>
-          <Text style={styles.resultTitle}>{result.lotId}</Text>
-          <Text style={styles.resultLine}>Statut: {result.status}</Text>
-          <Text style={styles.resultLine}>Type: {result.mineralType}</Text>
-          <Text style={styles.resultLine}>Token: {result.tokenId ?? 'non cree'}</Text>
-          <Text style={styles.resultLine}>Bloc: {result.blockNumber ?? 'non disponible'}</Text>
-          <Text style={styles.resultLine}>Mode: {result.simulated ? 'simule' : 'reel'}</Text>
-          <Text style={styles.resultLine}>IPFS: {result.ipfsHash ?? 'absent'}</Text>
+        <AnimatedEntrance delay={170}>
+          <View style={styles.resultCard}>
+            <Text style={styles.resultEyebrow}>{t('certificate_issued')}</Text>
+            <Text style={styles.resultTitle}>{result.lotId}</Text>
+            <Text style={styles.resultLine}>Statut: {result.status}</Text>
+            <Text style={styles.resultLine}>Type: {result.mineralType}</Text>
+            <Text style={styles.resultLine}>Token: {result.tokenId ?? 'non cree'}</Text>
+            <Text style={styles.resultLine}>Bloc: {result.blockNumber ?? 'non disponible'}</Text>
+            <Text style={styles.resultLine}>Mode: {result.simulated ? 'simule' : 'reel'}</Text>
+            <Text style={styles.resultLine}>IPFS: {result.ipfsHash ?? 'absent'}</Text>
 
-          {result.gatewayUrl ? (
-            <Pressable onPress={() => Linking.openURL(result.gatewayUrl)} style={styles.linkButton}>
-              <Text style={styles.linkText}>Ouvrir le certificat</Text>
-            </Pressable>
-          ) : null}
-        </View>
+            {result.gatewayUrl ? (
+              <Pressable onPress={() => Linking.openURL(result.gatewayUrl)} style={styles.linkButton}>
+                <Text style={styles.linkText}>{t('open_certificate')}</Text>
+              </Pressable>
+            ) : null}
+          </View>
+        </AnimatedEntrance>
       ) : null}
     </ScreenShell>
   );

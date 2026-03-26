@@ -1,0 +1,189 @@
+import { createContext, useContext, useEffect, useState } from 'react';
+import { loadPreferences, savePreferences } from '../services/storage/preferencesStorage';
+
+const PreferencesContext = createContext(null);
+
+const translations = {
+  fr: {
+    refresh: 'Actualiser',
+    refreshing: 'Mise a jour...',
+    logout: 'Quitter',
+    login: 'Connexion',
+    register: 'Inscription',
+    secure_access: 'Acces securise aux operations terrain et aux certificats.',
+    create_account: 'Creation d un compte operateur pour les flux mobiles.',
+    identifier: 'Identifiant',
+    password: 'Mot de passe',
+    email_or_username: 'Email ou nom utilisateur',
+    sign_in: 'Se connecter',
+    signing_in: 'Connexion...',
+    full_name: 'Nom complet',
+    username: 'Nom utilisateur',
+    email: 'Email',
+    role: 'Role',
+    organization: 'Organisation',
+    site: 'Site',
+    create_account_btn: 'Creer le compte',
+    creating_account: 'Inscription...',
+    dashboard_subtitle: 'Operations terrain, certification et suivi on-chain.',
+    connection_unavailable: 'Connexion indisponible',
+    tracking: 'Suivi',
+    view_lots: 'Voir les lots',
+    issuance: 'Emission',
+    certify_lot: 'Certifier un lot',
+    supervision_center: 'Centre de supervision',
+    summary: 'Resume',
+    active_indicators: 'Indicateurs actifs',
+    inventory: 'Inventaire',
+    lots: 'Lots',
+    lot_subtitle: 'Consulter le detail d un lot et son statut blockchain.',
+    no_lot: 'Aucun lot',
+    no_data: 'Aucune donnee disponible pour le moment.',
+    certification: 'Certification',
+    cert_subtitle: 'Creation et emission du certificat mineral.',
+    processing: 'Traitement...',
+    launch_certification: 'Lancer la certification',
+    error: 'Erreur',
+    certificate_issued: 'Certificat emis',
+    open_certificate: 'Ouvrir le certificat',
+    opening: 'Ouverture...',
+    system: 'Systeme',
+    theme: 'Theme',
+    language: 'Langue',
+    light: 'Clair',
+    dark: 'Sombre',
+  },
+  en: {
+    refresh: 'Refresh',
+    refreshing: 'Updating...',
+    logout: 'Sign out',
+    login: 'Sign in',
+    register: 'Register',
+    secure_access: 'Secure access to field operations and certificates.',
+    create_account: 'Create an operator account for mobile workflows.',
+    identifier: 'Identifier',
+    password: 'Password',
+    email_or_username: 'Email or username',
+    sign_in: 'Sign in',
+    signing_in: 'Signing in...',
+    full_name: 'Full name',
+    username: 'Username',
+    email: 'Email',
+    role: 'Role',
+    organization: 'Organization',
+    site: 'Site',
+    create_account_btn: 'Create account',
+    creating_account: 'Registering...',
+    dashboard_subtitle: 'Field operations, certification, and on-chain tracking.',
+    connection_unavailable: 'Connection unavailable',
+    tracking: 'Tracking',
+    view_lots: 'View lots',
+    issuance: 'Issuance',
+    certify_lot: 'Certify a lot',
+    supervision_center: 'Supervision center',
+    summary: 'Summary',
+    active_indicators: 'Active indicators',
+    inventory: 'Inventory',
+    lots: 'Lots',
+    lot_subtitle: 'Review lot details and blockchain status.',
+    no_lot: 'No lots',
+    no_data: 'No data available right now.',
+    certification: 'Certification',
+    cert_subtitle: 'Create and issue the mineral certificate.',
+    processing: 'Processing...',
+    launch_certification: 'Launch certification',
+    error: 'Error',
+    certificate_issued: 'Certificate issued',
+    open_certificate: 'Open certificate',
+    opening: 'Opening...',
+    system: 'System',
+    theme: 'Theme',
+    language: 'Language',
+    light: 'Light',
+    dark: 'Dark',
+  },
+};
+
+const themes = {
+  light: {
+    screen: '#efe6d5',
+    card: '#fcf8ef',
+    cardAlt: '#f8f1e5',
+    text: '#1d2c2b',
+    muted: '#5f675c',
+    brand: '#1d6b57',
+    brandDark: '#183632',
+    accent: '#bf8b4c',
+    border: '#dcccb5',
+    input: '#fffdf9',
+    inputBorder: '#dccbb1',
+  },
+  dark: {
+    screen: '#121816',
+    card: '#1a2422',
+    cardAlt: '#21302d',
+    text: '#f2efe8',
+    muted: '#b2bbb6',
+    brand: '#2d8c74',
+    brandDark: '#0f1917',
+    accent: '#d39a59',
+    border: '#30403d',
+    input: '#18211f',
+    inputBorder: '#33413f',
+  },
+};
+
+export function PreferencesProvider({ children }) {
+  const [theme, setTheme] = useState('light');
+  const [language, setLanguage] = useState('fr');
+  const [ready, setReady] = useState(false);
+
+  useEffect(() => {
+    let active = true;
+    loadPreferences().then((prefs) => {
+      if (!active) return;
+      setTheme(prefs.theme);
+      setLanguage(prefs.language);
+      setReady(true);
+    });
+    return () => {
+      active = false;
+    };
+  }, []);
+
+  const update = async (next) => {
+    setTheme(next.theme);
+    setLanguage(next.language);
+    await savePreferences(next);
+  };
+
+  const toggleTheme = async () => {
+    const next = theme === 'light' ? 'dark' : 'light';
+    await update({ theme: next, language });
+  };
+
+  const toggleLanguage = async () => {
+    const next = language === 'fr' ? 'en' : 'fr';
+    await update({ theme, language: next });
+  };
+
+  const value = {
+    ready,
+    theme,
+    language,
+    colors: themes[theme],
+    t: (key) => translations[language][key] || key,
+    toggleTheme,
+    toggleLanguage,
+  };
+
+  return <PreferencesContext.Provider value={value}>{children}</PreferencesContext.Provider>;
+}
+
+export function usePreferences() {
+  const context = useContext(PreferencesContext);
+  if (!context) {
+    throw new Error('usePreferences must be used within PreferencesProvider');
+  }
+  return context;
+}

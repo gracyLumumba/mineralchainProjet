@@ -1,25 +1,27 @@
 import { Pressable, StyleSheet, Text, TextInput, View } from 'react-native';
 import ScreenShell from '../components/ScreenShell';
 import RolePicker from '../components/RolePicker';
+import AnimatedEntrance from '../components/AnimatedEntrance';
+import { usePreferences } from '../../contexts/PreferencesContext';
 import { useAuthViewModel } from '../../viewmodels/useAuthViewModel';
 
-function AuthToggle({ mode, onChange }) {
+function AuthToggle({ mode, onChange, colors, t }) {
   return (
-    <View style={styles.toggleRow}>
+    <View style={[styles.toggleRow, { backgroundColor: colors.cardAlt }]}>
       <Pressable
         onPress={() => onChange('login')}
-        style={[styles.toggleItem, mode === 'login' ? styles.toggleActive : null]}
+        style={[styles.toggleItem, mode === 'login' ? [styles.toggleActive, { backgroundColor: colors.input }] : null]}
       >
-        <Text style={[styles.toggleText, mode === 'login' ? styles.toggleTextActive : null]}>
-          Connexion
+        <Text style={[styles.toggleText, { color: colors.muted }, mode === 'login' ? [styles.toggleTextActive, { color: colors.text }] : null]}>
+          {t('login')}
         </Text>
       </Pressable>
       <Pressable
         onPress={() => onChange('register')}
-        style={[styles.toggleItem, mode === 'register' ? styles.toggleActive : null]}
+        style={[styles.toggleItem, mode === 'register' ? [styles.toggleActive, { backgroundColor: colors.input }] : null]}
       >
-        <Text style={[styles.toggleText, mode === 'register' ? styles.toggleTextActive : null]}>
-          Inscription
+        <Text style={[styles.toggleText, { color: colors.muted }, mode === 'register' ? [styles.toggleTextActive, { color: colors.text }] : null]}>
+          {t('register')}
         </Text>
       </Pressable>
     </View>
@@ -27,6 +29,7 @@ function AuthToggle({ mode, onChange }) {
 }
 
 export default function LoginScreen({ onLogin }) {
+  const { colors, language, theme, toggleLanguage, toggleTheme, t } = usePreferences();
   const {
     mode,
     setMode,
@@ -45,159 +48,179 @@ export default function LoginScreen({ onLogin }) {
 
   return (
     <ScreenShell>
-      <View style={styles.hero}>
-        <Text style={styles.kicker}>Traceabilite miniere</Text>
-        <Text style={styles.title}>{mode === 'login' ? 'Connexion' : 'Inscription'}</Text>
-        <Text style={styles.subtitle}>
-          {mode === 'login'
-            ? 'Acces securise aux operations terrain et aux certificats.'
-            : 'Creation d un compte operateur pour les flux mobiles.'}
-        </Text>
-      </View>
-
-      <View style={styles.card}>
-        <View style={styles.cardAccent} />
-        <AuthToggle mode={mode} onChange={setMode} />
-
-        {mode === 'login' ? (
-          <>
-            <Text style={styles.label}>Identifiant</Text>
-            <TextInput
-              value={identifier}
-              onChangeText={setIdentifier}
-              style={styles.input}
-              placeholder="Email ou nom utilisateur"
-              placeholderTextColor="#9b8c77"
-              autoCapitalize="none"
-            />
-
-            <Text style={styles.label}>Mot de passe</Text>
-            <TextInput
-              value={password}
-              onChangeText={setPassword}
-              style={styles.input}
-              placeholder="Mot de passe"
-              placeholderTextColor="#9b8c77"
-              secureTextEntry
-            />
-
-            <Pressable onPress={submitLogin} style={styles.button}>
-              <Text style={styles.buttonText}>
-                {isSubmitting ? 'Connexion...' : 'Se connecter'}
-              </Text>
-            </Pressable>
-
-            <View style={styles.hintBox}>
-              <Text style={styles.hintTitle}>Acces rapides</Text>
-              <Text style={styles.hintText}>admin / Admin2025!</Text>
-              <Text style={styles.hintText}>producteur / Demo2025!</Text>
-              <Text style={styles.hintText}>regulateur / Demo2025!</Text>
-              <Text style={styles.hintText}>transporteur / Demo2025!</Text>
+      <AnimatedEntrance delay={0}>
+        <View style={[styles.hero, { backgroundColor: colors.brandDark }]}>
+          <View style={styles.heroTop}>
+            <View>
+              <Text style={[styles.kicker, { color: colors.accent }]}>Traceabilite miniere</Text>
+              <Text style={styles.title}>{mode === 'login' ? t('login') : t('register')}</Text>
             </View>
-          </>
-        ) : (
-          <>
-            <Text style={styles.label}>Nom complet</Text>
-            <TextInput
-              value={registerForm.full_name}
-              onChangeText={(value) => updateRegisterField('full_name', value)}
-              style={styles.input}
-              placeholder="Nom complet"
-              placeholderTextColor="#9b8c77"
-            />
-
-            <Text style={styles.label}>Nom utilisateur</Text>
-            <TextInput
-              value={registerForm.username}
-              onChangeText={(value) => updateRegisterField('username', value)}
-              style={styles.input}
-              placeholder="Nom utilisateur"
-              placeholderTextColor="#9b8c77"
-              autoCapitalize="none"
-            />
-
-            <Text style={styles.label}>Email</Text>
-            <TextInput
-              value={registerForm.email}
-              onChangeText={(value) => updateRegisterField('email', value)}
-              style={styles.input}
-              placeholder="nom@organisation.cd"
-              placeholderTextColor="#9b8c77"
-              autoCapitalize="none"
-            />
-
-            <Text style={styles.label}>Mot de passe</Text>
-            <TextInput
-              value={registerForm.password}
-              onChangeText={(value) => updateRegisterField('password', value)}
-              style={styles.input}
-              placeholder="Mot de passe"
-              placeholderTextColor="#9b8c77"
-              secureTextEntry
-            />
-
-            <Text style={styles.label}>Role</Text>
-            <RolePicker
-              value={registerForm.role}
-              onChange={(value) => updateRegisterField('role', value)}
-            />
-
-            <Text style={styles.label}>Organisation</Text>
-            <TextInput
-              value={registerForm.organization}
-              onChangeText={(value) => updateRegisterField('organization', value)}
-              style={styles.input}
-              placeholder="Organisation"
-              placeholderTextColor="#9b8c77"
-            />
-
-            <Text style={styles.label}>Site</Text>
-            <TextInput
-              value={registerForm.site}
-              onChangeText={(value) => updateRegisterField('site', value)}
-              style={styles.input}
-              placeholder="Kamoa-Kansoko"
-              placeholderTextColor="#9b8c77"
-            />
-
-            <Pressable onPress={submitRegister} style={styles.button}>
-              <Text style={styles.buttonText}>
-                {isSubmitting ? 'Inscription...' : 'Creer le compte'}
-              </Text>
-            </Pressable>
-          </>
-        )}
-
-        {error ? (
-          <View style={styles.errorBox}>
-            <Text style={styles.errorText}>{error}</Text>
+            <View style={styles.quickToggles}>
+              <Pressable onPress={toggleLanguage} style={[styles.quickPill, { borderColor: colors.accent }]}>
+                <Text style={styles.quickPillText}>{language.toUpperCase()}</Text>
+              </Pressable>
+              <Pressable onPress={toggleTheme} style={[styles.quickPill, { borderColor: colors.accent }]}>
+                <Text style={styles.quickPillText}>{theme === 'light' ? t('light') : t('dark')}</Text>
+              </Pressable>
+            </View>
           </View>
-        ) : null}
+          <Text style={styles.subtitle}>
+            {mode === 'login' ? t('secure_access') : t('create_account')}
+          </Text>
+        </View>
+      </AnimatedEntrance>
 
-        {notice ? (
-          <View style={styles.noticeBox}>
-            <Text style={styles.noticeText}>{notice}</Text>
-          </View>
-        ) : null}
-      </View>
+      <AnimatedEntrance delay={90}>
+        <View style={[styles.card, { backgroundColor: colors.card, borderColor: colors.border }]}>
+          <View style={[styles.cardAccent, { backgroundColor: colors.accent }]} />
+          <AuthToggle mode={mode} onChange={setMode} colors={colors} t={t} />
+
+          {mode === 'login' ? (
+            <>
+              <Text style={[styles.label, { color: colors.text }]}>{t('identifier')}</Text>
+              <TextInput
+                value={identifier}
+                onChangeText={setIdentifier}
+                style={[styles.input, { backgroundColor: colors.input, borderColor: colors.inputBorder, color: colors.text }]}
+                placeholder={t('email_or_username')}
+                placeholderTextColor={colors.muted}
+                autoCapitalize="none"
+              />
+
+              <Text style={[styles.label, { color: colors.text }]}>{t('password')}</Text>
+              <TextInput
+                value={password}
+                onChangeText={setPassword}
+                style={[styles.input, { backgroundColor: colors.input, borderColor: colors.inputBorder, color: colors.text }]}
+                placeholder={t('password')}
+                placeholderTextColor={colors.muted}
+                secureTextEntry
+              />
+
+              <Pressable onPress={submitLogin} style={[styles.button, { backgroundColor: colors.brand }]}>
+                <Text style={styles.buttonText}>
+                  {isSubmitting ? t('signing_in') : t('sign_in')}
+                </Text>
+              </Pressable>
+            </>
+          ) : (
+            <>
+              <Text style={[styles.label, { color: colors.text }]}>{t('full_name')}</Text>
+              <TextInput
+                value={registerForm.full_name}
+                onChangeText={(value) => updateRegisterField('full_name', value)}
+                style={[styles.input, { backgroundColor: colors.input, borderColor: colors.inputBorder, color: colors.text }]}
+                placeholder={t('full_name')}
+                placeholderTextColor={colors.muted}
+              />
+
+              <Text style={[styles.label, { color: colors.text }]}>{t('username')}</Text>
+              <TextInput
+                value={registerForm.username}
+                onChangeText={(value) => updateRegisterField('username', value)}
+                style={[styles.input, { backgroundColor: colors.input, borderColor: colors.inputBorder, color: colors.text }]}
+                placeholder={t('username')}
+                placeholderTextColor={colors.muted}
+                autoCapitalize="none"
+              />
+
+              <Text style={[styles.label, { color: colors.text }]}>{t('email')}</Text>
+              <TextInput
+                value={registerForm.email}
+                onChangeText={(value) => updateRegisterField('email', value)}
+                style={[styles.input, { backgroundColor: colors.input, borderColor: colors.inputBorder, color: colors.text }]}
+                placeholder="nom@organisation.cd"
+                placeholderTextColor={colors.muted}
+                autoCapitalize="none"
+              />
+
+              <Text style={[styles.label, { color: colors.text }]}>{t('password')}</Text>
+              <TextInput
+                value={registerForm.password}
+                onChangeText={(value) => updateRegisterField('password', value)}
+                style={[styles.input, { backgroundColor: colors.input, borderColor: colors.inputBorder, color: colors.text }]}
+                placeholder={t('password')}
+                placeholderTextColor={colors.muted}
+                secureTextEntry
+              />
+
+              <Text style={[styles.label, { color: colors.text }]}>{t('role')}</Text>
+              <RolePicker
+                value={registerForm.role}
+                onChange={(value) => updateRegisterField('role', value)}
+              />
+
+              <Text style={[styles.label, { color: colors.text }]}>{t('organization')}</Text>
+              <TextInput
+                value={registerForm.organization}
+                onChangeText={(value) => updateRegisterField('organization', value)}
+                style={[styles.input, { backgroundColor: colors.input, borderColor: colors.inputBorder, color: colors.text }]}
+                placeholder={t('organization')}
+                placeholderTextColor={colors.muted}
+              />
+
+              <Text style={[styles.label, { color: colors.text }]}>{t('site')}</Text>
+              <TextInput
+                value={registerForm.site}
+                onChangeText={(value) => updateRegisterField('site', value)}
+                style={[styles.input, { backgroundColor: colors.input, borderColor: colors.inputBorder, color: colors.text }]}
+                placeholder="Kamoa-Kansoko"
+                placeholderTextColor={colors.muted}
+              />
+
+              <Pressable onPress={submitRegister} style={[styles.button, { backgroundColor: colors.brand }]}>
+                <Text style={styles.buttonText}>
+                  {isSubmitting ? t('creating_account') : t('create_account_btn')}
+                </Text>
+              </Pressable>
+            </>
+          )}
+
+          {error ? (
+            <View style={styles.errorBox}>
+              <Text style={styles.errorText}>{error}</Text>
+            </View>
+          ) : null}
+
+          {notice ? (
+            <View style={styles.noticeBox}>
+              <Text style={styles.noticeText}>{notice}</Text>
+            </View>
+          ) : null}
+        </View>
+      </AnimatedEntrance>
     </ScreenShell>
   );
 }
 
 const styles = StyleSheet.create({
   hero: {
-    backgroundColor: '#183632',
     borderRadius: 32,
     gap: 8,
     padding: 24,
-    shadowColor: '#183632',
-    shadowOffset: { width: 0, height: 14 },
-    shadowOpacity: 0.2,
-    shadowRadius: 22,
-    elevation: 6,
+  },
+  heroTop: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    gap: 12,
+  },
+  quickToggles: {
+    alignItems: 'flex-end',
+    gap: 8,
+  },
+  quickPill: {
+    borderRadius: 999,
+    borderWidth: 1,
+    paddingHorizontal: 10,
+    paddingVertical: 7,
+  },
+  quickPillText: {
+    color: '#ffffff',
+    fontSize: 10,
+    fontWeight: '800',
+    textTransform: 'uppercase',
   },
   kicker: {
-    color: '#d0b689',
     fontSize: 11,
     fontWeight: '800',
     letterSpacing: 1.5,
@@ -215,28 +238,19 @@ const styles = StyleSheet.create({
     lineHeight: 21,
   },
   card: {
-    backgroundColor: '#fcf8ef',
-    borderColor: '#dcccb5',
     borderRadius: 30,
     borderWidth: 1,
     gap: 12,
     overflow: 'hidden',
     padding: 18,
-    shadowColor: '#8c7454',
-    shadowOffset: { width: 0, height: 10 },
-    shadowOpacity: 0.08,
-    shadowRadius: 20,
-    elevation: 4,
   },
   cardAccent: {
     width: 44,
     height: 6,
     borderRadius: 999,
-    backgroundColor: '#bf8b4c',
     marginBottom: 2,
   },
   toggleRow: {
-    backgroundColor: '#eadfcd',
     borderRadius: 999,
     flexDirection: 'row',
     padding: 4,
@@ -247,35 +261,23 @@ const styles = StyleSheet.create({
     paddingVertical: 11,
   },
   toggleActive: {
-    backgroundColor: '#ffffff',
-    shadowColor: '#92785a',
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.08,
-    shadowRadius: 10,
     elevation: 2,
   },
   toggleText: {
-    color: '#725f44',
     fontSize: 13,
     fontWeight: '800',
     textAlign: 'center',
   },
-  toggleTextActive: {
-    color: '#17312d',
-  },
+  toggleTextActive: {},
   label: {
-    color: '#6b5635',
     fontSize: 12,
     fontWeight: '800',
     letterSpacing: 0.5,
     textTransform: 'uppercase',
   },
   input: {
-    backgroundColor: '#fffdf9',
-    borderColor: '#dccbb1',
     borderRadius: 18,
     borderWidth: 1,
-    color: '#1d2c2b',
     fontSize: 15,
     paddingHorizontal: 16,
     paddingVertical: 14,
@@ -306,37 +308,13 @@ const styles = StyleSheet.create({
   },
   button: {
     alignItems: 'center',
-    backgroundColor: '#1d6b57',
     borderRadius: 20,
     marginTop: 8,
     paddingVertical: 15,
-    shadowColor: '#1d6b57',
-    shadowOffset: { width: 0, height: 10 },
-    shadowOpacity: 0.16,
-    shadowRadius: 18,
-    elevation: 4,
   },
   buttonText: {
     color: '#ffffff',
     fontSize: 15,
     fontWeight: '900',
-  },
-  hintBox: {
-    backgroundColor: '#f3e7d4',
-    borderRadius: 20,
-    gap: 4,
-    marginTop: 8,
-    padding: 14,
-  },
-  hintTitle: {
-    color: '#5d4b32',
-    fontSize: 12,
-    fontWeight: '900',
-    letterSpacing: 0.5,
-    textTransform: 'uppercase',
-  },
-  hintText: {
-    color: '#6b5a41',
-    fontSize: 13,
   },
 });

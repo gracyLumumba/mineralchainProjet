@@ -7,5 +7,8 @@ export async function login(payload) {
     body: JSON.stringify(payload),
   });
 
-  return createUserSession(data.user);
+  return createUserSession({
+    ...data.user,
+    token: data.token,
+  });
 }

@@ -1,7 +1,9 @@
 import { ActivityIndicator, StyleSheet, Text, View } from 'react-native';
 import StatusCard from '../components/StatusCard';
+import { usePreferences } from '../../contexts/PreferencesContext';
 
 export default function OverviewScreen({ health, lots, isLoading }) {
+  const { t } = usePreferences();
   if (isLoading && !health) {
     return (
       <View style={styles.placeholder}>
@@ -20,7 +22,7 @@ export default function OverviewScreen({ health, lots, isLoading }) {
   return (
     <View style={styles.container}>
       <View style={styles.hero}>
-        <Text style={styles.heroLabel}>Centre de supervision</Text>
+        <Text style={styles.heroLabel}>{t('supervision_center')}</Text>
         <Text style={styles.heroTitle}>{health.status.toUpperCase()}</Text>
         <Text style={styles.heroText}>
           PostgreSQL {health.databaseConnected ? 'connectee' : 'indisponible'} · {health.databaseUrl}
@@ -39,8 +41,8 @@ export default function OverviewScreen({ health, lots, isLoading }) {
       </View>
 
       <View style={styles.panel}>
-        <Text style={styles.panelEyebrow}>Resume</Text>
-        <Text style={styles.panelTitle}>Indicateurs actifs</Text>
+        <Text style={styles.panelEyebrow}>{t('summary')}</Text>
+        <Text style={styles.panelTitle}>{t('active_indicators')}</Text>
         <Text style={styles.panelText}>
           {health.features.length ? health.features.join(', ') : 'Aucune donnee disponible'}
         </Text>

@@ -5,6 +5,7 @@ import { createNativeStackNavigator } from '@react-navigation/native-stack';
 import { StatusBar } from 'expo-status-bar';
 import { useDashboardViewModel } from '../viewmodels/useDashboardViewModel';
 import { ROUTES } from '../navigation/routes';
+import { PreferencesProvider, usePreferences } from '../contexts/PreferencesContext';
 import { clearSession, loadSession, saveSession } from '../services/storage/sessionStorage';
 import LoginScreen from './screens/LoginScreen';
 import DashboardScreen from './screens/DashboardScreen';
@@ -15,18 +16,20 @@ import CertificationScreen from './screens/CertificationScreen';
 const Stack = createNativeStackNavigator();
 
 function BootScreen() {
+  const { colors, t } = usePreferences();
   return (
-    <View style={styles.bootScreen}>
-      <ActivityIndicator size="large" color="#1d6b57" />
-      <Text style={styles.bootText}>Ouverture...</Text>
+    <View style={[styles.bootScreen, { backgroundColor: colors.screen }]}>
+      <ActivityIndicator size="large" color={colors.brand} />
+      <Text style={[styles.bootText, { color: colors.muted }]}>{t('opening')}</Text>
     </View>
   );
 }
 
-export default function AppView() {
+function AppNavigator() {
   const [session, setSession] = useState(null);
   const [isBooting, setIsBooting] = useState(true);
   const dashboard = useDashboardViewModel();
+  const { colors, ready } = usePreferences();
 
   useEffect(() => {
     let active = true;
@@ -61,10 +64,10 @@ export default function AppView() {
     await clearSession();
   };
 
-  if (isBooting) {
+  if (!ready || isBooting) {
     return (
       <>
-        <StatusBar style="dark" />
+        <StatusBar style={colors.screen === '#121816' ? 'light' : 'dark'} />
         <BootScreen />
       </>
     );
@@ -72,17 +75,18 @@ export default function AppView() {
 
   return (
     <NavigationContainer>
-      <StatusBar style="dark" />
+      <StatusBar style={colors.screen === '#121816' ? 'light' : 'dark'} />
       <Stack.Navigator
         initialRouteName={session ? ROUTES.DASHBOARD : ROUTES.LOGIN}
         screenOptions={{
+          animation: 'fade_from_bottom',
           headerStyle: {
-            backgroundColor: '#f3efe5',
+            backgroundColor: colors.screen,
           },
           headerShadowVisible: false,
-          headerTintColor: '#17312d',
+          headerTintColor: colors.text,
           contentStyle: {
-            backgroundColor: '#f3efe5',
+            backgroundColor: colors.screen,
           },
         }}
       >
@@ -133,16 +137,22 @@ export default function AppView() {
   );
 }
 
+export default function AppView() {
+  return (
+    <PreferencesProvider>
+      <AppNavigator />
+    </PreferencesProvider>
+  );
+}
+
 const styles = StyleSheet.create({
   bootScreen: {
     alignItems: 'center',
-    backgroundColor: '#f3efe5',
     flex: 1,
     gap: 12,
     justifyContent: 'center',
   },
   bootText: {
-    color: '#516160',
     fontSize: 14,
   },
 });

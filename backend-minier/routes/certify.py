@@ -16,6 +16,7 @@ load_dotenv()
 sys.path.append(os.path.dirname(os.path.dirname(__file__)))
 from models.load_models import model_loader
 from routes.lots import upsert_database_lot, database_enabled
+from routes.auth import get_current_user
 from utils.blockchain_config import load_contract_config, GANACHE_URL, DEFAULT_CONTRACT_ADDRESS
 
 certify_bp = Blueprint('certify', __name__)
@@ -255,6 +256,10 @@ def analyze_and_certify():
     Étape 4: Mint du NFT sur la blockchain
     """
     try:
+        user = get_current_user()
+        if not user:
+            return jsonify({"error": "Authentification requise"}), 401
+
         data = request.get_json() or {}
         
         required_fields = ['lot_id']
@@ -525,6 +530,9 @@ def analyze_and_certify():
                     "block_number": blockchain_result.get("block_number") if blockchain_result else None,
                     "contract_address": blockchain_result.get("contract_address") if blockchain_result else CONTRACT_ADDRESS,
                     "certificate_id": certificate["certificate_id"],
+                    "owner_user_id": user.get('id'),
+                    "owner_username": user.get('username'),
+                    "owner_name": user.get('name'),
                 }, history_event='CERTIFIED', history_extra={
                     "certificate_hash": cert_hash,
                     "ipfs_hash": ipfs_hash,

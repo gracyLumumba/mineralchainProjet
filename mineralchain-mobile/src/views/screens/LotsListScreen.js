@@ -1,27 +1,36 @@
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 import ScreenShell from '../components/ScreenShell';
 import LotCard from '../components/LotCard';
+import AnimatedEntrance from '../components/AnimatedEntrance';
+import { usePreferences } from '../../contexts/PreferencesContext';
 
 export default function LotsListScreen({ lots, onOpenLot }) {
+  const { t } = usePreferences();
   return (
     <ScreenShell>
-      <View style={styles.header}>
-        <Text style={styles.eyebrow}>Inventaire</Text>
-        <Text style={styles.title}>Lots</Text>
-        <Text style={styles.subtitle}>Consulter le detail d un lot et son statut blockchain.</Text>
-      </View>
+      <AnimatedEntrance delay={0}>
+        <View style={styles.header}>
+          <Text style={styles.eyebrow}>{t('inventory')}</Text>
+          <Text style={styles.title}>{t('lots')}</Text>
+          <Text style={styles.subtitle}>{t('lot_subtitle')}</Text>
+        </View>
+      </AnimatedEntrance>
 
       {lots.length ? (
-        lots.map((lot) => (
-          <Pressable key={lot.id} onPress={() => onOpenLot(lot.id)}>
-            <LotCard lot={lot} />
-          </Pressable>
+        lots.map((lot, index) => (
+          <AnimatedEntrance key={lot.id} delay={70 + index * 45}>
+            <Pressable onPress={() => onOpenLot(lot.id)}>
+              <LotCard lot={lot} />
+            </Pressable>
+          </AnimatedEntrance>
         ))
       ) : (
-        <View style={styles.empty}>
-          <Text style={styles.emptyTitle}>Aucun lot</Text>
-          <Text style={styles.emptyText}>Aucune donnee disponible pour le moment.</Text>
-        </View>
+        <AnimatedEntrance delay={70}>
+          <View style={styles.empty}>
+            <Text style={styles.emptyTitle}>{t('no_lot')}</Text>
+            <Text style={styles.emptyText}>{t('no_data')}</Text>
+          </View>
+        </AnimatedEntrance>
       )}
     </ScreenShell>
   );

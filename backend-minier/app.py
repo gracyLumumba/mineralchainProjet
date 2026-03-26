@@ -52,6 +52,10 @@ if app.config['DATABASE_ENABLED']:
     try:
         with app.app_context():
             db.create_all()
+            db.session.execute(db.text("ALTER TABLE lots ADD COLUMN IF NOT EXISTS owner_user_id VARCHAR(80)"))
+            db.session.execute(db.text("ALTER TABLE lots ADD COLUMN IF NOT EXISTS owner_username VARCHAR(80)"))
+            db.session.execute(db.text("ALTER TABLE lots ADD COLUMN IF NOT EXISTS owner_name VARCHAR(120)"))
+            db.session.commit()
         print(f"[DB] PostgreSQL actif: {app.config['DATABASE_URL_MASKED']}")
     except Exception as error:
         app.config['DATABASE_ENABLED'] = False

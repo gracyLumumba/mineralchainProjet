@@ -2,6 +2,8 @@ import { Pressable, StyleSheet, Text, View } from 'react-native';
 import OverviewScreen from './OverviewScreen';
 import ScreenShell from '../components/ScreenShell';
 import TopBar from '../components/TopBar';
+import AnimatedEntrance from '../components/AnimatedEntrance';
+import { usePreferences } from '../../contexts/PreferencesContext';
 
 export default function DashboardScreen({
   session,
@@ -15,42 +17,53 @@ export default function DashboardScreen({
   onOpenLots,
   onOpenCertification,
 }) {
+  const { colors, t } = usePreferences();
   return (
     <ScreenShell>
-      <TopBar onRefresh={refresh} onLogout={onLogout} isRefreshing={isRefreshing} />
+      <AnimatedEntrance delay={0}>
+        <TopBar onRefresh={refresh} onLogout={onLogout} isRefreshing={isRefreshing} />
+      </AnimatedEntrance>
 
-      <View style={styles.userCard}>
-        <View style={styles.userHeader}>
-          <View style={styles.userBadge}>
-            <Text style={styles.userBadgeText}>{(session.name || 'O').slice(0, 1).toUpperCase()}</Text>
+      <AnimatedEntrance delay={70}>
+        <View style={[styles.userCard, { backgroundColor: colors.cardAlt, borderColor: colors.border }]}>
+          <View style={styles.userHeader}>
+            <View style={styles.userBadge}>
+              <Text style={styles.userBadgeText}>{(session.name || 'O').slice(0, 1).toUpperCase()}</Text>
+            </View>
+            <View style={styles.userCopy}>
+              <Text style={[styles.userTitle, { color: colors.text }]}>{session.name}</Text>
+              <Text style={[styles.userMeta, { color: colors.muted }]}>{session.site} · {session.role}</Text>
+            </View>
           </View>
-          <View style={styles.userCopy}>
-            <Text style={styles.userTitle}>{session.name}</Text>
-            <Text style={styles.userMeta}>{session.site} · {session.role}</Text>
-          </View>
+          <Text style={[styles.userCaption, { color: colors.muted }]}>{t('dashboard_subtitle')}</Text>
         </View>
-        <Text style={styles.userCaption}>Operations terrain, certification et suivi on-chain.</Text>
-      </View>
+      </AnimatedEntrance>
 
       {error ? (
-        <View style={styles.errorBox}>
-          <Text style={styles.errorTitle}>Connexion indisponible</Text>
-          <Text style={styles.errorText}>{error}</Text>
-        </View>
+        <AnimatedEntrance delay={110}>
+          <View style={styles.errorBox}>
+            <Text style={styles.errorTitle}>{t('connection_unavailable')}</Text>
+            <Text style={styles.errorText}>{error}</Text>
+          </View>
+        </AnimatedEntrance>
       ) : null}
 
-      <OverviewScreen health={health} lots={lots} isLoading={isLoading} />
+      <AnimatedEntrance delay={140}>
+        <OverviewScreen health={health} lots={lots} isLoading={isLoading} />
+      </AnimatedEntrance>
 
-      <View style={styles.actions}>
-        <Pressable onPress={onOpenLots} style={styles.actionButton}>
-          <Text style={styles.actionLabel}>Suivi</Text>
-          <Text style={styles.actionText}>Voir les lots</Text>
-        </Pressable>
-        <Pressable onPress={onOpenCertification} style={styles.secondaryButton}>
-          <Text style={styles.secondaryLabel}>Emission</Text>
-          <Text style={styles.secondaryText}>Certifier un lot</Text>
-        </Pressable>
-      </View>
+      <AnimatedEntrance delay={190}>
+        <View style={styles.actions}>
+          <Pressable onPress={onOpenLots} style={styles.actionButton}>
+            <Text style={styles.actionLabel}>{t('tracking')}</Text>
+            <Text style={styles.actionText}>{t('view_lots')}</Text>
+          </Pressable>
+          <Pressable onPress={onOpenCertification} style={styles.secondaryButton}>
+            <Text style={styles.secondaryLabel}>{t('issuance')}</Text>
+            <Text style={styles.secondaryText}>{t('certify_lot')}</Text>
+          </Pressable>
+        </View>
+      </AnimatedEntrance>
     </ScreenShell>
   );
 }

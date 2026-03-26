@@ -1,4 +1,5 @@
 import { API_BASE_URL } from '../../config/api';
+import { getSessionSync } from '../storage/sessionStorage';
 
 async function parseResponse(response) {
   const text = await response.text();
@@ -15,10 +16,12 @@ async function parseResponse(response) {
 }
 
 export async function request(path, options = {}) {
+  const session = getSessionSync();
   const response = await fetch(`${API_BASE_URL}${path}`, {
     headers: {
       Accept: 'application/json',
       'Content-Type': 'application/json',
+      ...(session?.token ? { Authorization: `Bearer ${session.token}` } : {}),
       ...(options.headers || {}),
     },
     ...options,

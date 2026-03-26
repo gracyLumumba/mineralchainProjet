@@ -42,6 +42,9 @@ class Lot(db.Model):
     block_number = db.Column(db.Integer)
     contract_address = db.Column(db.String(100))
     certificate_id = db.Column(db.String(100))
+    owner_user_id = db.Column(db.String(80))
+    owner_username = db.Column(db.String(80))
+    owner_name = db.Column(db.String(120))
     
     # Relations
     history = db.relationship('LotHistory', backref='lot', lazy=True, cascade='all, delete-orphan')
@@ -73,7 +76,10 @@ class Lot(db.Model):
             'tx_hash': self.tx_hash,
             'block_number': self.block_number,
             'contract_address': self.contract_address,
-            'certificate_id': self.certificate_id
+            'certificate_id': self.certificate_id,
+            'owner_user_id': self.owner_user_id,
+            'owner_username': self.owner_username,
+            'owner_name': self.owner_name
         }
 
 class LotHistory(db.Model):
