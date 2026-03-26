@@ -10,11 +10,9 @@ export default function LoginScreen({ onLogin }) {
   return (
     <ScreenShell>
       <View style={styles.hero}>
-        <Text style={styles.kicker}>MineralChain Mobile</Text>
-        <Text style={styles.title}>Connexion terrain</Text>
-        <Text style={styles.subtitle}>
-          Base mobile MVVM pour Kamoa-Kansoko, connectee au backend existant.
-        </Text>
+        <Text style={styles.kicker}>MineralChain</Text>
+        <Text style={styles.title}>Connexion</Text>
+        <Text style={styles.subtitle}>Acces aux operations terrain.</Text>
       </View>
 
       <View style={styles.card}>
@@ -28,7 +26,7 @@ export default function LoginScreen({ onLogin }) {
         <TextInput value={site} onChangeText={setSite} style={styles.input} placeholder="Kamoa-Kansoko" />
 
         <Pressable onPress={submit} style={styles.button}>
-          <Text style={styles.buttonText}>Entrer dans l application</Text>
+          <Text style={styles.buttonText}>Se connecter</Text>
         </Pressable>
       </View>
     </ScreenShell>

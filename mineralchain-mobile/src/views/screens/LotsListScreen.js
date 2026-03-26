@@ -6,8 +6,8 @@ export default function LotsListScreen({ lots, onOpenLot }) {
   return (
     <ScreenShell>
       <View style={styles.header}>
-        <Text style={styles.title}>Lots recents</Text>
-        <Text style={styles.subtitle}>Selectionne un lot pour voir le detail mobile.</Text>
+        <Text style={styles.title}>Lots</Text>
+        <Text style={styles.subtitle}>Consulter le detail d un lot.</Text>
       </View>
 
       {lots.length ? (

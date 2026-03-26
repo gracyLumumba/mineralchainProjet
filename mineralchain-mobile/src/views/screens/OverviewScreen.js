@@ -6,7 +6,7 @@ export default function OverviewScreen({ health, lots, isLoading }) {
     return (
       <View style={styles.placeholder}>
         <ActivityIndicator size="large" color="#1d6b57" />
-        <Text style={styles.placeholderText}>Chargement de l etat backend...</Text>
+        <Text style={styles.placeholderText}>Chargement...</Text>
       </View>
     );
   }
@@ -20,10 +20,10 @@ export default function OverviewScreen({ health, lots, isLoading }) {
   return (
     <View style={styles.container}>
       <View style={styles.hero}>
-        <Text style={styles.heroLabel}>Etat backend</Text>
+        <Text style={styles.heroLabel}>Systeme</Text>
         <Text style={styles.heroTitle}>{health.status.toUpperCase()}</Text>
         <Text style={styles.heroText}>
-          Base PostgreSQL {health.databaseConnected ? 'connectee' : 'non connectee'} sur {health.databaseUrl}
+          PostgreSQL {health.databaseConnected ? 'connectee' : 'indisponible'} - {health.databaseUrl}
         </Text>
       </View>
 
@@ -35,13 +35,13 @@ export default function OverviewScreen({ health, lots, isLoading }) {
         />
         <StatusCard label="Lots" value={String(lots.length)} />
         <StatusCard label="Certifies" value={String(certifiedLots)} />
-        <StatusCard label="Modeles IA" value={String(health.modelCount)} />
+        <StatusCard label="Modeles" value={String(health.modelCount)} />
       </View>
 
       <View style={styles.panel}>
-        <Text style={styles.panelTitle}>Fonctionnalites detectees</Text>
+        <Text style={styles.panelTitle}>Indicateurs</Text>
         <Text style={styles.panelText}>
-          {health.features.length ? health.features.join(', ') : 'Aucune feature remontee'}
+          {health.features.length ? health.features.join(', ') : 'Aucune donnee disponible'}
         </Text>
       </View>
     </View>

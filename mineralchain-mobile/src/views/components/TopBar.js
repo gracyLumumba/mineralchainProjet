@@ -4,12 +4,12 @@ export default function TopBar({ onRefresh, isRefreshing }) {
   return (
     <View style={styles.row}>
       <View>
-        <Text style={styles.kicker}>MineralChain Mobile</Text>
+        <Text style={styles.kicker}>MineralChain</Text>
         <Text style={styles.title}>Kamoa-Kansoko</Text>
       </View>
       <Pressable onPress={onRefresh} style={styles.button}>
         <Text style={styles.buttonText}>
-          {isRefreshing ? 'Actualisation...' : 'Rafraichir'}
+          {isRefreshing ? 'Mise a jour...' : 'Actualiser'}
         </Text>
       </Pressable>
     </View>

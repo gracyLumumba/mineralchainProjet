@@ -8,6 +8,7 @@ import LoginScreen from './screens/LoginScreen';
 import DashboardScreen from './screens/DashboardScreen';
 import LotsListScreen from './screens/LotsListScreen';
 import LotDetailScreen from './screens/LotDetailScreen';
+import CertificationScreen from './screens/CertificationScreen';
 
 const Stack = createNativeStackNavigator();
 
@@ -48,6 +49,7 @@ export default function AppView() {
                   error={dashboard.error}
                   refresh={dashboard.refresh}
                   onOpenLots={() => navigation.navigate(ROUTES.LOTS)}
+                  onOpenCertification={() => navigation.navigate(ROUTES.CERTIFY)}
                 />
               )}
             </Stack.Screen>
@@ -66,6 +68,9 @@ export default function AppView() {
               component={LotDetailScreen}
               options={{ title: 'Detail lot' }}
             />
+            <Stack.Screen name={ROUTES.CERTIFY} options={{ title: 'Certification' }}>
+              {() => <CertificationScreen session={session} />}
+            </Stack.Screen>
           </>
         )}
       </Stack.Navigator>

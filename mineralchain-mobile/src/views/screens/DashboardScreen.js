@@ -12,6 +12,7 @@ export default function DashboardScreen({
   error,
   refresh,
   onOpenLots,
+  onOpenCertification,
 }) {
   return (
     <ScreenShell>
@@ -20,22 +21,27 @@ export default function DashboardScreen({
       <View style={styles.userCard}>
         <Text style={styles.userTitle}>{session.name}</Text>
         <Text style={styles.userMeta}>
-          {session.site} · {session.role}
+          {session.site} - {session.role}
         </Text>
       </View>
 
       {error ? (
         <View style={styles.errorBox}>
-          <Text style={styles.errorTitle}>Connexion backend echouee</Text>
+          <Text style={styles.errorTitle}>Connexion indisponible</Text>
           <Text style={styles.errorText}>{error}</Text>
         </View>
       ) : null}
 
       <OverviewScreen health={health} lots={lots} isLoading={isLoading} />
 
-      <Pressable onPress={onOpenLots} style={styles.actionButton}>
-        <Text style={styles.actionText}>Voir les lots</Text>
-      </Pressable>
+      <View style={styles.actions}>
+        <Pressable onPress={onOpenLots} style={styles.actionButton}>
+          <Text style={styles.actionText}>Voir les lots</Text>
+        </Pressable>
+        <Pressable onPress={onOpenCertification} style={styles.secondaryButton}>
+          <Text style={styles.secondaryText}>Certifier un lot</Text>
+        </Pressable>
+      </View>
     </ScreenShell>
   );
 }
@@ -74,6 +80,9 @@ const styles = StyleSheet.create({
     fontSize: 14,
     lineHeight: 20,
   },
+  actions: {
+    gap: 10,
+  },
   actionButton: {
     alignItems: 'center',
     backgroundColor: '#1d2c2b',
@@ -82,6 +91,17 @@ const styles = StyleSheet.create({
   },
   actionText: {
     color: '#ffffff',
+    fontSize: 15,
+    fontWeight: '800',
+  },
+  secondaryButton: {
+    alignItems: 'center',
+    backgroundColor: '#e0d3be',
+    borderRadius: 18,
+    paddingVertical: 14,
+  },
+  secondaryText: {
+    color: '#17312d',
     fontSize: 15,
     fontWeight: '800',
   },

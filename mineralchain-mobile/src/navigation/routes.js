@@ -3,4 +3,5 @@ export const ROUTES = {
   DASHBOARD: 'Dashboard',
   LOTS: 'Lots',
   LOT_DETAIL: 'LotDetail',
+  CERTIFY: 'Certify',
 };
