@@ -15,6 +15,7 @@ load_dotenv()
 
 sys.path.append(os.path.dirname(os.path.dirname(__file__)))
 from models.load_models import model_loader
+from routes.lots import upsert_database_lot, database_enabled
 from utils.blockchain_config import load_contract_config, GANACHE_URL, DEFAULT_CONTRACT_ADDRESS
 
 certify_bp = Blueprint('certify', __name__)
@@ -496,6 +497,42 @@ def analyze_and_certify():
             "blockchain": blockchain_result,
             "blockchain_error": blockchain_error
         }
+
+        if database_enabled():
+            try:
+                upsert_database_lot({
+                    "lot_id": lot_id,
+                    "site": data.get('site', 'inconnu'),
+                    "extraction_date": data.get('extraction_date'),
+                    "status": status,
+                    "weight_tonnes": data.get('weight_tonnes', 0),
+                    "cu_grade_percent": data.get('cu_grade_percent', 0),
+                    "co_grade_percent": data.get('co_grade_percent', 0),
+                    "fe_percent": data.get('fe_percent', 0),
+                    "ni_percent": data.get('ni_percent', 0),
+                    "s_percent": data.get('s_percent', 0),
+                    "silica_percent": data.get('silica_percent', 0),
+                    "density_t_m3": data.get('density_t_m3', 0),
+                    "moisture_percent": data.get('moisture_percent', 0),
+                    "hardness_mohs": data.get('hardness_mohs', 0),
+                    "analyzed_at": datetime.now().isoformat(),
+                    "mineral_type": mineral_type,
+                    "confidence": mineral_conf,
+                    "impurity_level": impurity_level,
+                    "is_fraud": is_fraud,
+                    "token_id": blockchain_result.get("token_id") if blockchain_result else None,
+                    "tx_hash": blockchain_result.get("transaction_hash") if blockchain_result else None,
+                    "block_number": blockchain_result.get("block_number") if blockchain_result else None,
+                    "contract_address": blockchain_result.get("contract_address") if blockchain_result else CONTRACT_ADDRESS,
+                    "certificate_id": certificate["certificate_id"],
+                }, history_event='CERTIFIED', history_extra={
+                    "certificate_hash": cert_hash,
+                    "ipfs_hash": ipfs_hash,
+                    "token_id": blockchain_result.get("token_id") if blockchain_result else None,
+                    "simulated_blockchain": blockchain_result.get("simulated") if blockchain_result else None,
+                })
+            except Exception as db_error:
+                print(f"   [WARN] Persistance PostgreSQL impossible: {db_error}")
         
         print(f"\n{'='*60}")
         print(f"[DONE] ANALYSE ET CERTIFICATION TERMINEES")
