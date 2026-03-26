@@ -2,11 +2,16 @@ export function createCertificationResult(payload = {}) {
   const blockchain = payload.blockchain || {};
   const certificate = payload.certificate || {};
   const ia = payload.ia_result || {};
+  const rawMineralType = ia.mineral_type || 'unknown';
+  const normalizedMineralType =
+    ['unknown', 'inconnu', 'none', 'null', ''].includes(String(rawMineralType).trim().toLowerCase())
+      ? 'Non determine'
+      : rawMineralType;
 
   return {
     lotId: payload.lot_id || 'inconnu',
     status: ia.status || 'INCONNU',
-    mineralType: ia.mineral_type || 'unknown',
+    mineralType: normalizedMineralType,
     confidence: ia.confidence ?? 0,
     tokenId: blockchain.token_id ?? null,
     blockNumber: blockchain.block_number ?? null,

@@ -174,6 +174,34 @@ def build_simulated_blockchain_result(lot_id, cert_hash, reason=None):
         "reason": reason or "Ganache indisponible"
     }
 
+
+def is_unknown_mineral(value):
+    return str(value).strip().lower() in {'', 'unknown', 'inconnu', 'none', 'null'}
+
+
+def infer_mineral_type_from_payload(data):
+    """
+    Domain fallback when the IA mineral model is absent or inconclusive.
+    The project mostly handles copper/cobalt ore, so prefer that vocabulary.
+    """
+    cu = float(data.get('cu_grade_percent', 0) or 0)
+    co = float(data.get('co_grade_percent', 0) or 0)
+    fe = float(data.get('fe_percent', 0) or 0)
+    sulfur = float(data.get('s_percent', 0) or 0)
+
+    if cu >= 1.0 and co >= 0.1:
+        return "Cuivre-Cobalt", 0.55
+    if cu >= 1.0:
+        return "Cuivre", 0.45
+    if co >= 0.1:
+        return "Cobalt", 0.45
+    if fe >= 20:
+        return "Fer", 0.35
+    if sulfur >= 5:
+        return "Sulfure", 0.30
+
+    return "Non determine", 0.0
+
 # ============================================================
 # CONFIGURATION IPFS (Pinata) - AVEC TES VRAIES CLÉS
 # ============================================================
@@ -286,6 +314,11 @@ def analyze_and_certify():
         mineral_type = ia_results.get('mineral', {}).get('type', 'unknown')
         mineral_conf = ia_results.get('mineral', {}).get('confidence', 0)
         impurity_level = ia_results.get('impurity', {}).get('level', 'unknown')
+
+        if is_unknown_mineral(mineral_type):
+            inferred_type, inferred_conf = infer_mineral_type_from_payload(data)
+            mineral_type = inferred_type
+            mineral_conf = max(mineral_conf, inferred_conf)
         
         # Vérifier la fraude
         if 'fraud' in ia_results:
@@ -310,8 +343,11 @@ def analyze_and_certify():
                 print(f"   [ALERT] REGLE 3: Cu > 25%")
         
         # Déterminer le statut
+        mineral_unknown = is_unknown_mineral(mineral_type) or mineral_type == "Non determine"
         if is_fraud:
             status = "SUSPECT"
+        elif mineral_unknown:
+            status = "A_VERIFIER"
         else:
             status = "AUTHENTIQUE"
         
@@ -320,7 +356,6 @@ def analyze_and_certify():
         print(f"      • Confiance: {mineral_conf:.1%}")
         print(f"      • Impuretés: {impurity_level}")
         print(f"      • Statut: {status}")
-        print(f"      • Fraude: {'OUI' if is_fraud else 'NON'}")
         
         # -------------------------------------------------
         # ÉTAPE 2: CRÉATION DU CERTIFICAT
@@ -695,3 +730,4 @@ def verify_lot():
         except:
             pass
     return jsonify(result)
+
