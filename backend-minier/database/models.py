@@ -12,6 +12,7 @@ class Lot(db.Model):
     site = db.Column(db.String(20), nullable=False)
     extraction_date = db.Column(db.Date, nullable=False)
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
+    updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
     analyzed_at = db.Column(db.DateTime)
     
     # Composition chimique
@@ -40,6 +41,7 @@ class Lot(db.Model):
     tx_hash = db.Column(db.String(100), unique=True)
     block_number = db.Column(db.Integer)
     contract_address = db.Column(db.String(100))
+    certificate_id = db.Column(db.String(100))
     
     # Relations
     history = db.relationship('LotHistory', backref='lot', lazy=True, cascade='all, delete-orphan')
@@ -50,15 +52,28 @@ class Lot(db.Model):
             'site': self.site,
             'extraction_date': self.extraction_date.isoformat() if self.extraction_date else None,
             'created_at': self.created_at.isoformat() if self.created_at else None,
+            'updated_at': self.updated_at.isoformat() if self.updated_at else None,
             'analyzed_at': self.analyzed_at.isoformat() if self.analyzed_at else None,
             'cu_grade': self.cu_grade,
             'co_grade': self.co_grade,
+            'fe_grade': self.fe_grade,
+            'ni_grade': self.ni_grade,
+            's_grade': self.s_grade,
+            'silica_grade': self.silica_grade,
+            'density': self.density,
+            'moisture': self.moisture,
+            'hardness': self.hardness,
+            'weight': self.weight,
             'mineral_type': self.mineral_type,
             'confidence': self.confidence,
+            'impurity_level': self.impurity_level,
             'status': self.status,
             'is_fraud': self.is_fraud,
             'token_id': self.token_id,
-            'tx_hash': self.tx_hash
+            'tx_hash': self.tx_hash,
+            'block_number': self.block_number,
+            'contract_address': self.contract_address,
+            'certificate_id': self.certificate_id
         }
 
 class LotHistory(db.Model):

@@ -1,12 +1,14 @@
 # routes/analyze.py
-from flask import Blueprint, request, jsonify
+from flask import Blueprint, request, jsonify, current_app
 import hashlib
 from datetime import datetime
 import sys
 import os
+from sqlalchemy import text
 
 sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 from models.load_models import model_loader
+from database.models import db
 
 analyze_bp = Blueprint('analyze', __name__)
 AUTO_CERT_THRESHOLD = 0.00  # Demo mode: any non-fraud lot is considered authentic
@@ -70,9 +72,25 @@ def analyze_lot():
 @analyze_bp.route('/health', methods=['GET'])
 def health_check():
     """Vérification santé"""
+    database_status = {
+        "enabled": current_app.config.get('DATABASE_ENABLED', False),
+        "configured": bool(current_app.config.get('DATABASE_URL_MASKED')),
+        "url": current_app.config.get('DATABASE_URL_MASKED') or None,
+    }
+    if database_status["enabled"]:
+        try:
+            db.session.execute(text('SELECT 1'))
+            database_status["connected"] = True
+        except Exception as error:
+            database_status["connected"] = False
+            database_status["error"] = str(error)
+    else:
+        database_status["connected"] = False
+
     return jsonify({
         "status": "ok",
         "models_loaded": list(model_loader.models.keys()),
         "features": model_loader.feature_columns,
-        "model_dir": model_loader.model_dir
+        "model_dir": model_loader.model_dir,
+        "database": database_status,
     })

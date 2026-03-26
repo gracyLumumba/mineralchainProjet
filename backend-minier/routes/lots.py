@@ -1,13 +1,16 @@
 # routes/lots.py
-from flask import Blueprint, request, jsonify
+from flask import Blueprint, request, jsonify, current_app
 from datetime import datetime
 import json
 import os
 
+from database.models import db, Lot, LotHistory
+
 lots_bp = Blueprint('lots', __name__)
 
 # Base de données
-lots_db_file = 'lots_data.json'
+BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+lots_db_file = os.path.join(BASE_DIR, 'lots_data.json')
 lots_db = {}
 
 # Charger données existantes
@@ -18,6 +21,124 @@ if os.path.exists(lots_db_file):
     except:
         lots_db = {}
 
+
+def json_history_entry(event, extra=None):
+    payload = {
+        "event": event,
+        "timestamp": datetime.now().isoformat(),
+        "user": "system"
+    }
+    if extra:
+        payload.update(extra)
+    return payload
+
+
+def save_json_store():
+    with open(lots_db_file, 'w', encoding='utf-8') as f:
+        json.dump(lots_db, f, indent=2, ensure_ascii=False)
+
+
+def database_enabled():
+    return bool(current_app.config.get('DATABASE_ENABLED'))
+
+
+def parse_date(value):
+    if not value:
+        return None
+    if isinstance(value, datetime):
+        return value.date()
+    return datetime.fromisoformat(str(value)).date()
+
+
+def db_lot_to_payload(lot):
+    payload = {
+        "lot_id": lot.lot_id,
+        "site": lot.site,
+        "created_at": lot.created_at.isoformat() if lot.created_at else None,
+        "updated_at": lot.updated_at.isoformat() if lot.updated_at else None,
+        "extraction_date": lot.extraction_date.isoformat() if lot.extraction_date else None,
+        "analyzed_at": lot.analyzed_at.isoformat() if lot.analyzed_at else None,
+        "status": lot.status,
+        "weight": lot.weight,
+        "composition": {
+            "cu": lot.cu_grade,
+            "co": lot.co_grade,
+            "fe": lot.fe_grade,
+            "s": lot.s_grade,
+            "ni": lot.ni_grade,
+            "silica": lot.silica_grade,
+        },
+        "history": [
+            {
+                "event": item.event,
+                "status": item.status,
+                "details": item.details,
+                "timestamp": item.timestamp.isoformat() if item.timestamp else None,
+            }
+            for item in sorted(lot.history, key=lambda entry: entry.timestamp or datetime.min)
+        ],
+        "certificate_id": lot.certificate_id,
+        "token_id": lot.token_id,
+        "tx_hash": lot.tx_hash,
+        "block_number": lot.block_number,
+        "contract_address": lot.contract_address,
+        "storage": "postgres"
+    }
+    return payload
+
+
+def upsert_database_lot(data, history_event=None, history_extra=None):
+    if not database_enabled():
+        return None
+
+    lot = Lot.query.filter_by(lot_id=data['lot_id']).first()
+    is_new = lot is None
+    if is_new:
+        lot = Lot(lot_id=data['lot_id'])
+        db.session.add(lot)
+
+    lot.site = data.get('site', lot.site or 'inconnu')
+    lot.extraction_date = parse_date(data.get('extraction_date')) or lot.extraction_date or datetime.utcnow().date()
+    lot.updated_at = datetime.utcnow()
+    if is_new:
+        lot.created_at = datetime.utcnow()
+
+    lot.status = data.get('status', lot.status or 'CRÉÉ')
+    lot.weight = data.get('weight_tonnes', data.get('weight', lot.weight))
+    lot.cu_grade = data.get('cu_grade_percent', data.get('cu_grade', lot.cu_grade))
+    lot.co_grade = data.get('co_grade_percent', data.get('co_grade', lot.co_grade))
+    lot.fe_grade = data.get('fe_percent', data.get('fe_grade', lot.fe_grade))
+    lot.ni_grade = data.get('ni_percent', data.get('ni_grade', lot.ni_grade))
+    lot.s_grade = data.get('s_percent', data.get('s_grade', lot.s_grade))
+    lot.silica_grade = data.get('silica_percent', data.get('silica_grade', lot.silica_grade))
+    lot.density = data.get('density_t_m3', data.get('density', lot.density))
+    lot.moisture = data.get('moisture_percent', data.get('moisture', lot.moisture))
+    lot.hardness = data.get('hardness_mohs', data.get('hardness', lot.hardness))
+    lot.analyzed_at = data.get('analyzed_at', lot.analyzed_at)
+    lot.mineral_type = data.get('mineral_type', lot.mineral_type)
+    lot.confidence = data.get('confidence', lot.confidence)
+    lot.impurity_level = data.get('impurity_level', lot.impurity_level)
+    lot.is_fraud = data.get('is_fraud', lot.is_fraud)
+    lot.token_id = data.get('token_id', lot.token_id)
+    lot.tx_hash = data.get('tx_hash', lot.tx_hash)
+    lot.block_number = data.get('block_number', lot.block_number)
+    lot.contract_address = data.get('contract_address', lot.contract_address)
+    lot.certificate_id = data.get('certificate_id', lot.certificate_id)
+
+    if isinstance(lot.analyzed_at, str):
+        lot.analyzed_at = datetime.fromisoformat(lot.analyzed_at)
+
+    if history_event:
+        db.session.add(LotHistory(
+            lot=lot,
+            event=history_event,
+            status=lot.status,
+            details=history_extra or {}
+        ))
+
+    db.session.commit()
+    return lot
+
 @lots_bp.route('/lots', methods=['GET'])
 def get_all_lots():
     """Liste tous les lots"""
@@ -26,8 +147,14 @@ def get_all_lots():
     site = request.args.get('site')
     status = request.args.get('status')
     
-    # Filtrer
     lots_list = list(lots_db.values())
+    if database_enabled():
+        db_lots = [db_lot_to_payload(item) for item in Lot.query.order_by(Lot.created_at.desc()).all()]
+        merged = {lot['lot_id']: lot for lot in lots_list}
+        for lot in db_lots:
+            merged[lot['lot_id']] = lot
+        lots_list = list(merged.values())
+
     if site:
         lots_list = [l for l in lots_list if l.get('site') == site]
     if status:
@@ -47,6 +174,11 @@ def get_all_lots():
 @lots_bp.route('/lots/<lot_id>', methods=['GET'])
 def get_lot(lot_id):
     """Détail d'un lot"""
+    if database_enabled():
+        db_lot = Lot.query.filter_by(lot_id=lot_id).first()
+        if db_lot:
+            return jsonify(db_lot_to_payload(db_lot))
+
     lot = lots_db.get(lot_id)
     if lot:
         return jsonify(lot)
@@ -62,7 +194,7 @@ def create_lot():
     
     lot_id = data['lot_id']
     
-    if lot_id in lots_db:
+    if lot_id in lots_db or (database_enabled() and Lot.query.filter_by(lot_id=lot_id).first()):
         return jsonify({"error": "Lot existe déjà"}), 409
     
     new_lot = {
@@ -78,18 +210,16 @@ def create_lot():
             "fe": data.get('fe_percent', 0),
             "s": data.get('s_percent', 0)
         },
-        "history": [{
-            "event": "Création du lot",
-            "timestamp": datetime.now().isoformat(),
-            "user": "system"
-        }]
+        "history": [json_history_entry("Création du lot")]
     }
     
     lots_db[lot_id] = new_lot
-    
-    with open(lots_db_file, 'w', encoding='utf-8') as f:
-        json.dump(lots_db, f, indent=2, ensure_ascii=False)
-    
+    save_json_store()
+
+    if database_enabled():
+        upsert_database_lot(data, history_event='CREATED', history_extra={"source": "json_route"})
+
+    new_lot["storage"] = "json+postgres" if database_enabled() else "json"
     return jsonify(new_lot), 201
 
 @lots_bp.route('/lots/<lot_id>/certify', methods=['POST'])
@@ -103,13 +233,20 @@ def certify_lot(lot_id):
     lots_db[lot_id]['status'] = "CERTIFIÉ"
     lots_db[lot_id]['certificate_id'] = data.get('certificate_id', f"CERT-{lot_id}")
     lots_db[lot_id]['updated_at'] = datetime.now().isoformat()
-    lots_db[lot_id]['history'].append({
-        "event": "Certification",
-        "timestamp": datetime.now().isoformat(),
+    lots_db[lot_id]['history'].append(json_history_entry("Certification", {
         "certificate_id": lots_db[lot_id]['certificate_id']
-    })
-    
-    with open(lots_db_file, 'w', encoding='utf-8') as f:
-        json.dump(lots_db, f, indent=2, ensure_ascii=False)
-    
+    }))
+    save_json_store()
+
+    if database_enabled():
+        upsert_database_lot({
+            "lot_id": lot_id,
+            "site": lots_db[lot_id].get('site'),
+            "status": "CERTIFIÉ",
+            "certificate_id": lots_db[lot_id]['certificate_id']
+        }, history_event='CERTIFIED', history_extra={
+            "certificate_id": lots_db[lot_id]['certificate_id']
+        })
+
+    lots_db[lot_id]['storage'] = "json+postgres" if database_enabled() else "json"
     return jsonify(lots_db[lot_id])

@@ -11,6 +11,7 @@ if hasattr(sys.stderr, 'reconfigure'):
 
 from flask import Flask, jsonify
 from flask_cors import CORS
+from dotenv import load_dotenv
 
 from routes.analyze import analyze_bp
 from routes.lots import lots_bp
@@ -18,10 +19,23 @@ from routes.certify import certify_bp
 from routes.blockchain import blockchain_bp
 from models.load_models import model_loader
 from routes.ipfs import ipfs_bp
+from database.models import db
+
+load_dotenv()
 
 # Créer l'application Flask
 app = Flask(__name__)
 CORS(app)  # Permet les requêtes depuis React
+
+database_url = (os.environ.get('DATABASE_URL') or os.environ.get('SQLALCHEMY_DATABASE_URI') or '').strip()
+app.config['SQLALCHEMY_DATABASE_URI'] = database_url or 'sqlite:///:memory:'
+app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
+app.config['DATABASE_ENABLED'] = bool(database_url)
+app.config['DATABASE_URL_MASKED'] = (
+    database_url.rsplit('@', 1)[-1] if database_url and '@' in database_url else database_url
+)
+
+db.init_app(app)
 
 # Charger les modèles au démarrage
 print("="*60)
@@ -33,6 +47,17 @@ MODEL_PATH = r"C:\Users\Dr_Denise\Desktop\Gracy\memoire\modele_ia_minier\modeles
 model_loader.model_dir = MODEL_PATH
 model_loader.load_all()
 
+if app.config['DATABASE_ENABLED']:
+    try:
+        with app.app_context():
+            db.create_all()
+        print(f"[DB] PostgreSQL actif: {app.config['DATABASE_URL_MASKED']}")
+    except Exception as error:
+        app.config['DATABASE_ENABLED'] = False
+        print(f"[DB] Connexion PostgreSQL impossible: {error}")
+else:
+    print("[DB] PostgreSQL non configuré - stockage existant conservé")
+
 
 # Enregistrer les blueprints
 app.register_blueprint(analyze_bp, url_prefix='/api')
@@ -40,6 +65,29 @@ app.register_blueprint(lots_bp, url_prefix='/api')
 app.register_blueprint(certify_bp, url_prefix='/api')
 app.register_blueprint(ipfs_bp, url_prefix='/api')
 app.register_blueprint(blockchain_bp, url_prefix='/api/blockchain')
+
+@app.route('/api/health', methods=['GET'])
+def health():
+    database_status = {
+        "enabled": app.config.get('DATABASE_ENABLED', False),
+        "configured": bool(database_url),
+    }
+    if app.config.get('DATABASE_ENABLED'):
+        try:
+            db.session.execute(db.text('SELECT 1'))
+            database_status["connected"] = True
+        except Exception as error:
+            database_status["connected"] = False
+            database_status["error"] = str(error)
+    else:
+        database_status["connected"] = False
+
+    return jsonify({
+        "status": "ok",
+        "database": database_status,
+        "models_loaded": True,
+    })
+
 @app.route('/', methods=['GET'])
 def home():
     return jsonify({
