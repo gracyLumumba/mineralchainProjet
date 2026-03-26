@@ -1,13 +1,18 @@
-import { StyleSheet, Text, View } from 'react-native';
+import { ActivityIndicator, StyleSheet, Text, View } from 'react-native';
 import StatusCard from '../components/StatusCard';
 
-export default function OverviewScreen({ health, lots }) {
-  if (!health) {
+export default function OverviewScreen({ health, lots, isLoading }) {
+  if (isLoading && !health) {
     return (
       <View style={styles.placeholder}>
+        <ActivityIndicator size="large" color="#1d6b57" />
         <Text style={styles.placeholderText}>Chargement de l etat backend...</Text>
       </View>
     );
+  }
+
+  if (!health) {
+    return null;
   }
 
   const certifiedLots = lots.filter((lot) => lot.tokenId).length;
@@ -91,6 +96,8 @@ const styles = StyleSheet.create({
     lineHeight: 20,
   },
   placeholder: {
+    alignItems: 'center',
+    gap: 12,
     paddingVertical: 40,
   },
   placeholderText: {
