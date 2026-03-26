@@ -1,11 +1,17 @@
 import { Pressable, StyleSheet, Text, TextInput, View } from 'react-native';
 import ScreenShell from '../components/ScreenShell';
-import RolePicker from '../components/RolePicker';
 import { useAuthViewModel } from '../../viewmodels/useAuthViewModel';
 
 export default function LoginScreen({ onLogin }) {
-  const { name, setName, role, setRole, site, setSite, submit } =
-    useAuthViewModel({ onLogin });
+  const {
+    identifier,
+    setIdentifier,
+    password,
+    setPassword,
+    isSubmitting,
+    error,
+    submit,
+  } = useAuthViewModel({ onLogin });
 
   return (
     <ScreenShell>
@@ -16,18 +22,43 @@ export default function LoginScreen({ onLogin }) {
       </View>
 
       <View style={styles.card}>
-        <Text style={styles.label}>Nom</Text>
-        <TextInput value={name} onChangeText={setName} style={styles.input} placeholder="Votre nom" />
+        <Text style={styles.label}>Identifiant</Text>
+        <TextInput
+          value={identifier}
+          onChangeText={setIdentifier}
+          style={styles.input}
+          placeholder="Email ou nom utilisateur"
+          autoCapitalize="none"
+        />
 
-        <Text style={styles.label}>Role</Text>
-        <RolePicker value={role} onChange={setRole} />
+        <Text style={styles.label}>Mot de passe</Text>
+        <TextInput
+          value={password}
+          onChangeText={setPassword}
+          style={styles.input}
+          placeholder="Mot de passe"
+          secureTextEntry
+        />
 
-        <Text style={styles.label}>Site</Text>
-        <TextInput value={site} onChangeText={setSite} style={styles.input} placeholder="Kamoa-Kansoko" />
+        {error ? (
+          <View style={styles.errorBox}>
+            <Text style={styles.errorText}>{error}</Text>
+          </View>
+        ) : null}
 
         <Pressable onPress={submit} style={styles.button}>
-          <Text style={styles.buttonText}>Se connecter</Text>
+          <Text style={styles.buttonText}>
+            {isSubmitting ? 'Connexion...' : 'Se connecter'}
+          </Text>
         </Pressable>
+
+        <View style={styles.hintBox}>
+          <Text style={styles.hintTitle}>Comptes disponibles</Text>
+          <Text style={styles.hintText}>admin / Admin2025!</Text>
+          <Text style={styles.hintText}>producteur / Demo2025!</Text>
+          <Text style={styles.hintText}>regulateur / Demo2025!</Text>
+          <Text style={styles.hintText}>transporteur / Demo2025!</Text>
+        </View>
       </View>
     </ScreenShell>
   );
@@ -77,6 +108,18 @@ const styles = StyleSheet.create({
     paddingHorizontal: 14,
     paddingVertical: 12,
   },
+  errorBox: {
+    backgroundColor: '#fff0ed',
+    borderColor: '#efb0a0',
+    borderRadius: 16,
+    borderWidth: 1,
+    padding: 12,
+  },
+  errorText: {
+    color: '#8f2d14',
+    fontSize: 14,
+    fontWeight: '700',
+  },
   button: {
     alignItems: 'center',
     backgroundColor: '#1d6b57',
@@ -88,5 +131,21 @@ const styles = StyleSheet.create({
     color: '#ffffff',
     fontSize: 15,
     fontWeight: '800',
+  },
+  hintBox: {
+    backgroundColor: '#efe5d4',
+    borderRadius: 18,
+    gap: 4,
+    marginTop: 6,
+    padding: 14,
+  },
+  hintTitle: {
+    color: '#5d4b32',
+    fontSize: 13,
+    fontWeight: '800',
+  },
+  hintText: {
+    color: '#6b5a41',
+    fontSize: 13,
   },
 });

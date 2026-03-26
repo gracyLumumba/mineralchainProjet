@@ -1,28 +1,35 @@
 import { useState } from 'react';
-import { createUserSession } from '../models/UserSession';
+import { login } from '../services/api/authService';
 
 export function useAuthViewModel({ onLogin }) {
-  const [name, setName] = useState('Denise');
-  const [role, setRole] = useState('producer');
-  const [site, setSite] = useState('Kamoa-Kansoko');
+  const [identifier, setIdentifier] = useState('producteur');
+  const [password, setPassword] = useState('Demo2025!');
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [error, setError] = useState('');
 
-  const submit = () => {
-    onLogin(
-      createUserSession({
-        name: name.trim() || 'Operateur',
-        role,
-        site: site.trim() || 'Kamoa-Kansoko',
-      })
-    );
+  const submit = async () => {
+    try {
+      setIsSubmitting(true);
+      setError('');
+      const session = await login({
+        identifier: identifier.trim(),
+        password,
+      });
+      onLogin(session);
+    } catch (submitError) {
+      setError(submitError.message || 'Connexion impossible');
+    } finally {
+      setIsSubmitting(false);
+    }
   };
 
   return {
-    name,
-    setName,
-    role,
-    setRole,
-    site,
-    setSite,
+    identifier,
+    setIdentifier,
+    password,
+    setPassword,
+    isSubmitting,
+    error,
     submit,
   };
 }
