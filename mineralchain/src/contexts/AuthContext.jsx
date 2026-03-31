@@ -2,6 +2,7 @@ import React, { createContext, useContext, useState, useCallback, useEffect } fr
 import { DEFAULT_OWNER_ADDRESS } from '../config/blockchain';
 
 const AuthContext = createContext(null);
+const BACKEND_URL = process.env.REACT_APP_BACKEND_URL || 'http://localhost:5000';
 
 const LS = {
   get: (k, fb = null) => { try { const v = localStorage.getItem(k); return v ? JSON.parse(v) : fb; } catch (error) { void error; return fb; } },
@@ -9,7 +10,7 @@ const LS = {
   del: (k) => { try { localStorage.removeItem(k); } catch (error) { void error; } },
 };
 
-const KEYS = { users: 'mc_users', currentUser: 'mc_current_user' };
+const KEYS = { users: 'mc_users', currentUser: 'mc_current_user', backendToken: 'mc_backend_token' };
 
 function hashPassword(pw) {
   let h = 0;
@@ -17,7 +18,7 @@ function hashPassword(pw) {
   return `mc_${Math.abs(h).toString(36)}_${pw.length}`;
 }
 
-//  Utilisateurs pré-approuvés (démo) 
+//  Utilisateurs prÃ©-approuvÃ©s (dÃ©mo) 
 // account_status : 'approved' | 'pending' | 'rejected'
 const DEMO_USERS = [
   {
@@ -25,7 +26,7 @@ const DEMO_USERS = [
     username: 'admin',
     email: 'admin@mineralchain.cd',
     password: hashPassword('Admin2025!'),
-    full_name: 'Administrateur Système',
+    full_name: 'Administrateur SystÃ¨me',
     role: 'admin',
     organization: 'MineralChain',
     wallet: '0xAd1234567890abcdef1234567890abcdef123456',
@@ -60,7 +61,7 @@ const DEMO_USERS = [
     password: hashPassword('Demo2025!'),
     full_name: 'Marie-Claire Kabongo',
     role: 'regulator',
-    organization: 'DGMR — Direction des Mines',
+    organization: 'DGMR â€” Direction des Mines',
     wallet: '0xA0Cf798816D4b9b9866b5330EEa46a18382f251e',
     avatar: 'scale',
     account_status: 'approved',
@@ -104,7 +105,7 @@ function initUsers() {
   return merged;
 }
 
-// ════════════════════════════════════════════════════════════════════════════
+// â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
 export function AuthProvider({ children }) {
   const [users,       setUsers]       = useState(() => initUsers());
   const [currentUser, setCurrentUser] = useState(() => LS.get(KEYS.currentUser));
@@ -114,6 +115,39 @@ export function AuthProvider({ children }) {
   useEffect(() => {
     if (currentUser) LS.set(KEYS.currentUser, currentUser);
     else             LS.del(KEYS.currentUser);
+  }, [currentUser]);
+
+  useEffect(() => {
+    const syncBackendTokenForDemoUser = async () => {
+      if (!currentUser) return;
+      if (LS.get(KEYS.backendToken)) return;
+
+      const demoPasswordByUsername = {
+        admin: 'Admin2025!',
+        producteur: 'Demo2025!',
+        regulateur: 'Demo2025!',
+        transporteur: 'Demo2025!',
+      };
+
+      const demoPassword = demoPasswordByUsername[currentUser.username];
+      if (!demoPassword) return;
+
+      try {
+        const response = await fetch(`${BACKEND_URL}/api/auth/login`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ identifier: currentUser.username, password: demoPassword }),
+        });
+        const payload = await response.json();
+        if (response.ok && payload?.token) {
+          LS.set(KEYS.backendToken, payload.token);
+        }
+      } catch (error) {
+        console.warn('[AUTH] Backend token auto-sync unavailable:', error);
+      }
+    };
+
+    syncBackendTokenForDemoUser();
   }, [currentUser]);
 
   //  Login 
@@ -130,29 +164,51 @@ export function AuthProvider({ children }) {
 
     if (!user) {
       setAuthError('Identifiants incorrects.');
+      LS.del(KEYS.backendToken);
       setIsLoading(false);
       return { success: false, reason: 'invalid_credentials' };
     }
 
-    //  Vérifier le statut du compte 
+    //  VÃ©rifier le statut du compte 
     if (user.account_status === 'pending') {
       setAuthError('Votre compte est en attente d\'approbation par l\'administrateur.');
+      LS.del(KEYS.backendToken);
       setIsLoading(false);
       return { success: false, reason: 'pending_approval' };
     }
     if (user.account_status === 'rejected') {
-      setAuthError('Votre demande d\'accès a été refusée. Contactez l\'administration.');
+      setAuthError('Votre demande d\'accÃ¨s a Ã©tÃ© refusÃ©e. Contactez l\'administration.');
+      LS.del(KEYS.backendToken);
       setIsLoading(false);
       return { success: false, reason: 'rejected' };
     }
 
     const { password: _, ...safeUser } = user;
     setCurrentUser({ ...safeUser, login_at: new Date().toISOString() });
+
+    // Synchronise une session backend pour les routes protegÃ©es (certification, lots, etc.).
+    try {
+      const response = await fetch(`${BACKEND_URL}/api/auth/login`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ identifier, password }),
+      });
+      const payload = await response.json();
+      if (response.ok && payload?.token) {
+        LS.set(KEYS.backendToken, payload.token);
+      } else {
+        LS.del(KEYS.backendToken);
+      }
+    } catch (error) {
+      console.warn('[AUTH] Backend login unavailable:', error);
+      LS.del(KEYS.backendToken);
+    }
+
     setIsLoading(false);
     return { success: true };
   }, []);
 
-  //  Register — crée un compte PENDING 
+  //  Register â€” crÃ©e un compte PENDING 
   const register = useCallback(async (formData) => {
     setIsLoading(true); setAuthError('');
     await new Promise(r => setTimeout(r, 700));
@@ -160,12 +216,12 @@ export function AuthProvider({ children }) {
     const allUsers = LS.get(KEYS.users, []);
 
     if (allUsers.some(u => u.email === formData.email.trim().toLowerCase())) {
-      setAuthError('Cet email est déjà utilisé.');
+      setAuthError('Cet email est dÃ©jÃ  utilisÃ©.');
       setIsLoading(false);
       return false;
     }
     if (allUsers.some(u => u.username === formData.username.trim().toLowerCase())) {
-      setAuthError('Ce nom d\'utilisateur est déjà pris.');
+      setAuthError('Ce nom d\'utilisateur est dÃ©jÃ  pris.');
       setIsLoading(false);
       return false;
     }
@@ -189,7 +245,7 @@ export function AuthProvider({ children }) {
       phone:          formData.phone?.trim() || '',
       wallet:         `0x${Array.from({length:40}, () => '0123456789abcdef'[Math.floor(Math.random()*16)]).join('')}`,
       avatar:         ROLE_AVATARS[formData.role] || 'users',
-      //  Statut PENDING — doit être approuvé 
+      //  Statut PENDING â€” doit Ãªtre approuvÃ© 
       account_status: 'pending',
       approved_by:    null,
       approved_at:    null,
@@ -203,7 +259,7 @@ export function AuthProvider({ children }) {
     LS.set(KEYS.users, updated);
     setUsers(updated);
     setIsLoading(false);
-    // Ne connecte PAS l'utilisateur — il doit attendre l'approbation
+    // Ne connecte PAS l'utilisateur â€” il doit attendre l'approbation
     return true;
   }, []);
 
@@ -250,6 +306,7 @@ export function AuthProvider({ children }) {
   const logout = useCallback(() => {
     setCurrentUser(null);
     LS.del(KEYS.currentUser);
+    LS.del(KEYS.backendToken);
   }, []);
 
   const updateProfile = useCallback((updates) => {
@@ -286,3 +343,4 @@ export function useAuth() {
   if (!ctx) throw new Error('useAuth must be used within AuthProvider');
   return ctx;
 }
+

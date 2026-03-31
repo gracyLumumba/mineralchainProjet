@@ -2,11 +2,26 @@ import axios from 'axios';
 import { CONTRACT_ADDRESS } from '../config/blockchain';
 
 const BACKEND_URL = process.env.REACT_APP_BACKEND_URL || 'http://localhost:5000';
+const BACKEND_TOKEN_KEY = 'mc_backend_token';
 
 const API = axios.create({
   baseURL: `${BACKEND_URL}/api`,
   timeout: 30000,
   headers: { 'Content-Type': 'application/json' },
+});
+
+API.interceptors.request.use((config) => {
+  try {
+    const raw = localStorage.getItem(BACKEND_TOKEN_KEY);
+    const token = raw ? JSON.parse(raw) : null;
+    if (token) {
+      config.headers = config.headers || {};
+      config.headers.Authorization = `Bearer ${token}`;
+    }
+  } catch (error) {
+    void error;
+  }
+  return config;
 });
 
 API.interceptors.response.use(
