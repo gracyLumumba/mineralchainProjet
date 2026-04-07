@@ -12,6 +12,13 @@ const REGISTER_INITIAL = {
   site: 'Kamoa-Kansoko',
 };
 
+const DEMO_CREDENTIALS = [
+  { key: 'admin', label: 'Admin', identifier: 'admin', password: 'Admin2025!' },
+  { key: 'producer', label: 'Producteur', identifier: 'producteur', password: 'Demo2025!' },
+  { key: 'regulator', label: 'Regulateur', identifier: 'regulateur', password: 'Demo2025!' },
+  { key: 'transporter', label: 'Transporteur', identifier: 'transporteur', password: 'Demo2025!' },
+];
+
 export function useAuthViewModel({ onLogin }) {
   const [mode, setMode] = useState('login');
   const [identifier, setIdentifier] = useState('');
@@ -28,6 +35,14 @@ export function useAuthViewModel({ onLogin }) {
     }));
   };
 
+  const fillDemoCredentials = (credential) => {
+    setMode('login');
+    setIdentifier(credential.identifier);
+    setPassword(credential.password);
+    setError('');
+    setNotice(`Compte demo charge : ${credential.label}`);
+  };
+
   const submitLogin = async () => {
     try {
       setIsSubmitting(true);
@@ -40,6 +55,7 @@ export function useAuthViewModel({ onLogin }) {
       onLogin(session);
     } catch (submitError) {
       setError(submitError.message || 'Connexion impossible');
+      setNotice('Essayez un des comptes demo affiches ci-dessous.');
     } finally {
       setIsSubmitting(false);
     }
@@ -75,6 +91,8 @@ export function useAuthViewModel({ onLogin }) {
     isSubmitting,
     error,
     notice,
+    demoCredentials: DEMO_CREDENTIALS,
+    fillDemoCredentials,
     submitLogin,
     submitRegister,
   };

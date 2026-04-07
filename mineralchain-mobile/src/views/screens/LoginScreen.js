@@ -42,12 +42,14 @@ export default function LoginScreen({ onLogin }) {
     isSubmitting,
     error,
     notice,
+    demoCredentials,
+    fillDemoCredentials,
     submitLogin,
     submitRegister,
   } = useAuthViewModel({ onLogin });
 
   return (
-    <ScreenShell>
+    <ScreenShell keyboardShouldPersistTaps="always">
       <AnimatedEntrance delay={0}>
         <View style={[styles.hero, { backgroundColor: colors.brandDark }]}>
           <View style={styles.heroTop}>
@@ -77,6 +79,23 @@ export default function LoginScreen({ onLogin }) {
 
           {mode === 'login' ? (
             <>
+              <View style={[styles.demoBox, { backgroundColor: colors.cardAlt, borderColor: colors.border }]}>
+                <Text style={[styles.demoTitle, { color: colors.text }]}>Comptes demo</Text>
+                <Text style={[styles.demoHint, { color: colors.muted }]}>Touchez un role pour pre-remplir l identifiant et le mot de passe.</Text>
+                <View style={styles.demoRow}>
+                  {demoCredentials.map((credential) => (
+                    <Pressable
+                      key={credential.key}
+                      onPress={() => fillDemoCredentials(credential)}
+                      style={[styles.demoPill, { backgroundColor: colors.input, borderColor: colors.inputBorder }]}
+                    >
+                      <Text style={[styles.demoPillText, { color: colors.text }]}>{credential.label}</Text>
+                    </Pressable>
+                  ))}
+                </View>
+                <Text style={[styles.demoCredentialText, { color: colors.muted }]}>Admin: `admin` / `Admin2025!`</Text>
+              </View>
+
               <Text style={[styles.label, { color: colors.text }]}>{t('identifier')}</Text>
               <TextInput
                 value={identifier}
@@ -269,6 +288,39 @@ const styles = StyleSheet.create({
     textAlign: 'center',
   },
   toggleTextActive: {},
+  demoBox: {
+    borderRadius: 20,
+    borderWidth: 1,
+    gap: 8,
+    padding: 14,
+  },
+  demoTitle: {
+    fontSize: 14,
+    fontWeight: '900',
+  },
+  demoHint: {
+    fontSize: 12,
+    lineHeight: 18,
+  },
+  demoRow: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 8,
+  },
+  demoPill: {
+    borderRadius: 999,
+    borderWidth: 1,
+    paddingHorizontal: 12,
+    paddingVertical: 9,
+  },
+  demoPillText: {
+    fontSize: 12,
+    fontWeight: '800',
+  },
+  demoCredentialText: {
+    fontSize: 12,
+    lineHeight: 18,
+  },
   label: {
     fontSize: 12,
     fontWeight: '800',

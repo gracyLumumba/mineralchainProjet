@@ -1,4 +1,5 @@
 import { RefreshControl, SafeAreaView, ScrollView, StyleSheet, View } from 'react-native';
+import { usePreferences } from '../../contexts/PreferencesContext';
 
 export default function ScreenShell({
   children,
@@ -6,16 +7,18 @@ export default function ScreenShell({
   refreshing = false,
   keyboardShouldPersistTaps = 'handled',
 }) {
+  const { colors } = usePreferences();
+
   return (
-    <SafeAreaView style={styles.safeArea}>
-      <View style={styles.bgOrbOne} />
-      <View style={styles.bgOrbTwo} />
+    <SafeAreaView style={[styles.safeArea, { backgroundColor: colors.screen }]}>
+      <View style={[styles.bgOrbOne, { backgroundColor: colors.overlayOne }]} />
+      <View style={[styles.bgOrbTwo, { backgroundColor: colors.overlayTwo }]} />
       <ScrollView
         contentContainerStyle={styles.content}
         keyboardShouldPersistTaps={keyboardShouldPersistTaps}
         refreshControl={
           onRefresh ? (
-            <RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor="#1d6b57" />
+            <RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={colors.brand} />
           ) : undefined
         }
         showsVerticalScrollIndicator={false}
@@ -29,7 +32,6 @@ export default function ScreenShell({
 const styles = StyleSheet.create({
   safeArea: {
     flex: 1,
-    backgroundColor: '#efe6d5',
   },
   bgOrbOne: {
     position: 'absolute',
@@ -38,7 +40,6 @@ const styles = StyleSheet.create({
     width: 220,
     height: 220,
     borderRadius: 999,
-    backgroundColor: '#d7b487',
     opacity: 0.22,
   },
   bgOrbTwo: {
@@ -48,7 +49,6 @@ const styles = StyleSheet.create({
     width: 240,
     height: 240,
     borderRadius: 999,
-    backgroundColor: '#9fc3b3',
     opacity: 0.18,
   },
   content: {

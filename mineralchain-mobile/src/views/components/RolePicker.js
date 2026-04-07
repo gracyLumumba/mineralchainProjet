@@ -1,4 +1,5 @@
 import { Pressable, StyleSheet, Text, View } from 'react-native';
+import { usePreferences } from '../../contexts/PreferencesContext';
 
 const ROLES = [
   { key: 'producer', label: 'Producteur' },
@@ -7,15 +8,26 @@ const ROLES = [
 ];
 
 export default function RolePicker({ value, onChange }) {
+  const { colors } = usePreferences();
+
   return (
     <View style={styles.row}>
       {ROLES.map((role) => (
         <Pressable
           key={role.key}
           onPress={() => onChange(role.key)}
-          style={[styles.item, value === role.key ? styles.activeItem : null]}
+          style={[
+            styles.item,
+            {
+              backgroundColor: colors.cardAlt,
+              borderColor: colors.border,
+            },
+            value === role.key
+              ? [styles.activeItem, { backgroundColor: colors.brand, borderColor: colors.brand, shadowColor: colors.shadow }]
+              : null,
+          ]}
         >
-          <Text style={[styles.label, value === role.key ? styles.activeLabel : null]}>
+          <Text style={[styles.label, { color: value === role.key ? '#ffffff' : colors.text }]}>
             {role.label}
           </Text>
         </Pressable>
@@ -31,28 +43,19 @@ const styles = StyleSheet.create({
     gap: 10,
   },
   item: {
-    backgroundColor: '#f7eedf',
-    borderColor: '#dac7a5',
     borderRadius: 999,
     borderWidth: 1,
     paddingHorizontal: 16,
     paddingVertical: 11,
   },
   activeItem: {
-    backgroundColor: '#1d6b57',
-    borderColor: '#1d6b57',
-    shadowColor: '#1d6b57',
     shadowOffset: { width: 0, height: 8 },
     shadowOpacity: 0.16,
     shadowRadius: 16,
     elevation: 3,
   },
   label: {
-    color: '#6d5a3f',
     fontSize: 13,
     fontWeight: '800',
-  },
-  activeLabel: {
-    color: '#ffffff',
   },
 });

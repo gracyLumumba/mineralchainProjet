@@ -7,7 +7,7 @@ import { useCertificationViewModel } from '../../viewmodels/useCertificationView
 import { API_BASE_URL } from '../../config/api';
 
 export default function CertificationScreen({ session }) {
-  const { t } = usePreferences();
+  const { colors, t } = usePreferences();
   const {
     form,
     result,
@@ -23,23 +23,23 @@ export default function CertificationScreen({ session }) {
     <ScreenShell keyboardShouldPersistTaps="always">
       <AnimatedEntrance delay={0}>
         <View style={styles.header}>
-          <Text style={styles.eyebrow}>{t('issuance')}</Text>
-          <Text style={styles.title}>{t('certification')}</Text>
-          <Text style={styles.subtitle}>{t('cert_subtitle')}</Text>
+          <Text style={[styles.eyebrow, { color: colors.accent }]}>{t('issuance')}</Text>
+          <Text style={[styles.title, { color: colors.text }]}>{t('certification')}</Text>
+          <Text style={[styles.subtitle, { color: colors.muted }]}>{t('cert_subtitle')}</Text>
         </View>
       </AnimatedEntrance>
 
       <AnimatedEntrance delay={30}>
-        <View style={styles.infoCard}>
-          <Text style={styles.infoLabel}>API</Text>
-          <Text style={styles.infoValue}>{API_BASE_URL}</Text>
-          <Text style={styles.infoHint}>Utile pour verifier rapidement que le telephone pointe vers le bon backend.</Text>
+        <View style={[styles.infoCard, { backgroundColor: colors.infoBg, borderColor: colors.infoBorder }]}>
+          <Text style={[styles.infoLabel, { color: colors.infoText }]}>API</Text>
+          <Text style={[styles.infoValue, { color: colors.text }]}>{API_BASE_URL}</Text>
+          <Text style={[styles.infoHint, { color: colors.muted }]}>Utile pour verifier rapidement que le telephone pointe vers le bon backend.</Text>
         </View>
       </AnimatedEntrance>
 
       <AnimatedEntrance delay={80}>
-        <View style={styles.card}>
-          <View style={styles.ribbon} />
+        <View style={[styles.card, { backgroundColor: colors.card, borderColor: colors.border, shadowColor: colors.shadow }]}>
+          <View style={[styles.ribbon, { backgroundColor: colors.accent }]} />
           <FormField
             label="Lot ID"
             value={form.lot_id}
@@ -117,13 +117,13 @@ export default function CertificationScreen({ session }) {
           />
 
           <View style={styles.actionRow}>
-            <Pressable onPress={submit} style={[styles.button, isSubmitting ? styles.buttonDisabled : null]} disabled={isSubmitting}>
+            <Pressable onPress={submit} style={[styles.button, { backgroundColor: colors.brand, shadowColor: colors.shadow }, isSubmitting ? styles.buttonDisabled : null]} disabled={isSubmitting}>
               <Text style={styles.buttonText}>
                 {isSubmitting ? t('processing') : t('launch_certification')}
               </Text>
             </Pressable>
-            <Pressable onPress={resetForm} style={styles.secondaryButton} disabled={isSubmitting}>
-              <Text style={styles.secondaryButtonText}>Reinitialiser</Text>
+            <Pressable onPress={resetForm} style={[styles.secondaryButton, { backgroundColor: colors.ghostButton }]} disabled={isSubmitting}>
+              <Text style={[styles.secondaryButtonText, { color: colors.ghostButtonText }]}>Reinitialiser</Text>
             </Pressable>
           </View>
         </View>
@@ -131,28 +131,28 @@ export default function CertificationScreen({ session }) {
 
       {error ? (
         <AnimatedEntrance delay={130}>
-          <View style={styles.errorBox}>
-            <Text style={styles.errorTitle}>{t('error')}</Text>
-            <Text style={styles.errorText}>{error}</Text>
+          <View style={[styles.errorBox, { backgroundColor: colors.errorBg, borderColor: colors.errorBorder }]}>
+            <Text style={[styles.errorTitle, { color: colors.errorText }]}>{t('error')}</Text>
+            <Text style={[styles.errorText, { color: colors.errorText }]}>{error}</Text>
           </View>
         </AnimatedEntrance>
       ) : null}
 
       {result ? (
         <AnimatedEntrance delay={170}>
-          <View style={styles.resultCard}>
-            <Text style={styles.resultEyebrow}>{t('certificate_issued')}</Text>
-            <Text style={styles.resultTitle}>{result.lotId}</Text>
-            <Text style={styles.resultLine}>Statut: {result.status}</Text>
-            <Text style={styles.resultLine}>Type: {result.mineralType}</Text>
-            <Text style={styles.resultLine}>Confiance: {(result.confidence * 100).toFixed(1)}%</Text>
-            <Text style={styles.resultLine}>Token: {result.tokenId ?? 'non cree'}</Text>
-            <Text style={styles.resultLine}>Bloc: {result.blockNumber ?? 'non disponible'}</Text>
-            <Text style={styles.resultLine}>Mode: {result.simulated ? 'simule' : 'reel'}</Text>
-            <Text style={styles.resultLine}>IPFS: {result.ipfsHash ?? 'absent'}</Text>
+          <View style={[styles.resultCard, { backgroundColor: colors.successBg, borderColor: colors.successBorder }]}>
+            <Text style={[styles.resultEyebrow, { color: colors.successText }]}>{t('certificate_issued')}</Text>
+            <Text style={[styles.resultTitle, { color: colors.text }]}>{result.lotId}</Text>
+            <Text style={[styles.resultLine, { color: colors.text }]}>Statut: {result.status}</Text>
+            <Text style={[styles.resultLine, { color: colors.text }]}>Type: {result.mineralType}</Text>
+            <Text style={[styles.resultLine, { color: colors.text }]}>Confiance: {(result.confidence * 100).toFixed(1)}%</Text>
+            <Text style={[styles.resultLine, { color: colors.text }]}>Token: {result.tokenId ?? 'non cree'}</Text>
+            <Text style={[styles.resultLine, { color: colors.text }]}>Bloc: {result.blockNumber ?? 'non disponible'}</Text>
+            <Text style={[styles.resultLine, { color: colors.text }]}>Mode: {result.simulated ? 'simule' : 'reel'}</Text>
+            <Text style={[styles.resultLine, { color: colors.text }]}>IPFS: {result.ipfsHash ?? 'absent'}</Text>
 
             {result.gatewayUrl ? (
-              <Pressable onPress={() => Linking.openURL(result.gatewayUrl)} style={styles.linkButton}>
+              <Pressable onPress={() => Linking.openURL(result.gatewayUrl)} style={[styles.linkButton, { backgroundColor: colors.surfaceStrong }]}>
                 <Text style={styles.linkText}>{t('open_certificate')}</Text>
               </Pressable>
             ) : null}
@@ -168,56 +168,45 @@ const styles = StyleSheet.create({
     gap: 4,
   },
   eyebrow: {
-    color: '#8e6a3f',
     fontSize: 11,
     fontWeight: '800',
     letterSpacing: 1.3,
     textTransform: 'uppercase',
   },
   title: {
-    color: '#1d2c2b',
     fontSize: 28,
     fontWeight: '900',
   },
   subtitle: {
-    color: '#5f675c',
     fontSize: 14,
     lineHeight: 20,
   },
   infoCard: {
-    backgroundColor: '#f0f7ff',
-    borderColor: '#bfd4ef',
     borderRadius: 22,
     borderWidth: 1,
     gap: 6,
     padding: 16,
   },
   infoLabel: {
-    color: '#29527a',
     fontSize: 11,
     fontWeight: '800',
     letterSpacing: 1.2,
     textTransform: 'uppercase',
   },
   infoValue: {
-    color: '#17324c',
     fontSize: 14,
     fontWeight: '800',
   },
   infoHint: {
-    color: '#496784',
     fontSize: 12,
     lineHeight: 18,
   },
   card: {
-    backgroundColor: '#fcf8ef',
-    borderColor: '#dfcfb6',
     borderRadius: 28,
     borderWidth: 1,
     gap: 12,
     overflow: 'hidden',
     padding: 18,
-    shadowColor: '#8e7453',
     shadowOffset: { width: 0, height: 10 },
     shadowOpacity: 0.08,
     shadowRadius: 20,
@@ -227,7 +216,6 @@ const styles = StyleSheet.create({
     width: 42,
     height: 6,
     borderRadius: 999,
-    backgroundColor: '#bf8b4c',
     marginBottom: 2,
   },
   actionRow: {
@@ -236,10 +224,8 @@ const styles = StyleSheet.create({
   },
   button: {
     alignItems: 'center',
-    backgroundColor: '#1d6b57',
     borderRadius: 18,
     paddingVertical: 15,
-    shadowColor: '#1d6b57',
     shadowOffset: { width: 0, height: 10 },
     shadowOpacity: 0.16,
     shadowRadius: 18,
@@ -255,61 +241,49 @@ const styles = StyleSheet.create({
   },
   secondaryButton: {
     alignItems: 'center',
-    backgroundColor: '#efe3d2',
     borderRadius: 18,
     paddingVertical: 14,
   },
   secondaryButtonText: {
-    color: '#6b5635',
     fontSize: 14,
     fontWeight: '800',
   },
   errorBox: {
-    backgroundColor: '#fff0ed',
-    borderColor: '#efb0a0',
     borderRadius: 22,
     borderWidth: 1,
     gap: 6,
     padding: 16,
   },
   errorTitle: {
-    color: '#8f2d14',
     fontSize: 14,
     fontWeight: '800',
   },
   errorText: {
-    color: '#944732',
     fontSize: 14,
     lineHeight: 20,
   },
   resultCard: {
-    backgroundColor: '#edf7f0',
-    borderColor: '#9cc8ae',
     borderRadius: 28,
     borderWidth: 1,
     gap: 8,
     padding: 18,
   },
   resultEyebrow: {
-    color: '#2c6b58',
     fontSize: 11,
     fontWeight: '800',
     letterSpacing: 1.3,
     textTransform: 'uppercase',
   },
   resultTitle: {
-    color: '#1d2c2b',
     fontSize: 22,
     fontWeight: '900',
   },
   resultLine: {
-    color: '#38524d',
     fontSize: 14,
     lineHeight: 20,
   },
   linkButton: {
     alignSelf: 'flex-start',
-    backgroundColor: '#17312d',
     borderRadius: 999,
     marginTop: 8,
     paddingHorizontal: 14,

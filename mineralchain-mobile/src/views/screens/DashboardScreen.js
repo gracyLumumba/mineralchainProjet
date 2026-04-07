@@ -26,9 +26,18 @@ export default function DashboardScreen({
       </AnimatedEntrance>
 
       <AnimatedEntrance delay={70}>
-        <View style={[styles.userCard, { backgroundColor: colors.cardAlt, borderColor: colors.border }]}>
+        <View
+          style={[
+            styles.userCard,
+            {
+              backgroundColor: colors.cardAlt,
+              borderColor: colors.border,
+              shadowColor: colors.shadow,
+            },
+          ]}
+        >
           <View style={styles.userHeader}>
-            <View style={styles.userBadge}>
+            <View style={[styles.userBadge, { backgroundColor: colors.brand }]}>
               <Text style={styles.userBadgeText}>{(session.name || 'O').slice(0, 1).toUpperCase()}</Text>
             </View>
             <View style={styles.userCopy}>
@@ -42,9 +51,9 @@ export default function DashboardScreen({
 
       {error ? (
         <AnimatedEntrance delay={110}>
-          <View style={styles.errorBox}>
-            <Text style={styles.errorTitle}>{t('connection_unavailable')}</Text>
-            <Text style={styles.errorText}>{error}</Text>
+          <View style={[styles.errorBox, { backgroundColor: colors.errorBg, borderColor: colors.errorBorder }]}>
+            <Text style={[styles.errorTitle, { color: colors.errorText }]}>{t('connection_unavailable')}</Text>
+            <Text style={[styles.errorText, { color: colors.errorText }]}>{error}</Text>
           </View>
         </AnimatedEntrance>
       ) : null}
@@ -55,12 +64,12 @@ export default function DashboardScreen({
 
       <AnimatedEntrance delay={190}>
         <View style={styles.actions}>
-          <Pressable onPress={onOpenLots} style={styles.actionButton}>
-            <Text style={styles.actionLabel}>{t('tracking')}</Text>
+          <Pressable onPress={onOpenLots} style={[styles.actionButton, { backgroundColor: colors.surfaceStrong, shadowColor: colors.shadow }]}>
+            <Text style={[styles.actionLabel, { color: colors.accent }]}>{t('tracking')}</Text>
             <Text style={styles.actionText}>{t('view_lots')}</Text>
           </Pressable>
-          <Pressable onPress={onOpenCertification} style={styles.secondaryButton}>
-            <Text style={styles.secondaryLabel}>{t('issuance')}</Text>
+          <Pressable onPress={onOpenCertification} style={[styles.secondaryButton, { backgroundColor: colors.brand, shadowColor: colors.shadow }]}>
+            <Text style={[styles.secondaryLabel, { color: colors.surfaceStrongText }]}>{t('issuance')}</Text>
             <Text style={styles.secondaryText}>{t('certify_lot')}</Text>
           </Pressable>
         </View>
@@ -71,13 +80,10 @@ export default function DashboardScreen({
 
 const styles = StyleSheet.create({
   userCard: {
-    backgroundColor: '#f8f1e5',
-    borderColor: '#dbc8a9',
     borderRadius: 28,
     borderWidth: 1,
     gap: 12,
     padding: 18,
-    shadowColor: '#8c7454',
     shadowOffset: { width: 0, height: 10 },
     shadowOpacity: 0.08,
     shadowRadius: 20,
@@ -90,7 +96,6 @@ const styles = StyleSheet.create({
   },
   userBadge: {
     alignItems: 'center',
-    backgroundColor: '#1c5f53',
     borderRadius: 18,
     height: 52,
     justifyContent: 'center',
@@ -106,34 +111,27 @@ const styles = StyleSheet.create({
     gap: 2,
   },
   userTitle: {
-    color: '#1d2c2b',
     fontSize: 21,
     fontWeight: '900',
   },
   userMeta: {
-    color: '#6d654f',
     fontSize: 14,
   },
   userCaption: {
-    color: '#4f5f5b',
     fontSize: 14,
     lineHeight: 20,
   },
   errorBox: {
-    backgroundColor: '#fff0ed',
-    borderColor: '#efb0a0',
     borderRadius: 22,
     borderWidth: 1,
     gap: 6,
     padding: 16,
   },
   errorTitle: {
-    color: '#8f2d14',
     fontSize: 14,
     fontWeight: '800',
   },
   errorText: {
-    color: '#944732',
     fontSize: 14,
     lineHeight: 20,
   },
@@ -141,19 +139,16 @@ const styles = StyleSheet.create({
     gap: 12,
   },
   actionButton: {
-    backgroundColor: '#1b2f2d',
     borderRadius: 24,
     gap: 3,
     paddingHorizontal: 18,
     paddingVertical: 18,
-    shadowColor: '#1b2f2d',
     shadowOffset: { width: 0, height: 12 },
     shadowOpacity: 0.14,
     shadowRadius: 18,
     elevation: 4,
   },
   actionLabel: {
-    color: '#ccb58c',
     fontSize: 11,
     fontWeight: '800',
     letterSpacing: 1.2,
@@ -165,19 +160,16 @@ const styles = StyleSheet.create({
     fontWeight: '900',
   },
   secondaryButton: {
-    backgroundColor: '#b9814c',
     borderRadius: 24,
     gap: 3,
     paddingHorizontal: 18,
     paddingVertical: 18,
-    shadowColor: '#b9814c',
     shadowOffset: { width: 0, height: 12 },
     shadowOpacity: 0.14,
     shadowRadius: 18,
     elevation: 4,
   },
   secondaryLabel: {
-    color: '#f3e4d1',
     fontSize: 11,
     fontWeight: '800',
     letterSpacing: 1.2,
