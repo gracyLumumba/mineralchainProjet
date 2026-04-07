@@ -97,6 +97,9 @@ export default function LoginScreen({ onLogin }) {
                   ))}
                 </View>
                 <Text style={[styles.demoCredentialText, { color: colors.muted }]}>Admin: `admin` / `Admin2025!`</Text>
+                <Text style={[styles.demoCredentialText, { color: colors.muted }]}>Producteur: `producteur` / `Demo2025!`</Text>
+                <Text style={[styles.demoCredentialText, { color: colors.muted }]}>Regulateur: `regulateur` / `Demo2025!`</Text>
+                <Text style={[styles.demoCredentialText, { color: colors.muted }]}>Transporteur: `transporteur` / `Demo2025!`</Text>
               </View>
 
               <Text style={[styles.label, { color: colors.text }]}>{t('identifier')}</Text>

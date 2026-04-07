@@ -75,6 +75,9 @@ const translations = {
     dashboard_secondary_regulator: 'Voir le registre',
     dashboard_secondary_transporter: 'Voir le registre',
     dashboard_connection_hint: 'Vous pouvez continuer a consulter l interface et relancer la synchronisation.',
+    access_restricted: 'Acces restreint',
+    certification_restricted_message: 'La certification mobile est reservee au producteur. Connectez-vous avec un compte producteur pour emettre un lot.',
+    back_to_dashboard: 'Retour au tableau de bord',
   },
   en: {
     refresh: 'Refresh',
@@ -147,6 +150,9 @@ const translations = {
     dashboard_secondary_regulator: 'Open registry',
     dashboard_secondary_transporter: 'Open registry',
     dashboard_connection_hint: 'You can still browse the interface and retry synchronization.',
+    access_restricted: 'Restricted access',
+    certification_restricted_message: 'Mobile certification is reserved for the producer role. Sign in with a producer account to issue a lot.',
+    back_to_dashboard: 'Back to dashboard',
   },
 };
 

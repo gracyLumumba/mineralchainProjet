@@ -16,7 +16,7 @@ Le backend est concu pour fonctionner avec les autres modules du projet :
 - detection de fraude ou d'anomalies
 - creation d'un certificat de lot
 - upload du certificat sur IPFS via Pinata
-- fallback en mode simulation si IPFS ou Ganache sont indisponibles
+- connexion reelle a Ganache pour le mint NFT
 - mint d'un NFT pour les lots authentiques
 - gestion locale des lots via API REST
 
@@ -167,7 +167,7 @@ http://localhost:5000
 - `app.py` force actuellement un chemin absolu pour charger les modeles IA.
 - `routes/certify.py` utilise aussi un chemin absolu pour charger l'ABI du smart contract.
 - `routes/lots.py` stocke les lots dans un fichier JSON local.
-- certaines routes passent en mode simulation si la blockchain ou Pinata ne sont pas disponibles.
+- les routes de certification et IPFS echouent explicitement si Ganache, le contrat ou Pinata ne sont pas disponibles.
 
 ## Fichiers de test
 

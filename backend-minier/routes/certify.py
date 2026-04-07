@@ -156,25 +156,6 @@ def extract_token_id_from_receipt(receipt, lot_id=None):
     return None
 
 
-def build_simulated_blockchain_result(lot_id, cert_hash, reason=None):
-    """
-    Build a deterministic fallback NFT payload when Ganache is unavailable.
-    This keeps the demo flow usable without claiming a real on-chain mint.
-    """
-    token_seed = hashlib.sha256(f"{lot_id}:{cert_hash}".encode()).hexdigest()
-    token_id = int(token_seed[:8], 16) % 900000 + 1000
-    tx_hash = f"0x{token_seed[:64]}"
-    return {
-        "contract_address": CONTRACT_ADDRESS,
-        "token_id": token_id,
-        "transaction_hash": tx_hash,
-        "block_number": None,
-        "gas_used": None,
-        "simulated": True,
-        "reason": reason or "Ganache indisponible"
-    }
-
-
 def is_unknown_mineral(value):
     return str(value).strip().lower() in {'', 'unknown', 'inconnu', 'none', 'null'}
 
@@ -224,8 +205,7 @@ def upload_to_pinata(certificate_data, lot_id):
         
         # Vérifier que le JWT est présent
         if not PINATA_JWT:
-            print(f"   [WARN] JWT manquant - upload impossible")
-            return None
+            raise RuntimeError("PINATA_JWT manquant - upload IPFS impossible")
         
         # Préparer les métadonnées
         pinata_metadata = {
@@ -263,14 +243,13 @@ def upload_to_pinata(certificate_data, lot_id):
             print(f"   • CID: {ipfs_hash}")
             print(f"   • Lien: {PINATA_GATEWAY}/ipfs/{ipfs_hash}")
             return ipfs_hash
-        else:
-            print(f"   [WARN] Erreur Pinata: {response.status_code}")
-            print(f"   • Réponse: {response.text[:200]}")
-            return None
-            
+
+        raise RuntimeError(
+            f"Erreur Pinata {response.status_code}: {response.text[:200]}"
+        )
+
     except Exception as e:
-        print(f"   [WARN] Erreur upload IPFS: {str(e)}")
-        return None
+        raise RuntimeError(f"Erreur upload IPFS: {str(e)}") from e
 
 # ============================================================
 # FONCTION PRINCIPALE : ANALYSE + CERTIFICATION + BLOCKCHAIN
@@ -406,20 +385,11 @@ def analyze_and_certify():
         print("\n[ETAPE 3/4] Upload vers IPFS...")
         
         ipfs_hash = upload_to_pinata(certificate, lot_id)
-        
-        if ipfs_hash:
-            ipfs_uri = f"ipfs://{ipfs_hash}"
-            gateway_url = f"{PINATA_GATEWAY}/ipfs/{ipfs_hash}"
-            print(f"   [OK] Certificat sur IPFS")
-            print(f"   • CID: {ipfs_hash}")
-            print(f"   • URL: {gateway_url}")
-        else:
-            # Fallback local (simulation)
-            ipfs_hash = f"QmSimulated{hashlib.sha256(lot_id.encode()).hexdigest()[:44]}"
-            ipfs_uri = f"ipfs://{ipfs_hash}"
-            gateway_url = f"{PINATA_GATEWAY}/ipfs/{ipfs_hash}"
-            print(f"   [WARN] Fallback local (simulation)")
-            print(f"   • CID simulé: {ipfs_hash}")
+        ipfs_uri = f"ipfs://{ipfs_hash}"
+        gateway_url = f"{PINATA_GATEWAY}/ipfs/{ipfs_hash}"
+        print(f"   [OK] Certificat sur IPFS")
+        print(f"   • CID: {ipfs_hash}")
+        print(f"   • URL: {gateway_url}")
         
         # -------------------------------------------------
         # ÉTAPE 4: MINT DU NFT (seulement si authentique)
@@ -514,9 +484,10 @@ def analyze_and_certify():
                 "simulated": False
             }
         elif status == "AUTHENTIQUE":
-            blockchain_result = build_simulated_blockchain_result(lot_id, cert_hash, blockchain_error)
-            token_id = blockchain_result["token_id"]
-            print(f"   [WARN] Fallback NFT simule: #{token_id}")
+            raise RuntimeError(
+                blockchain_error
+                or "Mint blockchain impossible: Ganache ou le contrat MineralNFT est indisponible"
+            )
 
         result = {
             "success": True,
@@ -584,8 +555,7 @@ def analyze_and_certify():
         print(f"[STATUS] {status}")
         print(f"[TOKEN] {token_id if token_id else 'Non cree'}")
         print(f"[IPFS] CID: {ipfs_hash[:20]}...")
-        if ipfs_hash and not ipfs_hash.startswith('QmSimulated'):
-            print(f"[LINK] Voir certificat: {gateway_url}")
+        print(f"[LINK] Voir certificat: {gateway_url}")
         
         return jsonify(result), 200
         

@@ -6,8 +6,9 @@ import { usePreferences } from '../../contexts/PreferencesContext';
 import { useCertificationViewModel } from '../../viewmodels/useCertificationViewModel';
 import { API_BASE_URL } from '../../config/api';
 
-export default function CertificationScreen({ session }) {
+export default function CertificationScreen({ session, navigation }) {
   const { colors, t } = usePreferences();
+  const canCertify = session?.role === 'producer';
   const {
     form,
     result,
@@ -18,6 +19,38 @@ export default function CertificationScreen({ session }) {
     submit,
     resetForm,
   } = useCertificationViewModel(session);
+
+  if (!canCertify) {
+    return (
+      <ScreenShell>
+        <AnimatedEntrance delay={0}>
+          <View style={styles.header}>
+            <Text style={[styles.eyebrow, { color: colors.accent }]}>{t('access_restricted')}</Text>
+            <Text style={[styles.title, { color: colors.text }]}>{t('certification')}</Text>
+            <Text style={[styles.subtitle, { color: colors.muted }]}>{t('certification_restricted_message')}</Text>
+          </View>
+        </AnimatedEntrance>
+
+        <AnimatedEntrance delay={40}>
+          <View style={[styles.errorBox, { backgroundColor: colors.infoBg, borderColor: colors.infoBorder }]}>
+            <Text style={[styles.errorTitle, { color: colors.infoText }]}>{session?.role || 'unknown'}</Text>
+            <Text style={[styles.errorText, { color: colors.text }]}>
+              {t('certification_restricted_message')}
+            </Text>
+          </View>
+        </AnimatedEntrance>
+
+        <AnimatedEntrance delay={80}>
+          <Pressable
+            onPress={() => navigation?.goBack?.()}
+            style={[styles.button, { backgroundColor: colors.brand, shadowColor: colors.shadow }]}
+          >
+            <Text style={styles.buttonText}>{t('back_to_dashboard')}</Text>
+          </Pressable>
+        </AnimatedEntrance>
+      </ScreenShell>
+    );
+  }
 
   return (
     <ScreenShell keyboardShouldPersistTaps="always">

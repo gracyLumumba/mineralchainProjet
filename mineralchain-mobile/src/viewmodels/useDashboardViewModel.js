@@ -1,8 +1,9 @@
 import { useEffect, useState } from 'react';
 import { fetchHealthStatus } from '../services/api/healthService';
 import { fetchLots } from '../services/api/lotsService';
+import { filterLotsForRole } from '../models/roleAccess';
 
-export function useDashboardViewModel() {
+export function useDashboardViewModel(session) {
   const [activeTab, setActiveTab] = useState('overview');
   const [health, setHealth] = useState(null);
   const [lots, setLots] = useState([]);
@@ -25,7 +26,7 @@ export function useDashboardViewModel() {
       ]);
 
       setHealth(nextHealth);
-      setLots(nextLots);
+      setLots(filterLotsForRole(nextLots, session));
     } catch (loadError) {
       setError(loadError.message || 'Erreur de chargement');
     } finally {
@@ -36,7 +37,7 @@ export function useDashboardViewModel() {
 
   useEffect(() => {
     load();
-  }, []);
+  }, [session?.id, session?.role, session?.username]);
 
   return {
     activeTab,

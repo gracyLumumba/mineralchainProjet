@@ -28,8 +28,9 @@ function BootScreen() {
 function AppNavigator() {
   const [session, setSession] = useState(null);
   const [isBooting, setIsBooting] = useState(true);
-  const dashboard = useDashboardViewModel();
+  const dashboard = useDashboardViewModel(session);
   const { colors, ready, theme } = usePreferences();
+  const canCertify = session?.role === 'producer';
 
   useEffect(() => {
     let active = true;
@@ -108,7 +109,11 @@ function AppNavigator() {
                   refresh={dashboard.refresh}
                   onLogout={handleLogout}
                   onOpenLots={() => navigation.navigate(ROUTES.LOTS)}
-                  onOpenCertification={() => navigation.navigate(ROUTES.CERTIFY)}
+                  onOpenCertification={() => {
+                    if (canCertify) {
+                      navigation.navigate(ROUTES.CERTIFY);
+                    }
+                  }}
                 />
               )}
             </Stack.Screen>
@@ -129,9 +134,11 @@ function AppNavigator() {
               component={LotDetailScreen}
               options={{ title: 'Detail lot' }}
             />
-            <Stack.Screen name={ROUTES.CERTIFY} options={{ title: 'Certification' }}>
-              {() => <CertificationScreen session={session} />}
-            </Stack.Screen>
+            {canCertify ? (
+              <Stack.Screen name={ROUTES.CERTIFY} options={{ title: 'Certification' }}>
+                {() => <CertificationScreen session={session} />}
+              </Stack.Screen>
+            ) : null}
           </>
         )}
       </Stack.Navigator>
