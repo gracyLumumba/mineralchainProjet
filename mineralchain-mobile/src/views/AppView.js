@@ -29,7 +29,7 @@ function AppNavigator() {
   const [session, setSession] = useState(null);
   const [isBooting, setIsBooting] = useState(true);
   const dashboard = useDashboardViewModel();
-  const { colors, ready } = usePreferences();
+  const { colors, ready, theme } = usePreferences();
 
   useEffect(() => {
     let active = true;
@@ -66,8 +66,8 @@ function AppNavigator() {
 
   if (!ready || isBooting) {
     return (
-      <>
-        <StatusBar style={colors.screen === '#121816' ? 'light' : 'dark'} />
+        <>
+        <StatusBar style={theme === 'dark' ? 'light' : 'dark'} />
         <BootScreen />
       </>
     );
@@ -75,7 +75,7 @@ function AppNavigator() {
 
   return (
     <NavigationContainer>
-      <StatusBar style={colors.screen === '#121816' ? 'light' : 'dark'} />
+      <StatusBar style={theme === 'dark' ? 'light' : 'dark'} />
       <Stack.Navigator
         initialRouteName={session ? ROUTES.DASHBOARD : ROUTES.LOGIN}
         screenOptions={{

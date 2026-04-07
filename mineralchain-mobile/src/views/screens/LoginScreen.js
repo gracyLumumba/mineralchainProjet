@@ -1,4 +1,4 @@
-import { Pressable, StyleSheet, Text, TextInput, View } from 'react-native';
+import { DevSettings, Pressable, StyleSheet, Text, TextInput, View } from 'react-native';
 import ScreenShell from '../components/ScreenShell';
 import RolePicker from '../components/RolePicker';
 import AnimatedEntrance from '../components/AnimatedEntrance';
@@ -58,6 +58,9 @@ export default function LoginScreen({ onLogin }) {
               <Text style={styles.title}>{mode === 'login' ? t('login') : t('register')}</Text>
             </View>
             <View style={styles.quickToggles}>
+              <Pressable onPress={() => DevSettings.reload()} style={[styles.quickPill, { borderColor: colors.accent }]}>
+                <Text style={styles.quickPillText}>{t('reload_app')}</Text>
+              </Pressable>
               <Pressable onPress={toggleLanguage} style={[styles.quickPill, { borderColor: colors.accent }]}>
                 <Text style={styles.quickPillText}>{language.toUpperCase()}</Text>
               </Pressable>
@@ -66,7 +69,7 @@ export default function LoginScreen({ onLogin }) {
               </Pressable>
             </View>
           </View>
-          <Text style={styles.subtitle}>
+          <Text style={[styles.subtitle, { color: colors.surfaceStrongText }]}>
             {mode === 'login' ? t('secure_access') : t('create_account')}
           </Text>
         </View>
@@ -196,14 +199,14 @@ export default function LoginScreen({ onLogin }) {
           )}
 
           {error ? (
-            <View style={styles.errorBox}>
-              <Text style={styles.errorText}>{error}</Text>
+            <View style={[styles.errorBox, { backgroundColor: colors.errorBg, borderColor: colors.errorBorder }]}>
+              <Text style={[styles.errorText, { color: colors.errorText }]}>{error}</Text>
             </View>
           ) : null}
 
           {notice ? (
-            <View style={styles.noticeBox}>
-              <Text style={styles.noticeText}>{notice}</Text>
+            <View style={[styles.noticeBox, { backgroundColor: colors.successBg, borderColor: colors.successBorder }]}>
+              <Text style={[styles.noticeText, { color: colors.successText }]}>{notice}</Text>
             </View>
           ) : null}
         </View>
@@ -252,7 +255,6 @@ const styles = StyleSheet.create({
     letterSpacing: -0.7,
   },
   subtitle: {
-    color: '#d7ebe3',
     fontSize: 14,
     lineHeight: 21,
   },
@@ -335,26 +337,20 @@ const styles = StyleSheet.create({
     paddingVertical: 14,
   },
   errorBox: {
-    backgroundColor: '#fff0ed',
-    borderColor: '#efb0a0',
     borderRadius: 18,
     borderWidth: 1,
     padding: 12,
   },
   errorText: {
-    color: '#8f2d14',
     fontSize: 14,
     fontWeight: '800',
   },
   noticeBox: {
-    backgroundColor: '#eef8f2',
-    borderColor: '#9cc8ae',
     borderRadius: 18,
     borderWidth: 1,
     padding: 12,
   },
   noticeText: {
-    color: '#245b49',
     fontSize: 14,
     fontWeight: '800',
   },

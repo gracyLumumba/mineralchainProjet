@@ -25,20 +25,20 @@ export default function LotDetailScreen({ route }) {
           <Text style={[styles.stateText, { color: colors.muted }]}>Chargement du lot...</Text>
         </View>
       ) : error ? (
-        <View style={styles.errorBox}>
-          <Text style={styles.errorTitle}>Erreur de chargement</Text>
-          <Text style={styles.errorText}>{error}</Text>
+        <View style={[styles.errorBox, { backgroundColor: colors.errorBg, borderColor: colors.errorBorder }]}>
+          <Text style={[styles.errorTitle, { color: colors.errorText }]}>Erreur de chargement</Text>
+          <Text style={[styles.errorText, { color: colors.errorText }]}>{error}</Text>
         </View>
       ) : (
         <>
-          <View style={[styles.card, { backgroundColor: colors.card }]}>
+          <View style={[styles.card, { backgroundColor: colors.card, borderColor: colors.border }]}>
             <View style={styles.headerRow}>
               <View style={styles.headerCopy}>
                 <Text style={[styles.id, { color: colors.text }]}>{lot.id}</Text>
                 <Text style={[styles.caption, { color: colors.muted }]}>Derniere lecture terrain</Text>
               </View>
-              <View style={styles.statusPill}>
-                <Text style={styles.statusText}>{lot.status}</Text>
+              <View style={[styles.statusPill, { backgroundColor: colors.badgeBg, borderColor: colors.border }]}>
+                <Text style={[styles.statusText, { color: colors.badgeText }]}>{lot.status}</Text>
               </View>
             </View>
 
@@ -81,24 +81,21 @@ const styles = StyleSheet.create({
     fontSize: 14,
   },
   errorBox: {
-    backgroundColor: '#fff0ed',
-    borderColor: '#efb0a0',
     borderRadius: 20,
     borderWidth: 1,
     gap: 6,
     padding: 16,
   },
   errorTitle: {
-    color: '#8f2d14',
     fontSize: 14,
     fontWeight: '800',
   },
   errorText: {
-    color: '#944732',
     fontSize: 14,
     lineHeight: 20,
   },
   card: {
+    borderWidth: 1,
     borderRadius: 24,
     gap: 16,
     padding: 20,
@@ -121,13 +118,12 @@ const styles = StyleSheet.create({
     fontSize: 13,
   },
   statusPill: {
-    backgroundColor: '#d7eadf',
+    borderWidth: 1,
     borderRadius: 999,
     paddingHorizontal: 12,
     paddingVertical: 8,
   },
   statusText: {
-    color: '#245b49',
     fontSize: 12,
     fontWeight: '800',
   },

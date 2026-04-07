@@ -1,4 +1,5 @@
 import { Pressable, StyleSheet, Text, View } from 'react-native';
+import { usePreferences } from '../../contexts/PreferencesContext';
 
 const TABS = [
   { key: 'overview', label: 'Vue generale' },
@@ -6,21 +7,23 @@ const TABS = [
 ];
 
 export default function TabBar({ activeTab, onChange }) {
+  const { colors } = usePreferences();
+
   return (
-    <View style={styles.row}>
+    <View style={[styles.row, { backgroundColor: colors.cardAlt, borderColor: colors.border }]}>
       {TABS.map((tab) => (
         <Pressable
           key={tab.key}
           onPress={() => onChange(tab.key)}
           style={[
             styles.tab,
-            activeTab === tab.key ? styles.activeTab : null,
+            activeTab === tab.key ? [styles.activeTab, { backgroundColor: colors.input }] : null,
           ]}
         >
           <Text
             style={[
               styles.label,
-              activeTab === tab.key ? styles.activeLabel : null,
+              { color: activeTab === tab.key ? colors.text : colors.muted },
             ]}
           >
             {tab.label}
@@ -33,7 +36,7 @@ export default function TabBar({ activeTab, onChange }) {
 
 const styles = StyleSheet.create({
   row: {
-    backgroundColor: '#e4dac7',
+    borderWidth: 1,
     borderRadius: 999,
     flexDirection: 'row',
     padding: 4,
@@ -43,16 +46,10 @@ const styles = StyleSheet.create({
     flex: 1,
     paddingVertical: 10,
   },
-  activeTab: {
-    backgroundColor: '#ffffff',
-  },
+  activeTab: {},
   label: {
-    color: '#725f44',
     fontSize: 13,
     fontWeight: '700',
     textAlign: 'center',
-  },
-  activeLabel: {
-    color: '#17312d',
   },
 });

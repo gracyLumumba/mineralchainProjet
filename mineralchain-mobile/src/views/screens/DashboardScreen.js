@@ -5,6 +5,47 @@ import TopBar from '../components/TopBar';
 import AnimatedEntrance from '../components/AnimatedEntrance';
 import { usePreferences } from '../../contexts/PreferencesContext';
 
+function getRolePresentation(role, t) {
+  switch (role) {
+    case 'admin':
+      return {
+        roleLabel: t('role_admin'),
+        caption: t('dashboard_role_admin'),
+        primaryLabel: t('supervision_center'),
+        primaryText: t('dashboard_primary_admin'),
+        secondaryLabel: t('lots'),
+        secondaryText: t('dashboard_secondary_admin'),
+      };
+    case 'regulator':
+      return {
+        roleLabel: t('role_regulator'),
+        caption: t('dashboard_role_regulator'),
+        primaryLabel: t('tracking'),
+        primaryText: t('dashboard_primary_regulator'),
+        secondaryLabel: t('summary'),
+        secondaryText: t('dashboard_secondary_regulator'),
+      };
+    case 'transporter':
+      return {
+        roleLabel: t('role_transporter'),
+        caption: t('dashboard_role_transporter'),
+        primaryLabel: t('tracking'),
+        primaryText: t('dashboard_primary_transporter'),
+        secondaryLabel: t('summary'),
+        secondaryText: t('dashboard_secondary_transporter'),
+      };
+    default:
+      return {
+        roleLabel: t('role_producer'),
+        caption: t('dashboard_role_producer'),
+        primaryLabel: t('issuance'),
+        primaryText: t('dashboard_primary_producer'),
+        secondaryLabel: t('tracking'),
+        secondaryText: t('dashboard_secondary_producer'),
+      };
+  }
+}
+
 export default function DashboardScreen({
   session,
   health,
@@ -18,6 +59,8 @@ export default function DashboardScreen({
   onOpenCertification,
 }) {
   const { colors, t } = usePreferences();
+  const rolePresentation = getRolePresentation(session.role, t);
+  const canCertify = session.role === 'producer';
 
   return (
     <ScreenShell onRefresh={refresh} refreshing={isRefreshing}>
@@ -42,10 +85,10 @@ export default function DashboardScreen({
             </View>
             <View style={styles.userCopy}>
               <Text style={[styles.userTitle, { color: colors.text }]}>{session.name}</Text>
-              <Text style={[styles.userMeta, { color: colors.muted }]}>{session.site} - {session.role}</Text>
+              <Text style={[styles.userMeta, { color: colors.muted }]}>{session.site} - {rolePresentation.roleLabel}</Text>
             </View>
           </View>
-          <Text style={[styles.userCaption, { color: colors.muted }]}>{t('dashboard_subtitle')}</Text>
+          <Text style={[styles.userCaption, { color: colors.muted }]}>{rolePresentation.caption}</Text>
         </View>
       </AnimatedEntrance>
 
@@ -54,6 +97,10 @@ export default function DashboardScreen({
           <View style={[styles.errorBox, { backgroundColor: colors.errorBg, borderColor: colors.errorBorder }]}>
             <Text style={[styles.errorTitle, { color: colors.errorText }]}>{t('connection_unavailable')}</Text>
             <Text style={[styles.errorText, { color: colors.errorText }]}>{error}</Text>
+            <Text style={[styles.errorHint, { color: colors.muted }]}>{t('dashboard_connection_hint')}</Text>
+            <Pressable onPress={refresh} style={[styles.retryButton, { backgroundColor: colors.ghostButton }]}>
+              <Text style={[styles.retryText, { color: colors.ghostButtonText }]}>{t('retry')}</Text>
+            </Pressable>
           </View>
         </AnimatedEntrance>
       ) : null}
@@ -64,13 +111,16 @@ export default function DashboardScreen({
 
       <AnimatedEntrance delay={190}>
         <View style={styles.actions}>
-          <Pressable onPress={onOpenLots} style={[styles.actionButton, { backgroundColor: colors.surfaceStrong, shadowColor: colors.shadow }]}>
-            <Text style={[styles.actionLabel, { color: colors.accent }]}>{t('tracking')}</Text>
-            <Text style={styles.actionText}>{t('view_lots')}</Text>
+          <Pressable
+            onPress={canCertify ? onOpenCertification : onOpenLots}
+            style={[styles.secondaryButton, { backgroundColor: colors.brand, shadowColor: colors.shadow }]}
+          >
+            <Text style={[styles.secondaryLabel, { color: colors.surfaceStrongText }]}>{rolePresentation.primaryLabel}</Text>
+            <Text style={styles.secondaryText}>{rolePresentation.primaryText}</Text>
           </Pressable>
-          <Pressable onPress={onOpenCertification} style={[styles.secondaryButton, { backgroundColor: colors.brand, shadowColor: colors.shadow }]}>
-            <Text style={[styles.secondaryLabel, { color: colors.surfaceStrongText }]}>{t('issuance')}</Text>
-            <Text style={styles.secondaryText}>{t('certify_lot')}</Text>
+          <Pressable onPress={onOpenLots} style={[styles.actionButton, { backgroundColor: colors.surfaceStrong, shadowColor: colors.shadow }]}>
+            <Text style={[styles.actionLabel, { color: colors.accent }]}>{rolePresentation.secondaryLabel}</Text>
+            <Text style={styles.actionText}>{rolePresentation.secondaryText}</Text>
           </Pressable>
         </View>
       </AnimatedEntrance>
@@ -134,6 +184,22 @@ const styles = StyleSheet.create({
   errorText: {
     fontSize: 14,
     lineHeight: 20,
+  },
+  errorHint: {
+    fontSize: 13,
+    lineHeight: 18,
+  },
+  retryButton: {
+    alignSelf: 'flex-start',
+    borderRadius: 999,
+    marginTop: 6,
+    paddingHorizontal: 14,
+    paddingVertical: 9,
+  },
+  retryText: {
+    fontSize: 12,
+    fontWeight: '800',
+    textTransform: 'uppercase',
   },
   actions: {
     gap: 12,
