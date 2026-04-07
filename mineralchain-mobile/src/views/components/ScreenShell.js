@@ -1,11 +1,25 @@
-import { SafeAreaView, ScrollView, StyleSheet, View } from 'react-native';
+import { RefreshControl, SafeAreaView, ScrollView, StyleSheet, View } from 'react-native';
 
-export default function ScreenShell({ children }) {
+export default function ScreenShell({
+  children,
+  onRefresh,
+  refreshing = false,
+  keyboardShouldPersistTaps = 'handled',
+}) {
   return (
     <SafeAreaView style={styles.safeArea}>
       <View style={styles.bgOrbOne} />
       <View style={styles.bgOrbTwo} />
-      <ScrollView contentContainerStyle={styles.content} showsVerticalScrollIndicator={false}>
+      <ScrollView
+        contentContainerStyle={styles.content}
+        keyboardShouldPersistTaps={keyboardShouldPersistTaps}
+        refreshControl={
+          onRefresh ? (
+            <RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor="#1d6b57" />
+          ) : undefined
+        }
+        showsVerticalScrollIndicator={false}
+      >
         <View style={styles.inner}>{children}</View>
       </ScrollView>
     </SafeAreaView>

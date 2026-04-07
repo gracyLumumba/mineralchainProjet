@@ -116,6 +116,8 @@ function AppNavigator() {
               {({ navigation }) => (
                 <LotsListScreen
                   lots={dashboard.lots}
+                  isRefreshing={dashboard.isRefreshing}
+                  refresh={dashboard.refresh}
                   onOpenLot={(lotId) =>
                     navigation.navigate(ROUTES.LOT_DETAIL, { lotId })
                   }

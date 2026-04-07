@@ -15,7 +15,7 @@ export default function LotCard({ lot }) {
         <Text style={styles.meta}>Site: {lot.site}</Text>
         <Text style={styles.meta}>Poids: {lot.weight} t</Text>
         <Text style={styles.meta}>
-          Blockchain: {lot.tokenId ? `Token ${lot.tokenId} · Bloc ${lot.blockNumber}` : 'En attente'}
+          Blockchain: {lot.tokenId ? `Token ${lot.tokenId} - Bloc ${lot.blockNumber}` : 'En attente'}
         </Text>
       </View>
     </View>

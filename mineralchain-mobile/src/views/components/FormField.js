@@ -6,6 +6,10 @@ export default function FormField({
   onChangeText,
   placeholder,
   keyboardType,
+  autoCapitalize = 'sentences',
+  autoCorrect = false,
+  error,
+  helper,
 }) {
   return (
     <View style={styles.wrapper}>
@@ -16,8 +20,12 @@ export default function FormField({
         placeholder={placeholder}
         placeholderTextColor="#9b8c77"
         keyboardType={keyboardType}
-        style={styles.input}
+        autoCapitalize={autoCapitalize}
+        autoCorrect={autoCorrect}
+        style={[styles.input, error ? styles.inputError : null]}
       />
+      {error ? <Text style={styles.errorText}>{error}</Text> : null}
+      {!error && helper ? <Text style={styles.helperText}>{helper}</Text> : null}
     </View>
   );
 }
@@ -47,5 +55,18 @@ const styles = StyleSheet.create({
     shadowOpacity: 0.05,
     shadowRadius: 14,
     elevation: 2,
+  },
+  inputError: {
+    borderColor: '#d56a4d',
+  },
+  errorText: {
+    color: '#9a3412',
+    fontSize: 12,
+    lineHeight: 18,
+  },
+  helperText: {
+    color: '#7c6b56',
+    fontSize: 12,
+    lineHeight: 18,
   },
 });

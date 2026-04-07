@@ -1,17 +1,28 @@
-import { ActivityIndicator, StyleSheet, Text, View } from 'react-native';
+import { ActivityIndicator, Pressable, StyleSheet, Text, View } from 'react-native';
 import ScreenShell from '../components/ScreenShell';
+import { usePreferences } from '../../contexts/PreferencesContext';
 import { useLotDetailViewModel } from '../../viewmodels/useLotDetailViewModel';
+
+function DetailLine({ label, value, colors }) {
+  return (
+    <View style={styles.detailLine}>
+      <Text style={[styles.detailLabel, { color: colors.muted }]}>{label}</Text>
+      <Text style={[styles.detailValue, { color: colors.text }]}>{String(value)}</Text>
+    </View>
+  );
+}
 
 export default function LotDetailScreen({ route }) {
   const { lotId } = route.params;
-  const { lot, isLoading, error } = useLotDetailViewModel(lotId);
+  const { colors } = usePreferences();
+  const { lot, isLoading, isRefreshing, error, refresh } = useLotDetailViewModel(lotId);
 
   return (
-    <ScreenShell>
+    <ScreenShell onRefresh={refresh} refreshing={isRefreshing}>
       {isLoading ? (
         <View style={styles.stateBox}>
-          <ActivityIndicator size="large" color="#1d6b57" />
-          <Text style={styles.stateText}>Chargement du lot...</Text>
+          <ActivityIndicator size="large" color={colors.brand} />
+          <Text style={[styles.stateText, { color: colors.muted }]}>Chargement du lot...</Text>
         </View>
       ) : error ? (
         <View style={styles.errorBox}>
@@ -19,22 +30,42 @@ export default function LotDetailScreen({ route }) {
           <Text style={styles.errorText}>{error}</Text>
         </View>
       ) : (
-        <View style={styles.card}>
-          <Text style={styles.id}>{lot.id}</Text>
-          <Text style={styles.line}>Statut: {lot.status}</Text>
-          <Text style={styles.line}>Site: {lot.site}</Text>
-          <Text style={styles.line}>Poids: {lot.weight} t</Text>
-          <Text style={styles.line}>
-            Token: {lot.tokenId ?? 'non certifie'}
-          </Text>
-          <Text style={styles.line}>
-            Bloc: {lot.blockNumber ?? 'non disponible'}
-          </Text>
-          <Text style={styles.line}>
-            Certificat: {lot.certificateId ?? 'non disponible'}
-          </Text>
-          <Text style={styles.line}>Stockage: {lot.storage}</Text>
-        </View>
+        <>
+          <View style={[styles.card, { backgroundColor: colors.card }]}>
+            <View style={styles.headerRow}>
+              <View style={styles.headerCopy}>
+                <Text style={[styles.id, { color: colors.text }]}>{lot.id}</Text>
+                <Text style={[styles.caption, { color: colors.muted }]}>Derniere lecture terrain</Text>
+              </View>
+              <View style={styles.statusPill}>
+                <Text style={styles.statusText}>{lot.status}</Text>
+              </View>
+            </View>
+
+            <View style={styles.metaGrid}>
+              <View style={[styles.metaCard, { backgroundColor: colors.cardAlt, borderColor: colors.border }]}>
+                <Text style={[styles.metaLabel, { color: colors.muted }]}>Site</Text>
+                <Text style={[styles.metaValue, { color: colors.text }]}>{lot.site}</Text>
+              </View>
+              <View style={[styles.metaCard, { backgroundColor: colors.cardAlt, borderColor: colors.border }]}>
+                <Text style={[styles.metaLabel, { color: colors.muted }]}>Poids</Text>
+                <Text style={[styles.metaValue, { color: colors.text }]}>{lot.weight} t</Text>
+              </View>
+            </View>
+          </View>
+
+          <View style={[styles.section, { backgroundColor: colors.card, borderColor: colors.border }]}>
+            <Text style={[styles.sectionTitle, { color: colors.text }]}>Tracabilite</Text>
+            <DetailLine label="Token" value={lot.tokenId ?? 'non certifie'} colors={colors} />
+            <DetailLine label="Bloc" value={lot.blockNumber ?? 'non disponible'} colors={colors} />
+            <DetailLine label="Certificat" value={lot.certificateId ?? 'non disponible'} colors={colors} />
+            <DetailLine label="Stockage" value={lot.storage} colors={colors} />
+          </View>
+
+          <Pressable onPress={refresh} style={[styles.refreshButton, { backgroundColor: colors.brand }]}>
+            <Text style={styles.refreshText}>Actualiser ce lot</Text>
+          </Pressable>
+        </>
       )}
     </ScreenShell>
   );
@@ -47,7 +78,6 @@ const styles = StyleSheet.create({
     paddingVertical: 48,
   },
   stateText: {
-    color: '#516160',
     fontSize: 14,
   },
   errorBox: {
@@ -69,19 +99,86 @@ const styles = StyleSheet.create({
     lineHeight: 20,
   },
   card: {
-    backgroundColor: '#fffaf2',
     borderRadius: 24,
-    gap: 10,
+    gap: 16,
     padding: 20,
   },
+  headerRow: {
+    alignItems: 'flex-start',
+    flexDirection: 'row',
+    gap: 12,
+    justifyContent: 'space-between',
+  },
+  headerCopy: {
+    flex: 1,
+    gap: 4,
+  },
   id: {
-    color: '#1d2c2b',
     fontSize: 22,
     fontWeight: '800',
   },
-  line: {
-    color: '#485856',
+  caption: {
+    fontSize: 13,
+  },
+  statusPill: {
+    backgroundColor: '#d7eadf',
+    borderRadius: 999,
+    paddingHorizontal: 12,
+    paddingVertical: 8,
+  },
+  statusText: {
+    color: '#245b49',
+    fontSize: 12,
+    fontWeight: '800',
+  },
+  metaGrid: {
+    flexDirection: 'row',
+    gap: 10,
+  },
+  metaCard: {
+    borderRadius: 18,
+    borderWidth: 1,
+    flex: 1,
+    gap: 6,
+    padding: 14,
+  },
+  metaLabel: {
+    fontSize: 12,
+    textTransform: 'uppercase',
+  },
+  metaValue: {
+    fontSize: 17,
+    fontWeight: '800',
+  },
+  section: {
+    borderRadius: 24,
+    borderWidth: 1,
+    gap: 14,
+    padding: 20,
+  },
+  sectionTitle: {
+    fontSize: 18,
+    fontWeight: '800',
+  },
+  detailLine: {
+    gap: 4,
+  },
+  detailLabel: {
+    fontSize: 12,
+    textTransform: 'uppercase',
+  },
+  detailValue: {
     fontSize: 15,
     lineHeight: 22,
+  },
+  refreshButton: {
+    alignItems: 'center',
+    borderRadius: 18,
+    paddingVertical: 15,
+  },
+  refreshText: {
+    color: '#ffffff',
+    fontSize: 15,
+    fontWeight: '900',
   },
 });

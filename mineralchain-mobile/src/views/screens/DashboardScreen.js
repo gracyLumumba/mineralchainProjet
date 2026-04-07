@@ -18,8 +18,9 @@ export default function DashboardScreen({
   onOpenCertification,
 }) {
   const { colors, t } = usePreferences();
+
   return (
-    <ScreenShell>
+    <ScreenShell onRefresh={refresh} refreshing={isRefreshing}>
       <AnimatedEntrance delay={0}>
         <TopBar onRefresh={refresh} onLogout={onLogout} isRefreshing={isRefreshing} />
       </AnimatedEntrance>
@@ -32,7 +33,7 @@ export default function DashboardScreen({
             </View>
             <View style={styles.userCopy}>
               <Text style={[styles.userTitle, { color: colors.text }]}>{session.name}</Text>
-              <Text style={[styles.userMeta, { color: colors.muted }]}>{session.site} · {session.role}</Text>
+              <Text style={[styles.userMeta, { color: colors.muted }]}>{session.site} - {session.role}</Text>
             </View>
           </View>
           <Text style={[styles.userCaption, { color: colors.muted }]}>{t('dashboard_subtitle')}</Text>

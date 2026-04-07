@@ -51,7 +51,7 @@ export function useAuthViewModel({ onLogin }) {
       setError('');
       setNotice('');
       const result = await register(registerForm);
-      setNotice(result.message || 'Compte créé');
+      setNotice(result.message || 'Compte cree');
       setMode('login');
       setIdentifier(registerForm.username);
       setPassword('');

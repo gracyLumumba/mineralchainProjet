@@ -1,43 +1,43 @@
-import { useEffect, useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import { fetchLotDetail } from '../services/api/lotDetailService';
 
 export function useLotDetailViewModel(lotId) {
   const [lot, setLot] = useState(null);
   const [isLoading, setIsLoading] = useState(true);
+  const [isRefreshing, setIsRefreshing] = useState(false);
   const [error, setError] = useState('');
 
-  useEffect(() => {
-    let isMounted = true;
-
-    const load = async () => {
+  const load = useCallback(
+    async (mode = 'initial') => {
       try {
-        setIsLoading(true);
+        if (mode === 'initial') {
+          setIsLoading(true);
+        } else {
+          setIsRefreshing(true);
+        }
+
         setError('');
         const nextLot = await fetchLotDetail(lotId);
-        if (isMounted) {
-          setLot(nextLot);
-        }
+        setLot(nextLot);
       } catch (loadError) {
-        if (isMounted) {
-          setError(loadError.message || 'Erreur de chargement');
-        }
+        setError(loadError.message || 'Erreur de chargement');
       } finally {
-        if (isMounted) {
-          setIsLoading(false);
-        }
+        setIsLoading(false);
+        setIsRefreshing(false);
       }
-    };
+    },
+    [lotId]
+  );
 
+  useEffect(() => {
     load();
-
-    return () => {
-      isMounted = false;
-    };
-  }, [lotId]);
+  }, [load]);
 
   return {
     lot,
     isLoading,
+    isRefreshing,
     error,
+    refresh: () => load('refresh'),
   };
 }

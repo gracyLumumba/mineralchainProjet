@@ -4,19 +4,36 @@ import FormField from '../components/FormField';
 import AnimatedEntrance from '../components/AnimatedEntrance';
 import { usePreferences } from '../../contexts/PreferencesContext';
 import { useCertificationViewModel } from '../../viewmodels/useCertificationViewModel';
+import { API_BASE_URL } from '../../config/api';
 
 export default function CertificationScreen({ session }) {
   const { t } = usePreferences();
-  const { form, result, error, isSubmitting, updateField, submit } =
-    useCertificationViewModel(session);
+  const {
+    form,
+    result,
+    error,
+    fieldErrors,
+    isSubmitting,
+    updateField,
+    submit,
+    resetForm,
+  } = useCertificationViewModel(session);
 
   return (
-    <ScreenShell>
+    <ScreenShell keyboardShouldPersistTaps="always">
       <AnimatedEntrance delay={0}>
         <View style={styles.header}>
           <Text style={styles.eyebrow}>{t('issuance')}</Text>
           <Text style={styles.title}>{t('certification')}</Text>
           <Text style={styles.subtitle}>{t('cert_subtitle')}</Text>
+        </View>
+      </AnimatedEntrance>
+
+      <AnimatedEntrance delay={30}>
+        <View style={styles.infoCard}>
+          <Text style={styles.infoLabel}>API</Text>
+          <Text style={styles.infoValue}>{API_BASE_URL}</Text>
+          <Text style={styles.infoHint}>Utile pour verifier rapidement que le telephone pointe vers le bon backend.</Text>
         </View>
       </AnimatedEntrance>
 
@@ -28,67 +45,87 @@ export default function CertificationScreen({ session }) {
             value={form.lot_id}
             onChangeText={(value) => updateField('lot_id', value)}
             placeholder="MOB-XXXXXX"
+            autoCapitalize="characters"
+            error={fieldErrors.lot_id}
           />
           <FormField
             label="Producteur"
             value={form.producer}
             onChangeText={(value) => updateField('producer', value)}
             placeholder="Nom operateur"
+            error={fieldErrors.producer}
           />
           <FormField
             label="Site"
             value={form.site}
             onChangeText={(value) => updateField('site', value)}
             placeholder="Kamoa-Kansoko"
+            error={fieldErrors.site}
           />
           <FormField
             label="Poids (t)"
             value={form.weight_tonnes}
             onChangeText={(value) => updateField('weight_tonnes', value)}
             keyboardType="decimal-pad"
+            helper="Exemple : 125.4"
+            error={fieldErrors.weight_tonnes}
           />
           <FormField
             label="Cu %"
             value={form.cu_grade_percent}
             onChangeText={(value) => updateField('cu_grade_percent', value)}
             keyboardType="decimal-pad"
+            error={fieldErrors.cu_grade_percent}
           />
           <FormField
             label="Co %"
             value={form.co_grade_percent}
             onChangeText={(value) => updateField('co_grade_percent', value)}
             keyboardType="decimal-pad"
+            error={fieldErrors.co_grade_percent}
           />
           <FormField
             label="Fe %"
             value={form.fe_percent}
             onChangeText={(value) => updateField('fe_percent', value)}
             keyboardType="decimal-pad"
+            error={fieldErrors.fe_percent}
           />
           <FormField
             label="S %"
             value={form.s_percent}
             onChangeText={(value) => updateField('s_percent', value)}
             keyboardType="decimal-pad"
+            error={fieldErrors.s_percent}
           />
           <FormField
             label="Densite"
             value={form.density_t_m3}
             onChangeText={(value) => updateField('density_t_m3', value)}
             keyboardType="decimal-pad"
+            helper="Exemple : 2.7 t/m3"
+            error={fieldErrors.density_t_m3}
           />
           <FormField
             label="Date extraction"
             value={form.extraction_date}
             onChangeText={(value) => updateField('extraction_date', value)}
             placeholder="YYYY-MM-DD"
+            autoCapitalize="none"
+            helper="Format attendu : 2026-04-07"
+            error={fieldErrors.extraction_date}
           />
 
-          <Pressable onPress={submit} style={styles.button}>
-            <Text style={styles.buttonText}>
-              {isSubmitting ? t('processing') : t('launch_certification')}
-            </Text>
-          </Pressable>
+          <View style={styles.actionRow}>
+            <Pressable onPress={submit} style={[styles.button, isSubmitting ? styles.buttonDisabled : null]} disabled={isSubmitting}>
+              <Text style={styles.buttonText}>
+                {isSubmitting ? t('processing') : t('launch_certification')}
+              </Text>
+            </Pressable>
+            <Pressable onPress={resetForm} style={styles.secondaryButton} disabled={isSubmitting}>
+              <Text style={styles.secondaryButtonText}>Reinitialiser</Text>
+            </Pressable>
+          </View>
         </View>
       </AnimatedEntrance>
 
@@ -108,6 +145,7 @@ export default function CertificationScreen({ session }) {
             <Text style={styles.resultTitle}>{result.lotId}</Text>
             <Text style={styles.resultLine}>Statut: {result.status}</Text>
             <Text style={styles.resultLine}>Type: {result.mineralType}</Text>
+            <Text style={styles.resultLine}>Confiance: {(result.confidence * 100).toFixed(1)}%</Text>
             <Text style={styles.resultLine}>Token: {result.tokenId ?? 'non cree'}</Text>
             <Text style={styles.resultLine}>Bloc: {result.blockNumber ?? 'non disponible'}</Text>
             <Text style={styles.resultLine}>Mode: {result.simulated ? 'simule' : 'reel'}</Text>
@@ -146,6 +184,31 @@ const styles = StyleSheet.create({
     fontSize: 14,
     lineHeight: 20,
   },
+  infoCard: {
+    backgroundColor: '#f0f7ff',
+    borderColor: '#bfd4ef',
+    borderRadius: 22,
+    borderWidth: 1,
+    gap: 6,
+    padding: 16,
+  },
+  infoLabel: {
+    color: '#29527a',
+    fontSize: 11,
+    fontWeight: '800',
+    letterSpacing: 1.2,
+    textTransform: 'uppercase',
+  },
+  infoValue: {
+    color: '#17324c',
+    fontSize: 14,
+    fontWeight: '800',
+  },
+  infoHint: {
+    color: '#496784',
+    fontSize: 12,
+    lineHeight: 18,
+  },
   card: {
     backgroundColor: '#fcf8ef',
     borderColor: '#dfcfb6',
@@ -167,11 +230,14 @@ const styles = StyleSheet.create({
     backgroundColor: '#bf8b4c',
     marginBottom: 2,
   },
+  actionRow: {
+    gap: 10,
+    marginTop: 8,
+  },
   button: {
     alignItems: 'center',
     backgroundColor: '#1d6b57',
     borderRadius: 18,
-    marginTop: 8,
     paddingVertical: 15,
     shadowColor: '#1d6b57',
     shadowOffset: { width: 0, height: 10 },
@@ -179,10 +245,24 @@ const styles = StyleSheet.create({
     shadowRadius: 18,
     elevation: 4,
   },
+  buttonDisabled: {
+    opacity: 0.7,
+  },
   buttonText: {
     color: '#ffffff',
     fontSize: 15,
     fontWeight: '900',
+  },
+  secondaryButton: {
+    alignItems: 'center',
+    backgroundColor: '#efe3d2',
+    borderRadius: 18,
+    paddingVertical: 14,
+  },
+  secondaryButtonText: {
+    color: '#6b5635',
+    fontSize: 14,
+    fontWeight: '800',
   },
   errorBox: {
     backgroundColor: '#fff0ed',
