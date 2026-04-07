@@ -47,6 +47,7 @@ __pycache__/
 *.py[cod]
 backend-minier/lots_data.json
 backend-minier/users_data.json
+modele_ia_minier/dataset_minier_complet_50000.csv
 
 # Snowpack dependency directory (https://snowpack.dev/)
 web_modules/
