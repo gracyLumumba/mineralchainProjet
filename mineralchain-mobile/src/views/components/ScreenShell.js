@@ -1,4 +1,4 @@
-import { RefreshControl, SafeAreaView, ScrollView, StyleSheet, View } from 'react-native';
+import { DevSettings, Pressable, RefreshControl, SafeAreaView, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { usePreferences } from '../../contexts/PreferencesContext';
 
 export default function ScreenShell({
@@ -13,6 +13,16 @@ export default function ScreenShell({
     <SafeAreaView style={[styles.safeArea, { backgroundColor: colors.screen }]}>
       <View style={[styles.bgOrbOne, { backgroundColor: colors.overlayOne }]} />
       <View style={[styles.bgOrbTwo, { backgroundColor: colors.overlayTwo }]} />
+
+      {__DEV__ ? (
+        <Pressable
+          onPress={() => DevSettings.reload()}
+          style={[styles.devReload, { backgroundColor: colors.surfaceStrong, borderColor: colors.border }]}
+        >
+          <Text style={[styles.devReloadText, { color: colors.text }]}>Reload app</Text>
+        </Pressable>
+      ) : null}
+
       <ScrollView
         contentContainerStyle={styles.content}
         keyboardShouldPersistTaps={keyboardShouldPersistTaps}
@@ -50,6 +60,22 @@ const styles = StyleSheet.create({
     height: 240,
     borderRadius: 999,
     opacity: 0.18,
+  },
+  devReload: {
+    alignItems: 'center',
+    alignSelf: 'flex-end',
+    borderRadius: 999,
+    borderWidth: 1,
+    marginRight: 20,
+    marginTop: 12,
+    paddingHorizontal: 12,
+    paddingVertical: 8,
+    zIndex: 5,
+  },
+  devReloadText: {
+    fontSize: 11,
+    fontWeight: '800',
+    textTransform: 'uppercase',
   },
   content: {
     flexGrow: 1,
