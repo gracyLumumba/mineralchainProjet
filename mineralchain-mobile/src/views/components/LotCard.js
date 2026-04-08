@@ -29,6 +29,12 @@ export default function LotCard({ lot }) {
         <Text style={[styles.meta, { color: colors.muted }]}>Site: {lot.site}</Text>
         <Text style={[styles.meta, { color: colors.muted }]}>Poids: {lot.weight} t</Text>
         <Text style={[styles.meta, { color: colors.muted }]}>
+          DGMR: {lot.regulatorValidated ? 'Valide' : 'En attente'}
+        </Text>
+        <Text style={[styles.meta, { color: colors.muted }]}>
+          Transport: {lot.transportStatus || 'Non demarre'}
+        </Text>
+        <Text style={[styles.meta, { color: colors.muted }]}>
           Blockchain: {lot.tokenId ? `Token ${lot.tokenId} - Bloc ${lot.blockNumber}` : 'En attente'}
         </Text>
       </View>

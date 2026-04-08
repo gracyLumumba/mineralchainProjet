@@ -103,10 +103,15 @@ function AppNavigator() {
                   session={session}
                   health={dashboard.health}
                   lots={dashboard.lots}
+                  users={dashboard.users}
                   isLoading={dashboard.isLoading}
                   isRefreshing={dashboard.isRefreshing}
+                  isMutatingUsers={dashboard.isMutatingUsers}
                   error={dashboard.error}
                   refresh={dashboard.refresh}
+                  onApproveUser={dashboard.approveUser}
+                  onRejectUser={dashboard.rejectUser}
+                  onRevokeUser={dashboard.revokeUser}
                   onLogout={handleLogout}
                   onOpenLots={() => navigation.navigate(ROUTES.LOTS)}
                   onOpenCertification={() => {
@@ -120,20 +125,19 @@ function AppNavigator() {
             <Stack.Screen name={ROUTES.LOTS} options={{ title: 'Lots' }}>
               {({ navigation }) => (
                 <LotsListScreen
+                  session={session}
                   lots={dashboard.lots}
                   isRefreshing={dashboard.isRefreshing}
                   refresh={dashboard.refresh}
                   onOpenLot={(lotId) =>
-                    navigation.navigate(ROUTES.LOT_DETAIL, { lotId })
+                    navigation.navigate(ROUTES.LOT_DETAIL, { lotId, session })
                   }
                 />
               )}
             </Stack.Screen>
-            <Stack.Screen
-              name={ROUTES.LOT_DETAIL}
-              component={LotDetailScreen}
-              options={{ title: 'Detail lot' }}
-            />
+            <Stack.Screen name={ROUTES.LOT_DETAIL} options={{ title: 'Detail lot' }}>
+              {({ route }) => <LotDetailScreen route={route} />}
+            </Stack.Screen>
             {canCertify ? (
               <Stack.Screen name={ROUTES.CERTIFY} options={{ title: 'Certification' }}>
                 {() => <CertificationScreen session={session} />}

@@ -147,6 +147,15 @@ def get_current_user():
     return serialize_user(user)
 
 
+def ensure_admin_user():
+    current_user = get_current_user()
+    if not current_user:
+        return None, (jsonify({"error": "Authentification requise"}), 401)
+    if current_user.get("role") != "admin":
+        return None, (jsonify({"error": "Acces admin requis"}), 403)
+    return current_user, None
+
+
 @auth_bp.route('/auth/login', methods=['POST'])
 def login():
     data = request.get_json() or {}
@@ -221,3 +230,102 @@ def register():
         "message": "Compte créé. En attente d'approbation.",
         "user": serialize_user(new_user),
     }), 201
+
+
+@auth_bp.route('/auth/users', methods=['GET'])
+def list_users():
+    current_user, error_response = ensure_admin_user()
+    if error_response:
+        return error_response
+
+    users = sorted(
+        get_all_users(),
+        key=lambda user: user.get("created_at") or "",
+        reverse=True,
+    )
+    return jsonify({
+        "success": True,
+        "requested_by": current_user["id"],
+        "users": [serialize_user(user) for user in users],
+    })
+
+
+def update_registered_user(user_id, transform):
+    registered_users = load_registered_users()
+    target_user = None
+
+    for user in registered_users:
+        if user["id"] == user_id:
+            transform(user)
+            target_user = user
+            break
+
+    if not target_user:
+        return None
+
+    save_registered_users(registered_users)
+    return target_user
+
+
+@auth_bp.route('/auth/users/<user_id>/approve', methods=['POST'])
+def approve_user(user_id):
+    current_user, error_response = ensure_admin_user()
+    if error_response:
+        return error_response
+
+    user = update_registered_user(
+        user_id,
+        lambda item: item.update({
+            "account_status": "approved",
+            "approved_at": datetime.utcnow().isoformat(),
+            "approved_by": current_user["id"],
+            "rejection_reason": None,
+        }),
+    )
+    if not user:
+        return jsonify({"error": "Utilisateur introuvable ou non modifiable"}), 404
+
+    return jsonify({"success": True, "user": serialize_user(user)})
+
+
+@auth_bp.route('/auth/users/<user_id>/reject', methods=['POST'])
+def reject_user(user_id):
+    current_user, error_response = ensure_admin_user()
+    if error_response:
+        return error_response
+
+    payload = request.get_json() or {}
+    reason = str(payload.get("reason", "")).strip() or "Demande refusee"
+    user = update_registered_user(
+        user_id,
+        lambda item: item.update({
+            "account_status": "rejected",
+            "approved_at": datetime.utcnow().isoformat(),
+            "approved_by": current_user["id"],
+            "rejection_reason": reason,
+        }),
+    )
+    if not user:
+        return jsonify({"error": "Utilisateur introuvable ou non modifiable"}), 404
+
+    return jsonify({"success": True, "user": serialize_user(user)})
+
+
+@auth_bp.route('/auth/users/<user_id>/revoke', methods=['POST'])
+def revoke_user(user_id):
+    current_user, error_response = ensure_admin_user()
+    if error_response:
+        return error_response
+
+    user = update_registered_user(
+        user_id,
+        lambda item: item.update({
+            "account_status": "pending",
+            "approved_at": None,
+            "approved_by": None,
+        }),
+    )
+    if not user:
+        return jsonify({"error": "Utilisateur introuvable ou non modifiable"}), 404
+
+    return jsonify({"success": True, "user": serialize_user(user)})

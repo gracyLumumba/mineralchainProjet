@@ -2,6 +2,7 @@ import { ActivityIndicator, Pressable, StyleSheet, Text, View } from 'react-nati
 import ScreenShell from '../components/ScreenShell';
 import { usePreferences } from '../../contexts/PreferencesContext';
 import { useLotDetailViewModel } from '../../viewmodels/useLotDetailViewModel';
+import { getRoleNextStep } from '../../models/roleInsights';
 
 function DetailLine({ label, value, colors }) {
   return (
@@ -13,9 +14,10 @@ function DetailLine({ label, value, colors }) {
 }
 
 export default function LotDetailScreen({ route }) {
-  const { lotId } = route.params;
+  const { lotId, session } = route.params;
   const { colors } = usePreferences();
   const { lot, isLoading, isRefreshing, error, refresh } = useLotDetailViewModel(lotId);
+  const nextStep = lot ? getRoleNextStep(session, lot) : null;
 
   return (
     <ScreenShell onRefresh={refresh} refreshing={isRefreshing}>
@@ -54,11 +56,23 @@ export default function LotDetailScreen({ route }) {
             </View>
           </View>
 
+          {nextStep ? (
+            <View style={[styles.nextStepCard, { backgroundColor: colors.cardAlt, borderColor: colors.border }]}>
+              <Text style={[styles.nextStepLabel, { color: colors.accent }]}>Etape metier</Text>
+              <Text style={[styles.nextStepTitle, { color: colors.text }]}>{nextStep.title}</Text>
+              <Text style={[styles.nextStepBody, { color: colors.muted }]}>{nextStep.body}</Text>
+            </View>
+          ) : null}
+
           <View style={[styles.section, { backgroundColor: colors.card, borderColor: colors.border }]}>
             <Text style={[styles.sectionTitle, { color: colors.text }]}>Tracabilite</Text>
             <DetailLine label="Token" value={lot.tokenId ?? 'non certifie'} colors={colors} />
             <DetailLine label="Bloc" value={lot.blockNumber ?? 'non disponible'} colors={colors} />
-            <DetailLine label="Certificat" value={lot.certificateId ?? 'non disponible'} colors={colors} />
+            <DetailLine label="Minerai" value={lot.mineralType ?? 'non renseigne'} colors={colors} />
+            <DetailLine label="Confiance IA" value={lot.confidence ?? 'non disponible'} colors={colors} />
+            <DetailLine label="Validation DGMR" value={lot.regulatorValidated ? `oui - ${lot.regulatorValidatedAt || 'date indisponible'}` : 'en attente'} colors={colors} />
+            <DetailLine label="Transport" value={lot.transportStatus || 'non demarre'} colors={colors} />
+            <DetailLine label="Destination" value={lot.destination || 'non renseignee'} colors={colors} />
             <DetailLine label="Stockage" value={lot.storage} colors={colors} />
           </View>
 
@@ -145,6 +159,26 @@ const styles = StyleSheet.create({
   metaValue: {
     fontSize: 17,
     fontWeight: '800',
+  },
+  nextStepCard: {
+    borderRadius: 24,
+    borderWidth: 1,
+    gap: 6,
+    padding: 18,
+  },
+  nextStepLabel: {
+    fontSize: 11,
+    fontWeight: '800',
+    letterSpacing: 1.1,
+    textTransform: 'uppercase',
+  },
+  nextStepTitle: {
+    fontSize: 18,
+    fontWeight: '900',
+  },
+  nextStepBody: {
+    fontSize: 14,
+    lineHeight: 21,
   },
   section: {
     borderRadius: 24,

@@ -4,6 +4,7 @@ import ScreenShell from '../components/ScreenShell';
 import TopBar from '../components/TopBar';
 import AnimatedEntrance from '../components/AnimatedEntrance';
 import { usePreferences } from '../../contexts/PreferencesContext';
+import { buildRoleSummary } from '../../models/roleInsights';
 
 function getRolePresentation(role, t) {
   switch (role) {
@@ -46,14 +47,32 @@ function getRolePresentation(role, t) {
   }
 }
 
+function getToneColors(colors, tone) {
+  if (tone === 'success') {
+    return { bg: colors.successBg, text: colors.successText, border: colors.successBorder };
+  }
+  if (tone === 'warning') {
+    return { bg: colors.ghostButton, text: colors.accent, border: colors.border };
+  }
+  if (tone === 'danger') {
+    return { bg: colors.errorBg, text: colors.errorText, border: colors.errorBorder };
+  }
+  return { bg: colors.cardAlt, text: colors.text, border: colors.border };
+}
+
 export default function DashboardScreen({
   session,
   health,
   lots,
+  users,
   isLoading,
   isRefreshing,
+  isMutatingUsers,
   error,
   refresh,
+  onApproveUser,
+  onRejectUser,
+  onRevokeUser,
   onLogout,
   onOpenLots,
   onOpenCertification,
@@ -61,6 +80,7 @@ export default function DashboardScreen({
   const { colors, t } = usePreferences();
   const rolePresentation = getRolePresentation(session.role, t);
   const canCertify = session.role === 'producer';
+  const summary = buildRoleSummary(session, lots, users);
 
   return (
     <ScreenShell onRefresh={refresh} refreshing={isRefreshing}>
@@ -105,11 +125,60 @@ export default function DashboardScreen({
         </AnimatedEntrance>
       ) : null}
 
-      <AnimatedEntrance delay={140}>
-        <OverviewScreen health={health} lots={lots} isLoading={isLoading} />
+      <AnimatedEntrance delay={130}>
+        <View style={styles.summaryGrid}>
+          {summary.cards.map((card) => {
+            const tone = getToneColors(colors, card.tone);
+            return (
+              <View key={card.key} style={[styles.summaryCard, { backgroundColor: tone.bg, borderColor: tone.border }]}>
+                <Text style={[styles.summaryLabel, { color: colors.muted }]}>{card.label}</Text>
+                <Text style={[styles.summaryValue, { color: tone.text }]}>{card.value}</Text>
+              </View>
+            );
+          })}
+        </View>
       </AnimatedEntrance>
 
+      {session.role === 'admin' && summary.spotlight?.length ? (
+        <AnimatedEntrance delay={160}>
+          <View style={[styles.panel, { backgroundColor: colors.card, borderColor: colors.border }]}>
+            <View style={styles.panelHeader}>
+              <Text style={[styles.panelTitle, { color: colors.text }]}>{summary.spotlightTitle}</Text>
+              {isMutatingUsers ? <Text style={[styles.panelMeta, { color: colors.muted }]}>Mise a jour...</Text> : null}
+            </View>
+            {summary.spotlight.map((user) => (
+              <View key={user.id} style={[styles.userRow, { borderColor: colors.border }]}>
+                <View style={styles.userRowCopy}>
+                  <Text style={[styles.userRowTitle, { color: colors.text }]}>{user.name}</Text>
+                  <Text style={[styles.userRowMeta, { color: colors.muted }]}>{user.role} - {user.organization}</Text>
+                </View>
+                <View style={styles.userRowActions}>
+                  <Pressable
+                    disabled={isMutatingUsers}
+                    onPress={() => onApproveUser?.(user.id)}
+                    style={[styles.smallButton, { backgroundColor: colors.successBg, borderColor: colors.successBorder }]}
+                  >
+                    <Text style={[styles.smallButtonText, { color: colors.successText }]}>Approuver</Text>
+                  </Pressable>
+                  <Pressable
+                    disabled={isMutatingUsers}
+                    onPress={() => onRejectUser?.(user.id, 'Refuse depuis mobile admin')}
+                    style={[styles.smallButton, { backgroundColor: colors.errorBg, borderColor: colors.errorBorder }]}
+                  >
+                    <Text style={[styles.smallButtonText, { color: colors.errorText }]}>Refuser</Text>
+                  </Pressable>
+                </View>
+              </View>
+            ))}
+          </View>
+        </AnimatedEntrance>
+      ) : null}
+
       <AnimatedEntrance delay={190}>
+        <OverviewScreen health={health} lots={lots} isLoading={isLoading} session={session} />
+      </AnimatedEntrance>
+
+      <AnimatedEntrance delay={230}>
         <View style={styles.actions}>
           <Pressable
             onPress={canCertify ? onOpenCertification : onOpenLots}
@@ -122,6 +191,14 @@ export default function DashboardScreen({
             <Text style={[styles.actionLabel, { color: colors.accent }]}>{rolePresentation.secondaryLabel}</Text>
             <Text style={styles.actionText}>{rolePresentation.secondaryText}</Text>
           </Pressable>
+          {session.role === 'admin' ? (
+            <View style={[styles.ghostAction, { backgroundColor: colors.card, borderColor: colors.border }]}>
+              <Text style={[styles.ghostActionLabel, { color: colors.text }]}>Admin mobile</Text>
+              <Text style={[styles.ghostActionText, { color: colors.muted }]}>
+                {summary.spotlight?.length ? 'Traiter rapidement les demandes en attente depuis ce tableau de bord.' : 'Aucun compte en attente actuellement.'}
+              </Text>
+            </View>
+          ) : null}
         </View>
       </AnimatedEntrance>
     </ScreenShell>
@@ -201,6 +278,77 @@ const styles = StyleSheet.create({
     fontWeight: '800',
     textTransform: 'uppercase',
   },
+  summaryGrid: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 10,
+  },
+  summaryCard: {
+    borderRadius: 22,
+    borderWidth: 1,
+    gap: 6,
+    minWidth: '47%',
+    padding: 16,
+  },
+  summaryLabel: {
+    fontSize: 12,
+    fontWeight: '700',
+    textTransform: 'uppercase',
+  },
+  summaryValue: {
+    fontSize: 24,
+    fontWeight: '900',
+  },
+  panel: {
+    borderRadius: 24,
+    borderWidth: 1,
+    gap: 12,
+    padding: 18,
+  },
+  panelHeader: {
+    alignItems: 'center',
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+  },
+  panelTitle: {
+    fontSize: 18,
+    fontWeight: '900',
+  },
+  panelMeta: {
+    fontSize: 12,
+  },
+  userRow: {
+    borderTopWidth: 1,
+    flexDirection: 'row',
+    gap: 10,
+    paddingTop: 12,
+  },
+  userRowCopy: {
+    flex: 1,
+    gap: 2,
+  },
+  userRowTitle: {
+    fontSize: 15,
+    fontWeight: '800',
+  },
+  userRowMeta: {
+    fontSize: 12,
+  },
+  userRowActions: {
+    gap: 8,
+    justifyContent: 'center',
+  },
+  smallButton: {
+    borderRadius: 999,
+    borderWidth: 1,
+    paddingHorizontal: 12,
+    paddingVertical: 7,
+  },
+  smallButtonText: {
+    fontSize: 11,
+    fontWeight: '800',
+    textTransform: 'uppercase',
+  },
   actions: {
     gap: 12,
   },
@@ -245,5 +393,21 @@ const styles = StyleSheet.create({
     color: '#ffffff',
     fontSize: 19,
     fontWeight: '900',
+  },
+  ghostAction: {
+    borderRadius: 24,
+    borderWidth: 1,
+    gap: 4,
+    paddingHorizontal: 18,
+    paddingVertical: 16,
+  },
+  ghostActionLabel: {
+    fontSize: 13,
+    fontWeight: '800',
+    textTransform: 'uppercase',
+  },
+  ghostActionText: {
+    fontSize: 14,
+    lineHeight: 20,
   },
 });

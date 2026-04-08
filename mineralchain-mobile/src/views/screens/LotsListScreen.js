@@ -4,31 +4,50 @@ import ScreenShell from '../components/ScreenShell';
 import LotCard from '../components/LotCard';
 import AnimatedEntrance from '../components/AnimatedEntrance';
 import { usePreferences } from '../../contexts/PreferencesContext';
+import { filterLotsByWorkflow, getRoleLotFilters } from '../../models/roleInsights';
 
-export default function LotsListScreen({ lots, isRefreshing, refresh, onOpenLot }) {
+function getRoleTitle(role) {
+  if (role === 'admin') return 'Registre global';
+  if (role === 'regulator') return 'Registre regulatoire';
+  if (role === 'transporter') return 'Registre transport';
+  return 'Mes lots';
+}
+
+export default function LotsListScreen({ session, lots, isRefreshing, refresh, onOpenLot }) {
   const [query, setQuery] = useState('');
+  const [filterKey, setFilterKey] = useState('all');
   const { colors, t } = usePreferences();
+  const filters = useMemo(() => getRoleLotFilters(session?.role), [session?.role]);
 
   const filteredLots = useMemo(() => {
     const normalized = query.trim().toLowerCase();
+    const workflowLots = filterLotsByWorkflow(lots, session?.role, filterKey);
 
     if (!normalized) {
-      return lots;
+      return workflowLots;
     }
 
-    return lots.filter((lot) =>
-      [lot.id, lot.site, lot.status, lot.storage]
+    return workflowLots.filter((lot) =>
+      [
+        lot.id,
+        lot.site,
+        lot.status,
+        lot.storage,
+        lot.transportStatus,
+        lot.ownerName,
+        lot.ownerUsername,
+      ]
         .filter(Boolean)
         .some((value) => String(value).toLowerCase().includes(normalized))
     );
-  }, [lots, query]);
+  }, [lots, query, filterKey, session?.role]);
 
   return (
     <ScreenShell onRefresh={refresh} refreshing={isRefreshing}>
       <AnimatedEntrance delay={0}>
         <View style={styles.header}>
           <Text style={[styles.eyebrow, { color: colors.accent }]}>{t('inventory')}</Text>
-          <Text style={[styles.title, { color: colors.text }]}>{t('lots')}</Text>
+          <Text style={[styles.title, { color: colors.text }]}>{getRoleTitle(session?.role)}</Text>
           <Text style={[styles.subtitle, { color: colors.muted }]}>{t('lot_subtitle')}</Text>
         </View>
       </AnimatedEntrance>
@@ -50,6 +69,26 @@ export default function LotsListScreen({ lots, isRefreshing, refresh, onOpenLot 
               },
             ]}
           />
+          <View style={styles.filterRow}>
+            {filters.map((filter) => {
+              const active = filter.key === filterKey;
+              return (
+                <Pressable
+                  key={filter.key}
+                  onPress={() => setFilterKey(filter.key)}
+                  style={[
+                    styles.filterPill,
+                    {
+                      backgroundColor: active ? colors.brand : colors.cardAlt,
+                      borderColor: active ? colors.brand : colors.border,
+                    },
+                  ]}
+                >
+                  <Text style={[styles.filterText, { color: active ? '#ffffff' : colors.text }]}>{filter.label}</Text>
+                </Pressable>
+              );
+            })}
+          </View>
           <Text style={[styles.resultCount, { color: colors.muted }]}>
             {filteredLots.length} / {lots.length} {t('lots').toLowerCase()}
           </Text>
@@ -116,6 +155,21 @@ const styles = StyleSheet.create({
     fontSize: 15,
     paddingHorizontal: 14,
     paddingVertical: 13,
+  },
+  filterRow: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 8,
+  },
+  filterPill: {
+    borderRadius: 999,
+    borderWidth: 1,
+    paddingHorizontal: 12,
+    paddingVertical: 8,
+  },
+  filterText: {
+    fontSize: 12,
+    fontWeight: '800',
   },
   resultCount: {
     fontSize: 13,

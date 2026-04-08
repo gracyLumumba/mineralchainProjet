@@ -2,7 +2,14 @@ import { ActivityIndicator, StyleSheet, Text, View } from 'react-native';
 import StatusCard from '../components/StatusCard';
 import { usePreferences } from '../../contexts/PreferencesContext';
 
-export default function OverviewScreen({ health, lots, isLoading }) {
+function getHeroLabel(role, t) {
+  if (role === 'admin') return t('supervision_center');
+  if (role === 'regulator') return 'Controle DGMR';
+  if (role === 'transporter') return 'Logistique';
+  return 'Production';
+}
+
+export default function OverviewScreen({ health, lots, isLoading, session }) {
   const { colors, t } = usePreferences();
 
   if (isLoading && !health) {
@@ -23,7 +30,7 @@ export default function OverviewScreen({ health, lots, isLoading }) {
   return (
     <View style={styles.container}>
       <View style={[styles.hero, { backgroundColor: colors.surfaceStrong, shadowColor: colors.shadow }]}>
-        <Text style={[styles.heroLabel, { color: colors.accent }]}>{t('supervision_center')}</Text>
+        <Text style={[styles.heroLabel, { color: colors.accent }]}>{getHeroLabel(session?.role, t)}</Text>
         <Text style={[styles.heroTitle, { color: colors.text }]}>{health.status.toUpperCase()}</Text>
         <Text style={[styles.heroText, { color: colors.surfaceStrongText }]}>
           PostgreSQL {health.databaseConnected ? 'connectee' : 'indisponible'} - {health.databaseUrl}
