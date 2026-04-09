@@ -3,6 +3,7 @@ import ScreenShell from '../components/ScreenShell';
 import { usePreferences } from '../../contexts/PreferencesContext';
 import { useLotDetailViewModel } from '../../viewmodels/useLotDetailViewModel';
 import { getRoleNextStep } from '../../models/roleInsights';
+import { CONTRACT_ADDRESS, GANACHE_NETWORK_LABEL } from '../../config/blockchain';
 
 function DetailLine({ label, value, colors }) {
   return (
@@ -37,7 +38,7 @@ export default function LotDetailScreen({ route }) {
             <View style={styles.headerRow}>
               <View style={styles.headerCopy}>
                 <Text style={[styles.id, { color: colors.text }]}>{lot.id}</Text>
-                <Text style={[styles.caption, { color: colors.muted }]}>Derniere lecture terrain</Text>
+                <Text style={[styles.caption, { color: colors.muted }]}>Fiche de tracabilite terrain synchronisee avec le workflow web</Text>
               </View>
               <View style={[styles.statusPill, { backgroundColor: colors.badgeBg, borderColor: colors.border }]}>
                 <Text style={[styles.statusText, { color: colors.badgeText }]}>{lot.status}</Text>
@@ -54,6 +55,10 @@ export default function LotDetailScreen({ route }) {
                 <Text style={[styles.metaValue, { color: colors.text }]}>{lot.weight} t</Text>
               </View>
             </View>
+            <View style={[styles.blockchainBanner, { backgroundColor: colors.surfaceStrong }]}>
+              <Text style={[styles.blockchainLabel, { color: colors.accent }]}>Reseau</Text>
+              <Text style={styles.blockchainValue}>{GANACHE_NETWORK_LABEL}</Text>
+            </View>
           </View>
 
           {nextStep ? (
@@ -65,9 +70,11 @@ export default function LotDetailScreen({ route }) {
           ) : null}
 
           <View style={[styles.section, { backgroundColor: colors.card, borderColor: colors.border }]}>
-            <Text style={[styles.sectionTitle, { color: colors.text }]}>Tracabilite</Text>
+            <Text style={[styles.sectionTitle, { color: colors.text }]}>Certification blockchain</Text>
             <DetailLine label="Token" value={lot.tokenId ?? 'non certifie'} colors={colors} />
             <DetailLine label="Bloc" value={lot.blockNumber ?? 'non disponible'} colors={colors} />
+            <DetailLine label="Reseau" value={GANACHE_NETWORK_LABEL} colors={colors} />
+            <DetailLine label="Contrat" value={CONTRACT_ADDRESS} colors={colors} />
             <DetailLine label="Minerai" value={lot.mineralType ?? 'non renseigne'} colors={colors} />
             <DetailLine label="Confiance IA" value={lot.confidence ?? 'non disponible'} colors={colors} />
             <DetailLine label="Validation DGMR" value={lot.regulatorValidated ? `oui - ${lot.regulatorValidatedAt || 'date indisponible'}` : 'en attente'} colors={colors} />
@@ -151,6 +158,22 @@ const styles = StyleSheet.create({
     flex: 1,
     gap: 6,
     padding: 14,
+  },
+  blockchainBanner: {
+    borderRadius: 18,
+    gap: 4,
+    padding: 14,
+  },
+  blockchainLabel: {
+    fontSize: 10,
+    fontWeight: '800',
+    letterSpacing: 1.2,
+    textTransform: 'uppercase',
+  },
+  blockchainValue: {
+    color: '#ffffff',
+    fontSize: 13,
+    fontWeight: '800',
   },
   metaLabel: {
     fontSize: 12,

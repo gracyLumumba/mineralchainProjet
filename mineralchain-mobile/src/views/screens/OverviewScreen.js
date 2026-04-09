@@ -1,6 +1,7 @@
 import { ActivityIndicator, StyleSheet, Text, View } from 'react-native';
 import StatusCard from '../components/StatusCard';
 import { usePreferences } from '../../contexts/PreferencesContext';
+import { CONTRACT_ADDRESS, GANACHE_NETWORK_LABEL } from '../../config/blockchain';
 
 function getHeroLabel(role, t) {
   if (role === 'admin') return t('supervision_center');
@@ -31,10 +32,20 @@ export default function OverviewScreen({ health, lots, isLoading, session }) {
     <View style={styles.container}>
       <View style={[styles.hero, { backgroundColor: colors.surfaceStrong, shadowColor: colors.shadow }]}>
         <Text style={[styles.heroLabel, { color: colors.accent }]}>{getHeroLabel(session?.role, t)}</Text>
-        <Text style={[styles.heroTitle, { color: colors.text }]}>{health.status.toUpperCase()}</Text>
+        <Text style={[styles.heroTitle, { color: '#ffffff' }]}>{health.status.toUpperCase()}</Text>
         <Text style={[styles.heroText, { color: colors.surfaceStrongText }]}>
           PostgreSQL {health.databaseConnected ? 'connectee' : 'indisponible'} - {health.databaseUrl}
         </Text>
+        <View style={styles.heroMeta}>
+          <View style={[styles.heroPill, { backgroundColor: 'rgba(255,255,255,0.08)' }]}>
+            <Text style={[styles.heroPillLabel, { color: colors.accent }]}>Reseau</Text>
+            <Text style={styles.heroPillValue}>{GANACHE_NETWORK_LABEL}</Text>
+          </View>
+          <View style={[styles.heroPill, { backgroundColor: 'rgba(255,255,255,0.08)' }]}>
+            <Text style={[styles.heroPillLabel, { color: colors.accent }]}>Contrat</Text>
+            <Text style={styles.heroPillValue}>{CONTRACT_ADDRESS}</Text>
+          </View>
+        </View>
       </View>
 
       <View style={styles.grid}>
@@ -86,6 +97,26 @@ const styles = StyleSheet.create({
   heroText: {
     fontSize: 14,
     lineHeight: 20,
+  },
+  heroMeta: {
+    gap: 10,
+    marginTop: 6,
+  },
+  heroPill: {
+    borderRadius: 18,
+    gap: 4,
+    padding: 12,
+  },
+  heroPillLabel: {
+    fontSize: 10,
+    fontWeight: '800',
+    letterSpacing: 1.1,
+    textTransform: 'uppercase',
+  },
+  heroPillValue: {
+    color: '#ffffff',
+    fontSize: 13,
+    fontWeight: '700',
   },
   grid: {
     flexDirection: 'row',

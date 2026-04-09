@@ -1,3 +1,5 @@
+import { CONTRACT_ADDRESS, GANACHE_NETWORK_LABEL } from '../config/blockchain';
+
 export function createCertificationResult(payload = {}) {
   const blockchain = payload.blockchain || {};
   const certificate = payload.certificate || {};
@@ -16,8 +18,8 @@ export function createCertificationResult(payload = {}) {
     tokenId: blockchain.token_id ?? null,
     blockNumber: blockchain.block_number ?? null,
     transactionHash: blockchain.transaction_hash || null,
-    contractAddress: blockchain.contract_address || null,
-    simulated: Boolean(blockchain.simulated),
+    contractAddress: blockchain.contract_address || CONTRACT_ADDRESS,
+    network: blockchain.network || GANACHE_NETWORK_LABEL,
     certificateHash: certificate.hash || null,
     ipfsHash: certificate.ipfs_hash || null,
     gatewayUrl: certificate.gateway_url || null,

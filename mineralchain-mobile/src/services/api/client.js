@@ -1,4 +1,4 @@
-import { API_BASE_URL } from '../../config/api';
+import { getApiBaseUrl } from '../../config/api';
 import { getSessionSync } from '../storage/sessionStorage';
 
 const REQUEST_TIMEOUT_MS = 12000;
@@ -21,11 +21,12 @@ export async function request(path, options = {}) {
   const session = getSessionSync();
   const controller = new AbortController();
   const timeoutId = setTimeout(() => controller.abort(), REQUEST_TIMEOUT_MS);
+  const apiBaseUrl = await getApiBaseUrl();
 
   let response;
 
   try {
-    response = await fetch(`${API_BASE_URL}${path}`, {
+    response = await fetch(`${apiBaseUrl}${path}`, {
       headers: {
         Accept: 'application/json',
         'Content-Type': 'application/json',
@@ -38,8 +39,8 @@ export async function request(path, options = {}) {
   } catch (error) {
     const isTimeout = error?.name === 'AbortError';
     const message = isTimeout
-      ? `Delai depasse vers ${API_BASE_URL}`
-      : `Connexion impossible vers ${API_BASE_URL}`;
+      ? `Delai depasse vers ${apiBaseUrl}`
+      : `Connexion impossible vers ${apiBaseUrl}`;
     throw new Error(message);
   } finally {
     clearTimeout(timeoutId);

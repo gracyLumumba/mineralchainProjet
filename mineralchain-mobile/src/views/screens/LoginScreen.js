@@ -1,9 +1,16 @@
+import { useEffect, useState } from 'react';
 import { DevSettings, Pressable, StyleSheet, Text, TextInput, View } from 'react-native';
 import ScreenShell from '../components/ScreenShell';
 import RolePicker from '../components/RolePicker';
 import AnimatedEntrance from '../components/AnimatedEntrance';
 import { usePreferences } from '../../contexts/PreferencesContext';
 import { useAuthViewModel } from '../../viewmodels/useAuthViewModel';
+import {
+  getApiBaseUrl,
+  getDefaultApiBaseUrl,
+  resetCustomApiBaseUrl,
+  setCustomApiBaseUrl,
+} from '../../config/api';
 
 function AuthToggle({ mode, onChange, colors, t }) {
   return (
@@ -30,6 +37,9 @@ function AuthToggle({ mode, onChange, colors, t }) {
 
 export default function LoginScreen({ onLogin }) {
   const { colors, language, theme, toggleLanguage, toggleTheme, t } = usePreferences();
+  const [apiBaseUrl, setApiBaseUrl] = useState('');
+  const [apiInput, setApiInput] = useState('');
+  const [apiNotice, setApiNotice] = useState('');
   const {
     mode,
     setMode,
@@ -47,6 +57,41 @@ export default function LoginScreen({ onLogin }) {
     submitLogin,
     submitRegister,
   } = useAuthViewModel({ onLogin });
+
+  useEffect(() => {
+    let active = true;
+
+    const loadApiUrl = async () => {
+      const value = await getApiBaseUrl();
+      if (!active) {
+        return;
+      }
+      setApiBaseUrl(value);
+      setApiInput(value);
+    };
+
+    loadApiUrl();
+
+    return () => {
+      active = false;
+    };
+  }, []);
+
+  const handleSaveApiUrl = async () => {
+    await setCustomApiBaseUrl(apiInput);
+    const value = await getApiBaseUrl();
+    setApiBaseUrl(value);
+    setApiInput(value);
+    setApiNotice('URL API enregistree.');
+  };
+
+  const handleResetApiUrl = async () => {
+    await resetCustomApiBaseUrl();
+    const value = getDefaultApiBaseUrl();
+    setApiBaseUrl(value);
+    setApiInput(value);
+    setApiNotice('URL API par defaut restauree.');
+  };
 
   return (
     <ScreenShell keyboardShouldPersistTaps="always">
@@ -84,22 +129,50 @@ export default function LoginScreen({ onLogin }) {
             <>
               <View style={[styles.demoBox, { backgroundColor: colors.cardAlt, borderColor: colors.border }]}>
                 <Text style={[styles.demoTitle, { color: colors.text }]}>Comptes demo</Text>
-                <Text style={[styles.demoHint, { color: colors.muted }]}>Touchez un role pour pre-remplir l identifiant et le mot de passe.</Text>
-                <View style={styles.demoRow}>
+                <Text style={[styles.demoHint, { color: colors.muted }]}>Touchez un role pour preparer une connexion demo, comme sur la version web.</Text>
+                <View style={styles.demoGrid}>
                   {demoCredentials.map((credential) => (
                     <Pressable
                       key={credential.key}
                       onPress={() => fillDemoCredentials(credential)}
-                      style={[styles.demoPill, { backgroundColor: colors.input, borderColor: colors.inputBorder }]}
+                      style={[styles.demoCard, { backgroundColor: colors.input, borderColor: colors.inputBorder }]}
                     >
-                      <Text style={[styles.demoPillText, { color: colors.text }]}>{credential.label}</Text>
+                      <Text style={[styles.demoCardTitle, { color: colors.text }]}>{credential.label}</Text>
+                      <Text style={[styles.demoCardText, { color: colors.muted }]}>{credential.description}</Text>
                     </Pressable>
                   ))}
                 </View>
-                <Text style={[styles.demoCredentialText, { color: colors.muted }]}>Admin: `admin` / `Admin2025!`</Text>
-                <Text style={[styles.demoCredentialText, { color: colors.muted }]}>Producteur: `producteur` / `Demo2025!`</Text>
-                <Text style={[styles.demoCredentialText, { color: colors.muted }]}>Regulateur: `regulateur` / `Demo2025!`</Text>
-                <Text style={[styles.demoCredentialText, { color: colors.muted }]}>Transporteur: `transporteur` / `Demo2025!`</Text>
+              </View>
+
+              <View style={[styles.apiBox, { backgroundColor: colors.infoBg, borderColor: colors.infoBorder }]}>
+                <Text style={[styles.apiTitle, { color: colors.infoText }]}>Connexion API</Text>
+                <Text style={[styles.apiHint, { color: colors.infoText }]}>
+                  Si le telephone n atteint pas le backend, remplacez l adresse par l IP locale du PC, par exemple 192.168.1.20:5000/api.
+                </Text>
+                <TextInput
+                  value={apiInput}
+                  onChangeText={(value) => {
+                    setApiInput(value);
+                    setApiNotice('');
+                  }}
+                  style={[styles.input, { backgroundColor: colors.input, borderColor: colors.inputBorder, color: colors.text }]}
+                  placeholder="http://192.168.1.20:5000/api"
+                  placeholderTextColor={colors.muted}
+                  autoCapitalize="none"
+                  autoCorrect={false}
+                />
+                <View style={styles.apiActions}>
+                  <Pressable onPress={handleSaveApiUrl} style={[styles.apiButton, { backgroundColor: colors.brand }]}>
+                    <Text style={styles.apiButtonText}>Enregistrer</Text>
+                  </Pressable>
+                  <Pressable onPress={handleResetApiUrl} style={[styles.apiButtonSecondary, { borderColor: colors.infoBorder }]}>
+                    <Text style={[styles.apiButtonSecondaryText, { color: colors.infoText }]}>Par defaut</Text>
+                  </Pressable>
+                </View>
+                <Text style={[styles.apiCurrent, { color: colors.muted }]}>Actuelle: {apiBaseUrl || getDefaultApiBaseUrl()}</Text>
+                {apiNotice ? (
+                  <Text style={[styles.apiNotice, { color: colors.successText }]}>{apiNotice}</Text>
+                ) : null}
               </View>
 
               <Text style={[styles.label, { color: colors.text }]}>{t('identifier')}</Text>
@@ -312,19 +385,75 @@ const styles = StyleSheet.create({
     flexWrap: 'wrap',
     gap: 8,
   },
-  demoPill: {
-    borderRadius: 999,
-    borderWidth: 1,
-    paddingHorizontal: 12,
-    paddingVertical: 9,
+  demoGrid: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 8,
   },
-  demoPillText: {
-    fontSize: 12,
+  demoCard: {
+    borderRadius: 18,
+    borderWidth: 1,
+    gap: 4,
+    minWidth: '47%',
+    paddingHorizontal: 14,
+    paddingVertical: 12,
+  },
+  demoCardTitle: {
+    fontSize: 13,
     fontWeight: '800',
   },
-  demoCredentialText: {
+  demoCardText: {
     fontSize: 12,
     lineHeight: 18,
+  },
+  apiBox: {
+    borderRadius: 20,
+    borderWidth: 1,
+    gap: 10,
+    marginTop: 2,
+    padding: 14,
+  },
+  apiTitle: {
+    fontSize: 14,
+    fontWeight: '900',
+  },
+  apiHint: {
+    fontSize: 12,
+    lineHeight: 18,
+  },
+  apiActions: {
+    flexDirection: 'row',
+    gap: 10,
+  },
+  apiButton: {
+    alignItems: 'center',
+    borderRadius: 14,
+    flex: 1,
+    paddingVertical: 12,
+  },
+  apiButtonText: {
+    color: '#ffffff',
+    fontSize: 13,
+    fontWeight: '800',
+  },
+  apiButtonSecondary: {
+    alignItems: 'center',
+    borderRadius: 14,
+    borderWidth: 1,
+    flex: 1,
+    paddingVertical: 12,
+  },
+  apiButtonSecondaryText: {
+    fontSize: 13,
+    fontWeight: '800',
+  },
+  apiCurrent: {
+    fontSize: 12,
+    lineHeight: 18,
+  },
+  apiNotice: {
+    fontSize: 12,
+    fontWeight: '700',
   },
   label: {
     fontSize: 12,

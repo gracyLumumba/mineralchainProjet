@@ -13,10 +13,10 @@ const REGISTER_INITIAL = {
 };
 
 const DEMO_CREDENTIALS = [
-  { key: 'admin', label: 'Admin', identifier: 'admin', password: 'Admin2025!' },
-  { key: 'producer', label: 'Producteur', identifier: 'producteur', password: 'Demo2025!' },
-  { key: 'regulator', label: 'Regulateur', identifier: 'regulateur', password: 'Demo2025!' },
-  { key: 'transporter', label: 'Transporteur', identifier: 'transporteur', password: 'Demo2025!' },
+  { key: 'admin', label: 'Admin', identifier: 'admin', password: 'Admin2025!', description: 'Supervision et gestion des comptes' },
+  { key: 'producer', label: 'Producteur', identifier: 'producteur', password: 'Demo2025!', description: 'Creation et certification des lots' },
+  { key: 'regulator', label: 'Regulateur', identifier: 'regulateur', password: 'Demo2025!', description: 'Controle et verification des donnees' },
+  { key: 'transporter', label: 'Transporteur', identifier: 'transporteur', password: 'Demo2025!', description: 'Suivi logistique et expedition' },
 ];
 
 export function useAuthViewModel({ onLogin }) {
@@ -44,6 +44,12 @@ export function useAuthViewModel({ onLogin }) {
   };
 
   const submitLogin = async () => {
+    if (!identifier.trim() || !password) {
+      setError('Renseignez l identifiant et le mot de passe.');
+      setNotice('');
+      return;
+    }
+
     try {
       setIsSubmitting(true);
       setError('');
@@ -55,7 +61,7 @@ export function useAuthViewModel({ onLogin }) {
       onLogin(session);
     } catch (submitError) {
       setError(submitError.message || 'Connexion impossible');
-      setNotice('Essayez un des comptes demo affiches ci-dessous.');
+      setNotice('Verifiez l URL API ci-dessous puis relancez la connexion.');
     } finally {
       setIsSubmitting(false);
     }

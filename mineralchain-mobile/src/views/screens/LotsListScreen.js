@@ -5,6 +5,7 @@ import LotCard from '../components/LotCard';
 import AnimatedEntrance from '../components/AnimatedEntrance';
 import { usePreferences } from '../../contexts/PreferencesContext';
 import { filterLotsByWorkflow, getRoleLotFilters } from '../../models/roleInsights';
+import { GANACHE_NETWORK_LABEL } from '../../config/blockchain';
 
 function getRoleTitle(role) {
   if (role === 'admin') return 'Registre global';
@@ -55,6 +56,9 @@ export default function LotsListScreen({ session, lots, isRefreshing, refresh, o
       <AnimatedEntrance delay={40}>
         <View style={[styles.searchCard, { backgroundColor: colors.card, borderColor: colors.border }]}>
           <Text style={[styles.searchLabel, { color: colors.text }]}>{t('search_lot')}</Text>
+          <Text style={[styles.searchHint, { color: colors.muted }]}>
+            Registre mobile aligne sur le web. Les lots affiches respectent le role connecte et le workflow Ganache.
+          </Text>
           <TextInput
             value={query}
             onChangeText={setQuery}
@@ -92,6 +96,7 @@ export default function LotsListScreen({ session, lots, isRefreshing, refresh, o
           <Text style={[styles.resultCount, { color: colors.muted }]}>
             {filteredLots.length} / {lots.length} {t('lots').toLowerCase()}
           </Text>
+          <Text style={[styles.networkText, { color: colors.accent }]}>{GANACHE_NETWORK_LABEL}</Text>
         </View>
       </AnimatedEntrance>
 
@@ -156,6 +161,10 @@ const styles = StyleSheet.create({
     paddingHorizontal: 14,
     paddingVertical: 13,
   },
+  searchHint: {
+    fontSize: 13,
+    lineHeight: 19,
+  },
   filterRow: {
     flexDirection: 'row',
     flexWrap: 'wrap',
@@ -173,6 +182,10 @@ const styles = StyleSheet.create({
   },
   resultCount: {
     fontSize: 13,
+  },
+  networkText: {
+    fontSize: 12,
+    fontWeight: '800',
   },
   empty: {
     borderRadius: 24,

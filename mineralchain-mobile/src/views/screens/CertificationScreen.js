@@ -1,13 +1,16 @@
+import { useEffect, useState } from 'react';
 import { Linking, Pressable, StyleSheet, Text, View } from 'react-native';
 import ScreenShell from '../components/ScreenShell';
 import FormField from '../components/FormField';
 import AnimatedEntrance from '../components/AnimatedEntrance';
 import { usePreferences } from '../../contexts/PreferencesContext';
 import { useCertificationViewModel } from '../../viewmodels/useCertificationViewModel';
-import { API_BASE_URL } from '../../config/api';
+import { getApiBaseUrl, getDefaultApiBaseUrl } from '../../config/api';
+import { CONTRACT_ADDRESS, GANACHE_NETWORK_LABEL } from '../../config/blockchain';
 
 export default function CertificationScreen({ session, navigation }) {
   const { colors, t } = usePreferences();
+  const [apiBaseUrl, setApiBaseUrl] = useState(getDefaultApiBaseUrl());
   const canCertify = session?.role === 'producer';
   const {
     form,
@@ -19,6 +22,23 @@ export default function CertificationScreen({ session, navigation }) {
     submit,
     resetForm,
   } = useCertificationViewModel(session);
+
+  useEffect(() => {
+    let active = true;
+
+    const loadApiUrl = async () => {
+      const value = await getApiBaseUrl();
+      if (active) {
+        setApiBaseUrl(value);
+      }
+    };
+
+    loadApiUrl();
+
+    return () => {
+      active = false;
+    };
+  }, []);
 
   if (!canCertify) {
     return (
@@ -64,9 +84,17 @@ export default function CertificationScreen({ session, navigation }) {
 
       <AnimatedEntrance delay={30}>
         <View style={[styles.infoCard, { backgroundColor: colors.infoBg, borderColor: colors.infoBorder }]}>
-          <Text style={[styles.infoLabel, { color: colors.infoText }]}>API</Text>
-          <Text style={[styles.infoValue, { color: colors.text }]}>{API_BASE_URL}</Text>
-          <Text style={[styles.infoHint, { color: colors.muted }]}>Utile pour verifier rapidement que le telephone pointe vers le bon backend.</Text>
+          <Text style={[styles.infoLabel, { color: colors.infoText }]}>Blockchain</Text>
+          <Text style={[styles.infoValue, { color: colors.text }]}>{GANACHE_NETWORK_LABEL}</Text>
+          <Text style={[styles.infoHint, { color: colors.muted }]}>Le mint NFT suit le meme flux web: backend Flask, contrat MineralNFT et Ganache.</Text>
+          <View style={styles.infoDetails}>
+            <Text style={[styles.infoDetailLabel, { color: colors.infoText }]}>API</Text>
+            <Text style={[styles.infoDetailValue, { color: colors.text }]}>{apiBaseUrl}</Text>
+          </View>
+          <View style={styles.infoDetails}>
+            <Text style={[styles.infoDetailLabel, { color: colors.infoText }]}>Contrat</Text>
+            <Text style={[styles.infoDetailValue, { color: colors.text }]}>{CONTRACT_ADDRESS}</Text>
+          </View>
         </View>
       </AnimatedEntrance>
 
@@ -181,7 +209,8 @@ export default function CertificationScreen({ session, navigation }) {
             <Text style={[styles.resultLine, { color: colors.text }]}>Confiance: {(result.confidence * 100).toFixed(1)}%</Text>
             <Text style={[styles.resultLine, { color: colors.text }]}>Token: {result.tokenId ?? 'non cree'}</Text>
             <Text style={[styles.resultLine, { color: colors.text }]}>Bloc: {result.blockNumber ?? 'non disponible'}</Text>
-            <Text style={[styles.resultLine, { color: colors.text }]}>Mode: {result.simulated ? 'simule' : 'reel'}</Text>
+            <Text style={[styles.resultLine, { color: colors.text }]}>Reseau: {result.network || GANACHE_NETWORK_LABEL}</Text>
+            <Text style={[styles.resultLine, { color: colors.text }]}>Contrat: {result.contractAddress || CONTRACT_ADDRESS}</Text>
             <Text style={[styles.resultLine, { color: colors.text }]}>IPFS: {result.ipfsHash ?? 'absent'}</Text>
 
             {result.gatewayUrl ? (
@@ -233,6 +262,20 @@ const styles = StyleSheet.create({
   infoHint: {
     fontSize: 12,
     lineHeight: 18,
+  },
+  infoDetails: {
+    gap: 4,
+    marginTop: 2,
+  },
+  infoDetailLabel: {
+    fontSize: 11,
+    fontWeight: '800',
+    letterSpacing: 1.1,
+    textTransform: 'uppercase',
+  },
+  infoDetailValue: {
+    fontSize: 13,
+    fontWeight: '700',
   },
   card: {
     borderRadius: 28,

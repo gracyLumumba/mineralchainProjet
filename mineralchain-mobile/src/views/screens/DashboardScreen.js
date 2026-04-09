@@ -5,6 +5,7 @@ import TopBar from '../components/TopBar';
 import AnimatedEntrance from '../components/AnimatedEntrance';
 import { usePreferences } from '../../contexts/PreferencesContext';
 import { buildRoleSummary } from '../../models/roleInsights';
+import { GANACHE_NETWORK_LABEL } from '../../config/blockchain';
 
 function getRolePresentation(role, t) {
   switch (role) {
@@ -109,6 +110,10 @@ export default function DashboardScreen({
             </View>
           </View>
           <Text style={[styles.userCaption, { color: colors.muted }]}>{rolePresentation.caption}</Text>
+          <View style={[styles.networkPill, { backgroundColor: colors.surfaceStrong }]}>
+            <Text style={[styles.networkLabel, { color: colors.accent }]}>Blockchain</Text>
+            <Text style={styles.networkValue}>{GANACHE_NETWORK_LABEL}</Text>
+          </View>
         </View>
       </AnimatedEntrance>
 
@@ -247,6 +252,22 @@ const styles = StyleSheet.create({
   userCaption: {
     fontSize: 14,
     lineHeight: 20,
+  },
+  networkPill: {
+    borderRadius: 18,
+    gap: 4,
+    padding: 12,
+  },
+  networkLabel: {
+    fontSize: 10,
+    fontWeight: '800',
+    letterSpacing: 1.1,
+    textTransform: 'uppercase',
+  },
+  networkValue: {
+    color: '#ffffff',
+    fontSize: 13,
+    fontWeight: '800',
   },
   errorBox: {
     borderRadius: 22,

@@ -33,6 +33,7 @@ npm start
 ## Ameliorations deja ajoutees
 
 - detection automatique de l hote Expo pour atteindre le backend depuis un telephone reel
+- champ de configuration de l URL API directement dans l ecran de connexion mobile
 - delai reseau explicite et message d erreur plus utile
 - pull-to-refresh sur le tableau de bord, la liste des lots et le detail d un lot
 - recherche locale des lots par identifiant, site, statut ou stockage
