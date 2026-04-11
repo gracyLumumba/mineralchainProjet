@@ -483,11 +483,8 @@ def analyze_and_certify():
                 "gas_used": receipt.gasUsed if receipt else None,
                 "simulated": False
             }
-        elif status == "AUTHENTIQUE":
-            raise RuntimeError(
-                blockchain_error
-                or "Mint blockchain impossible: Ganache ou le contrat MineralNFT est indisponible"
-            )
+        elif status == "AUTHENTIQUE" and blockchain_error:
+            print(f"\n   [WARN] Mint echoue mais certification conservee: {blockchain_error}")
 
         result = {
             "success": True,

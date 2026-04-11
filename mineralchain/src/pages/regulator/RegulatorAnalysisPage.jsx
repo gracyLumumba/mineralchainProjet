@@ -4,6 +4,7 @@ import { useI18n } from '../../contexts/i18nContext';
 import { useNotif, NOTIF_TYPES } from '../../contexts/NotifContext';
 import { PageHeader, EmptyState, StatusBadge, MineralBadge } from '../../components/common/UI';
 import { fmt } from '../../contexts/AppContext';
+import { apiService } from '../../services/api';
 
 import { Ic } from '../../components/common/Icons';
 
@@ -263,6 +264,7 @@ export default function RegulatorAnalysisPage() {
   const [dragOver,   setDragOver]   = useState(false);
   const [comparison, setComparison] = useState(null);
   const [validating, setValidating] = useState(false);
+  const [validatingLotId, setValidatingLotId] = useState(null);
   const fileRef = useRef(null);
 
   const searchLot = useCallback((q) => {
@@ -390,6 +392,65 @@ export default function RegulatorAnalysisPage() {
 
   const pendingLots = lots.filter(l => !l.regulator_validated && l.analyzed_at && l.status!=='SUSPECT');
 
+  const handleAutoValidate = useCallback(async (lot) => {
+    if (validatingLotId) return;
+    console.log('[AUTO_VALIDATE] Début validation pour:', lot.lot_id);
+    setValidatingLotId(lot.lot_id);
+    try {
+      console.log('[AUTO_VALIDATE] Appel API...');
+      const result = await apiService.autoValidateLot(lot.lot_id);
+      console.log('[AUTO_VALIDATE] Réponse API:', result);
+      
+      if (result.success) {
+        console.log('[AUTO_VALIDATE] Mise à jour du lot avec status:', result.status);
+        updateLot(lot.lot_id, {
+          regulator_validated: true,
+          regulator_validated_at: new Date().toISOString(),
+          regulator_data: result.dgmr_data,
+          validation_comparison: result.comparison,
+          status: result.status,
+          audit_trail: [
+            ...(lot.audit_trail || []),
+            {
+              event: 'AUTO_VALIDATION',
+              status: result.status,
+              at: new Date().toISOString(),
+              params_compared: result.comparison?.length || 0,
+            }
+          ],
+        });
+        notify(result.status === 'AUTHENTIQUE' ? NOTIF_TYPES.LOT_VALIDATED : NOTIF_TYPES.LOT_SUSPECT, {
+          lotId: lot.lot_id,
+          site: lot.site,
+        });
+        addToast(result.status === 'AUTHENTIQUE' ? `ok Lot ${lot.lot_id} validé` : `! Lot ${lot.lot_id} marqué SUSPECT`,
+          result.status === 'AUTHENTIQUE' ? 'success' : 'warning');
+        
+        // Afficher la comparaison détaillée
+        setFoundLot(lot);
+        setComparison({
+          results: result.comparison,
+          allOk: result.status === 'AUTHENTIQUE',
+          fraudAlerts: [],
+          blocked: false,
+          signature: '',
+          comparedAt: new Date().toISOString(),
+        });
+        setStep(3);
+        console.log('[AUTO_VALIDATE] Validation terminée avec succès');
+      } else {
+        console.error('[AUTO_VALIDATE] Échec:', result.message || result.error);
+        addToast(`Erreur: ${result.message || result.error || 'Validation échouée'}`, 'error');
+      }
+    } catch (err) {
+      console.error('[AUTO_VALIDATE] Exception:', err);
+      addToast(`Erreur validation: ${err.message || err.error || 'Échec'}`, 'error');
+    } finally {
+      console.log('[AUTO_VALIDATE] Fin');
+      setValidatingLotId(null);
+    }
+  }, [validatingLotId, updateLot, addToast, notify]);
+
   return (
     <div className="page-wrapper">
       <PageHeader
@@ -478,20 +539,26 @@ export default function RegulatorAnalysisPage() {
             ) : (
               <div style={{ display:'flex', flexDirection:'column', gap:8, maxHeight:380, overflowY:'auto' }}>
                 {pendingLots.map(lot => (
-                  <button key={lot.lot_id} onClick={()=>{ setFoundLot(lot); setLotQuery(lot.lot_id); setStep(2); }} style={{
+                  <div key={lot.lot_id} style={{
                     padding:'10px 14px', background:'var(--bg-raised)', border:'1px solid var(--border-dim)',
-                    borderRadius:'var(--r-md)', cursor:'pointer', textAlign:'left', transition:'all 0.15s',
-                  }}
-                    onMouseEnter={e=>{e.currentTarget.style.borderColor='var(--brand)';e.currentTarget.style.background='var(--brand-dim)';}}
-                    onMouseLeave={e=>{e.currentTarget.style.borderColor='var(--border-dim)';e.currentTarget.style.background='var(--bg-raised)';}}>
+                    borderRadius:'var(--r-md)', transition:'all 0.15s',
+                  }}>
                     <div style={{ display:'flex', alignItems:'center', gap:8, marginBottom:4 }}>
                       <span style={{ fontFamily:'var(--font-mono)', fontWeight:700, fontSize:'0.88rem', color:'var(--brand)' }}>{lot.lot_id}</span>
                       <MineralBadge type={lot.mineral_type}/><StatusBadge status={lot.status}/>
                     </div>
-                    <div style={{ fontSize:'0.72rem', color:'var(--text-muted)', display:'flex', gap:12 }}>
+                    <div style={{ fontSize:'0.72rem', color:'var(--text-muted)', display:'flex', gap:12, marginBottom:8 }}>
                       <span>{lot.site}</span><span>Cu:{lot.cu_grade_percent??'—'}%</span><span>Co:{lot.co_grade_percent??'—'}%</span>
                     </div>
-                  </button>
+                    <div style={{ display:'flex', gap:8 }}>
+                      <button className="btn btn-gold btn-sm" onClick={()=>handleAutoValidate(lot)} disabled={validatingLotId === lot.lot_id} style={{ flex:1 }}>
+                        {validatingLotId === lot.lot_id ? <div className="loader" style={{ width:12, height:12, borderTopColor:'#0c0a06' }}/> : 'Double analyse'}
+                      </button>
+                      <button className="btn btn-ghost btn-sm" onClick={()=>{ setFoundLot(lot); setLotQuery(lot.lot_id); setStep(2); }} disabled={validatingLotId !== null}>
+                        <Ic name="upload" size={14}/>
+                      </button>
+                    </div>
+                  </div>
                 ))}
               </div>
             )}

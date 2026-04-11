@@ -29,12 +29,7 @@ export function filterLotsForRole(lots = [], session = null) {
   }
 
   if (role === 'regulator') {
-    return lots.filter((lot) =>
-      Boolean(lot.analyzedAt)
-      || Boolean(lot.tokenId)
-      || lot.status === 'SUSPECT'
-      || lot.regulatorValidated === true
-    );
+    return lots;
   }
 
   if (role === 'transporter') {

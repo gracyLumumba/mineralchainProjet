@@ -18,6 +18,8 @@ from routes.lots import lots_bp
 from routes.certify import certify_bp
 from routes.blockchain import blockchain_bp
 from routes.auth import auth_bp
+from routes.validate import validate_bp
+from routes.cache import cache_bp
 from models.load_models import model_loader
 from routes.ipfs import ipfs_bp
 from database.models import db
@@ -70,6 +72,8 @@ app.register_blueprint(lots_bp, url_prefix='/api')
 app.register_blueprint(certify_bp, url_prefix='/api')
 app.register_blueprint(ipfs_bp, url_prefix='/api')
 app.register_blueprint(auth_bp, url_prefix='/api')
+app.register_blueprint(validate_bp, url_prefix='/api')
+app.register_blueprint(cache_bp, url_prefix='/api')
 app.register_blueprint(blockchain_bp, url_prefix='/api/blockchain')
 
 @app.route('/api/health', methods=['GET'])

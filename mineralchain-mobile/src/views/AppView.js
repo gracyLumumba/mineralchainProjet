@@ -7,6 +7,15 @@ import { useDashboardViewModel } from '../viewmodels/useDashboardViewModel';
 import { ROUTES } from '../navigation/routes';
 import { PreferencesProvider, usePreferences } from '../contexts/PreferencesContext';
 import { clearSession, loadSession, saveSession } from '../services/storage/sessionStorage';
+import RegulatorScreen from './screens/RegulatorScreen';
+import RegulatorDashboardScreen from './screens/RegulatorDashboardScreen';
+import RegulatorAnalysisScreen from './screens/RegulatorAnalysisScreen';
+import RegulatorAlertsScreen from './screens/RegulatorAlertsScreen';
+import RegulatorLotsScreen from './screens/RegulatorLotsScreen';
+import ProducerScreen from './screens/ProducerScreen';
+import ProducerMenuScreen from './screens/ProducerMenuScreen';
+import TransporterMenuScreen from './screens/TransporterMenuScreen';
+import AdminMenuScreen from './screens/AdminMenuScreen';
 import LoginScreen from './screens/LoginScreen';
 import DashboardScreen from './screens/DashboardScreen';
 import LotsListScreen from './screens/LotsListScreen';
@@ -31,6 +40,10 @@ function AppNavigator() {
   const dashboard = useDashboardViewModel(session);
   const { colors, ready, theme } = usePreferences();
   const canCertify = session?.role === 'producer';
+  const isRegulator = session?.role === 'regulator';
+  const isProducer = session?.role === 'producer';
+  const isTransporter = session?.role === 'transporter';
+  const isAdmin = session?.role === 'admin';
 
   useEffect(() => {
     let active = true;
@@ -113,11 +126,13 @@ function AppNavigator() {
                   onRejectUser={dashboard.rejectUser}
                   onRevokeUser={dashboard.revokeUser}
                   onLogout={handleLogout}
+                  onNavigate={(route) => navigation.navigate(route)}
                   onOpenLots={() => navigation.navigate(ROUTES.LOTS)}
                   onOpenCertification={() => {
-                    if (canCertify) {
-                      navigation.navigate(ROUTES.CERTIFY);
-                    }
+                    if (canCertify) navigation.navigate(ROUTES.PRODUCER_MENU);
+                    else if (isRegulator) navigation.navigate(ROUTES.REGULATOR);
+                    else if (isTransporter) navigation.navigate(ROUTES.TRANSPORTER_MENU);
+                    else if (isAdmin) navigation.navigate(ROUTES.ADMIN_MENU);
                   }}
                 />
               )}
@@ -138,9 +153,117 @@ function AppNavigator() {
             <Stack.Screen name={ROUTES.LOT_DETAIL} options={{ title: 'Detail lot' }}>
               {({ route }) => <LotDetailScreen route={route} />}
             </Stack.Screen>
+            {isProducer ? (
+              <>
+                <Stack.Screen name={ROUTES.PRODUCER_MENU} options={{ title: 'Menu Production' }}>
+                  {({ navigation }) => (
+                    <ProducerMenuScreen
+                      lots={dashboard.lots}
+                      isRefreshing={dashboard.isRefreshing}
+                      refresh={dashboard.refresh}
+                      onNavigate={(route) => navigation.navigate(route)}
+                    />
+                  )}
+                </Stack.Screen>
+                <Stack.Screen name={ROUTES.PRODUCER} options={{ title: 'Dashboard' }}>
+                  {({ navigation }) => (
+                    <ProducerScreen
+                      lots={dashboard.lots}
+                      isRefreshing={dashboard.isRefreshing}
+                      refresh={dashboard.refresh}
+                      onOpenCertification={() => navigation.navigate(ROUTES.CERTIFY)}
+                      onOpenLots={() => navigation.navigate(ROUTES.LOTS)}
+                    />
+                  )}
+                </Stack.Screen>
+              </>
+            ) : null}
             {canCertify ? (
               <Stack.Screen name={ROUTES.CERTIFY} options={{ title: 'Certification' }}>
-                {() => <CertificationScreen session={session} />}
+                {({ navigation }) => (
+                  <CertificationScreen
+                    session={session}
+                    onCertified={() => {
+                      dashboard.refresh();
+                      navigation.navigate(ROUTES.PRODUCER);
+                    }}
+                  />
+                )}
+              </Stack.Screen>
+            ) : null}
+            {isRegulator ? (
+              <>
+                <Stack.Screen name={ROUTES.REGULATOR} options={{ title: 'Supervision DGMR' }}>
+                  {({ navigation }) => (
+                    <RegulatorScreen
+                      lots={dashboard.lots}
+                      isRefreshing={dashboard.isRefreshing}
+                      refresh={dashboard.refresh}
+                      onNavigate={(route) => navigation.navigate(route)}
+                    />
+                  )}
+                </Stack.Screen>
+                <Stack.Screen name={ROUTES.REGULATOR_DASHBOARD} options={{ title: 'Dashboard' }}>
+                  {() => (
+                    <RegulatorDashboardScreen
+                      lots={dashboard.lots}
+                      isRefreshing={dashboard.isRefreshing}
+                      refresh={dashboard.refresh}
+                    />
+                  )}
+                </Stack.Screen>
+                <Stack.Screen name={ROUTES.REGULATOR_ANALYSIS} options={{ title: 'Analyse' }}>
+                  {() => (
+                    <RegulatorAnalysisScreen
+                      lots={dashboard.lots}
+                      isRefreshing={dashboard.isRefreshing}
+                      refresh={dashboard.refresh}
+                    />
+                  )}
+                </Stack.Screen>
+                <Stack.Screen name={ROUTES.REGULATOR_ALERTS} options={{ title: 'Alertes' }}>
+                  {() => (
+                    <RegulatorAlertsScreen
+                      lots={dashboard.lots}
+                      isRefreshing={dashboard.isRefreshing}
+                      refresh={dashboard.refresh}
+                    />
+                  )}
+                </Stack.Screen>
+                <Stack.Screen name={ROUTES.REGULATOR_LOTS} options={{ title: 'Tous les lots' }}>
+                  {() => (
+                    <RegulatorLotsScreen
+                      lots={dashboard.lots}
+                      isRefreshing={dashboard.isRefreshing}
+                      refresh={dashboard.refresh}
+                    />
+                  )}
+                </Stack.Screen>
+              </>
+            ) : null}
+            {isTransporter ? (
+              <Stack.Screen name={ROUTES.TRANSPORTER_MENU} options={{ title: 'Menu Transport' }}>
+                {({ navigation }) => (
+                  <TransporterMenuScreen
+                    lots={dashboard.lots}
+                    isRefreshing={dashboard.isRefreshing}
+                    refresh={dashboard.refresh}
+                    onNavigate={(route) => navigation.navigate(route)}
+                  />
+                )}
+              </Stack.Screen>
+            ) : null}
+            {isAdmin ? (
+              <Stack.Screen name={ROUTES.ADMIN_MENU} options={{ title: 'Menu Admin' }}>
+                {({ navigation }) => (
+                  <AdminMenuScreen
+                    lots={dashboard.lots}
+                    users={dashboard.users}
+                    isRefreshing={dashboard.isRefreshing}
+                    refresh={dashboard.refresh}
+                    onNavigate={(route) => navigation.navigate(route)}
+                  />
+                )}
               </Stack.Screen>
             ) : null}
           </>

@@ -17,6 +17,12 @@ export function createLot(payload = {}) {
     analyzedAt: payload.analyzed_at || null,
     mineralType: payload.mineral_type || null,
     confidence: payload.confidence ?? null,
+    cuGradePercent: payload.cu_grade_percent ?? null,
+    coGradePercent: payload.co_grade_percent ?? null,
+    fePercent: payload.fe_percent ?? null,
+    sPercent: payload.s_percent ?? null,
+    densityTm3: payload.density_t_m3 ?? null,
+    weightTonnes: payload.weight_tonnes ?? null,
     updatedAt: payload.updated_at || payload.created_at || null,
     storage: payload.storage || 'unknown',
   };

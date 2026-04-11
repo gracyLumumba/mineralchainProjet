@@ -120,8 +120,17 @@ class ModelLoader:
                 mineral_pred = self.models['mineral'].predict(X_scaled)[0]
                 if hasattr(self.models['mineral'], 'predict_proba'):
                     mineral_proba = self.models['mineral'].predict_proba(X_scaled)[0]
+                    confidence = float(max(mineral_proba))
+                elif hasattr(self.models['mineral'], 'decision_function'):
+                    scores = self.models['mineral'].decision_function(X_scaled)[0]
+                    if hasattr(scores, '__len__'):
+                        exp_scores = np.exp(scores - np.max(scores))
+                        proba = exp_scores / exp_scores.sum()
+                        confidence = float(max(proba))
+                    else:
+                        confidence = float(1 / (1 + np.exp(-abs(scores))))
                 else:
-                    mineral_proba = [0.5, 0.5]
+                    confidence = 0.75
                 
                 if 'mineral' in self.label_encoders:
                     mineral_type = self.label_encoders['mineral'].inverse_transform([mineral_pred])[0]
@@ -130,7 +139,7 @@ class ModelLoader:
                 
                 results['mineral'] = {
                     'type': mineral_type,
-                    'confidence': float(max(mineral_proba)),
+                    'confidence': confidence,
                 }
             except Exception as e:
                 results['mineral'] = {'type': 'unknown', 'confidence': 0, 'error': str(e)}
@@ -140,8 +149,17 @@ class ModelLoader:
                 impurity_pred = self.models['impurity'].predict(X_scaled)[0]
                 if hasattr(self.models['impurity'], 'predict_proba'):
                     impurity_proba = self.models['impurity'].predict_proba(X_scaled)[0]
+                    imp_confidence = float(max(impurity_proba))
+                elif hasattr(self.models['impurity'], 'decision_function'):
+                    scores = self.models['impurity'].decision_function(X_scaled)[0]
+                    if hasattr(scores, '__len__'):
+                        exp_scores = np.exp(scores - np.max(scores))
+                        proba = exp_scores / exp_scores.sum()
+                        imp_confidence = float(max(proba))
+                    else:
+                        imp_confidence = float(1 / (1 + np.exp(-abs(scores))))
                 else:
-                    impurity_proba = [0.33, 0.33, 0.34]
+                    imp_confidence = 0.75
                 
                 if 'impurity' in self.label_encoders:
                     impurity_level = self.label_encoders['impurity'].inverse_transform([impurity_pred])[0]
@@ -150,29 +168,30 @@ class ModelLoader:
                 
                 results['impurity'] = {
                     'level': impurity_level,
-                    'confidence': float(max(impurity_proba))
+                    'confidence': imp_confidence
                 }
             except:
                 results['impurity'] = {'level': 'unknown', 'confidence': 0}
         
         if 'fraud' in self.models:
             try:
+                fraud_pred = self.models['fraud'].predict(X_scaled)[0]
                 if hasattr(self.models['fraud'], 'predict_proba'):
                     fraud_proba = self.models['fraud'].predict_proba(X_scaled)[0]
-                    fraud_pred = self.models['fraud'].predict(X_scaled)[0]
-                    
-                    results['fraud'] = {
-                        'is_fraud': bool(fraud_pred),
-                        'probability': float(fraud_proba[1]) if len(fraud_proba) > 1 else float(fraud_proba[0]),
-                        'confidence': float(max(fraud_proba))
-                    }
+                    fraud_confidence = float(max(fraud_proba))
+                    fraud_probability = float(fraud_proba[1]) if len(fraud_proba) > 1 else float(fraud_proba[0])
+                elif hasattr(self.models['fraud'], 'decision_function'):
+                    score = self.models['fraud'].decision_function(X_scaled)[0]
+                    fraud_probability = float(1 / (1 + np.exp(-float(score))))
+                    fraud_confidence = float(1 / (1 + np.exp(-abs(float(score)))))
                 else:
-                    fraud_pred = self.models['fraud'].predict(X_scaled)[0]
-                    results['fraud'] = {
-                        'is_fraud': bool(fraud_pred == -1),
-                        'score': 0.0,
-                        'confidence': 0.5
-                    }
+                    fraud_probability = 0.0
+                    fraud_confidence = 0.75
+                results['fraud'] = {
+                    'is_fraud': bool(fraud_pred == 1 or fraud_pred == -1),
+                    'probability': fraud_probability,
+                    'confidence': fraud_confidence
+                }
             except:
                 results['fraud'] = {'is_fraud': False, 'confidence': 0}
         

@@ -151,6 +151,26 @@ export function CertificateCard({ lot, token, onClose }) {
     }
   };
 
+  //  Download PNG 
+  const handleDownloadPNG = async () => {
+    setDownloading(true);
+    try {
+      const { default: html2canvas } = await import('html2canvas');
+      const el = certRef.current;
+      if (!el) throw new Error('no el');
+      const canvas  = await html2canvas(el, { backgroundColor: '#0c1118', scale: 2, logging: false, useCORS: true });
+      canvas.toBlob((blob) => {
+        const url = URL.createObjectURL(blob);
+        Object.assign(document.createElement('a'), { href: url, download: `certificat-${lot.lot_id}.png` }).click();
+        URL.revokeObjectURL(url);
+      }, 'image/png');
+    } catch (error) {
+      void error;
+    } finally {
+      setDownloading(false);
+    }
+  };
+
   //  Verify blockchain 
   const handleBlockchainVerify = async () => {
     setVerifying(true); setVerifyResult(null);
@@ -412,6 +432,10 @@ export function CertificateCard({ lot, token, onClose }) {
 
           <button className="btn btn-gold" onClick={handleDownloadPDF} disabled={downloading} style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
             {downloading ? <><div className="loader" style={{ width: 14, height: 14, borderTopColor: '#0c0a06' }}/> {t('cert.generating')}</> : t('action.download_pdf')}
+          </button>
+
+          <button className="btn btn-outline" onClick={handleDownloadPNG} disabled={downloading} style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+            {downloading ? <><div className="loader" style={{ width: 14, height: 14 }}/> {t('cert.generating')}</> : <><Ic name="image" size={14}/> Télécharger PNG</>}
           </button>
         </div>
       </div>

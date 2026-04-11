@@ -1,6 +1,7 @@
 import { useMemo, useState } from 'react';
 import { Pressable, StyleSheet, Text, TextInput, View } from 'react-native';
 import ScreenShell from '../components/ScreenShell';
+import PageHeader from '../components/PageHeader';
 import LotCard from '../components/LotCard';
 import AnimatedEntrance from '../components/AnimatedEntrance';
 import { usePreferences } from '../../contexts/PreferencesContext';
@@ -46,6 +47,10 @@ export default function LotsListScreen({ session, lots, isRefreshing, refresh, o
   return (
     <ScreenShell onRefresh={refresh} refreshing={isRefreshing}>
       <AnimatedEntrance delay={0}>
+        <PageHeader />
+      </AnimatedEntrance>
+
+      <AnimatedEntrance delay={20}>
         <View style={styles.header}>
           <Text style={[styles.eyebrow, { color: colors.accent }]}>{t('inventory')}</Text>
           <Text style={[styles.title, { color: colors.text }]}>{getRoleTitle(session?.role)}</Text>

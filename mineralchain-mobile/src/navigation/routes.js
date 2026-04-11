@@ -4,4 +4,13 @@ export const ROUTES = {
   LOTS: 'Lots',
   LOT_DETAIL: 'LotDetail',
   CERTIFY: 'Certify',
+  REGULATOR: 'Regulator',
+  REGULATOR_DASHBOARD: 'RegulatorDashboard',
+  REGULATOR_ANALYSIS: 'RegulatorAnalysis',
+  REGULATOR_ALERTS: 'RegulatorAlerts',
+  REGULATOR_LOTS: 'RegulatorLots',
+  PRODUCER: 'Producer',
+  PRODUCER_MENU: 'ProducerMenu',
+  TRANSPORTER_MENU: 'TransporterMenu',
+  ADMIN_MENU: 'AdminMenu',
 };

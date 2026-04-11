@@ -1,26 +1,33 @@
-import { DevSettings, Pressable, RefreshControl, SafeAreaView, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { useState } from 'react';
+import { RefreshControl, SafeAreaView, ScrollView, StyleSheet, View } from 'react-native';
 import { usePreferences } from '../../contexts/PreferencesContext';
+import DrawerMenu from './DrawerMenu';
 
 export default function ScreenShell({
   children,
   onRefresh,
   refreshing = false,
   keyboardShouldPersistTaps = 'handled',
+  session,
+  onNavigate,
+  onLogout,
 }) {
   const { colors } = usePreferences();
+  const [drawerOpen, setDrawerOpen] = useState(false);
 
   return (
     <SafeAreaView style={[styles.safeArea, { backgroundColor: colors.screen }]}>
       <View style={[styles.bgOrbOne, { backgroundColor: colors.overlayOne }]} />
       <View style={[styles.bgOrbTwo, { backgroundColor: colors.overlayTwo }]} />
 
-      {__DEV__ ? (
-        <Pressable
-          onPress={() => DevSettings.reload()}
-          style={[styles.devReload, { backgroundColor: colors.surfaceStrong, borderColor: colors.border }]}
-        >
-          <Text style={[styles.devReloadText, { color: colors.text }]}>Reload app</Text>
-        </Pressable>
+      {session && onNavigate && onLogout ? (
+        <DrawerMenu
+          visible={drawerOpen}
+          onClose={() => setDrawerOpen(false)}
+          onNavigate={onNavigate}
+          onLogout={onLogout}
+          session={session}
+        />
       ) : null}
 
       <ScrollView
@@ -33,7 +40,11 @@ export default function ScreenShell({
         }
         showsVerticalScrollIndicator={false}
       >
-        <View style={styles.inner}>{children}</View>
+        <View style={styles.inner}>
+          {typeof children === 'function'
+            ? children({ onOpenMenu: () => setDrawerOpen(true) })
+            : children}
+        </View>
       </ScrollView>
     </SafeAreaView>
   );
@@ -60,22 +71,6 @@ const styles = StyleSheet.create({
     height: 240,
     borderRadius: 999,
     opacity: 0.18,
-  },
-  devReload: {
-    alignItems: 'center',
-    alignSelf: 'flex-end',
-    borderRadius: 999,
-    borderWidth: 1,
-    marginRight: 20,
-    marginTop: 12,
-    paddingHorizontal: 12,
-    paddingVertical: 8,
-    zIndex: 5,
-  },
-  devReloadText: {
-    fontSize: 11,
-    fontWeight: '800',
-    textTransform: 'uppercase',
   },
   content: {
     flexGrow: 1,

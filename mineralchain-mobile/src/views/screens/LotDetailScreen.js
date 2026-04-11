@@ -1,5 +1,6 @@
 import { ActivityIndicator, Pressable, StyleSheet, Text, View } from 'react-native';
 import ScreenShell from '../components/ScreenShell';
+import PageHeader from '../components/PageHeader';
 import { usePreferences } from '../../contexts/PreferencesContext';
 import { useLotDetailViewModel } from '../../viewmodels/useLotDetailViewModel';
 import { getRoleNextStep } from '../../models/roleInsights';
@@ -22,6 +23,7 @@ export default function LotDetailScreen({ route }) {
 
   return (
     <ScreenShell onRefresh={refresh} refreshing={isRefreshing}>
+      <PageHeader />
       {isLoading ? (
         <View style={styles.stateBox}>
           <ActivityIndicator size="large" color={colors.brand} />

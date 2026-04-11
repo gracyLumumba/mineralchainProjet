@@ -13,10 +13,10 @@ const REGISTER_INITIAL = {
 };
 
 const DEMO_CREDENTIALS = [
-  { key: 'admin', label: 'Admin', identifier: 'admin', password: 'Admin2025!', description: 'Supervision et gestion des comptes' },
-  { key: 'producer', label: 'Producteur', identifier: 'producteur', password: 'Demo2025!', description: 'Creation et certification des lots' },
-  { key: 'regulator', label: 'Regulateur', identifier: 'regulateur', password: 'Demo2025!', description: 'Controle et verification des donnees' },
-  { key: 'transporter', label: 'Transporteur', identifier: 'transporteur', password: 'Demo2025!', description: 'Suivi logistique et expedition' },
+  { key: 'producer',    label: 'Producteur',  identifier: 'producteur',  password: 'Demo2025!',  icon: 'pickaxe',        iconLib: 'MaterialCommunityIcons', description: 'Creation et certification des lots' },
+  { key: 'regulator',  label: 'Regulateur',  identifier: 'regulateur',  password: 'Demo2025!',  icon: 'scale-balance',  iconLib: 'MaterialCommunityIcons', description: 'Controle et verification des donnees' },
+  { key: 'transporter',label: 'Transporteur',identifier: 'transporteur',password: 'Demo2025!',  icon: 'truck-outline',  iconLib: 'MaterialCommunityIcons', description: 'Suivi logistique et expedition' },
+  { key: 'admin',      label: 'Admin',       identifier: 'admin',       password: 'Admin2025!', icon: 'shield-account', iconLib: 'MaterialCommunityIcons', description: 'Supervision et gestion des comptes', isAdmin: true },
 ];
 
 export function useAuthViewModel({ onLogin }) {

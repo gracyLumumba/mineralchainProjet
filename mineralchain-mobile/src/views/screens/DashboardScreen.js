@@ -77,6 +77,7 @@ export default function DashboardScreen({
   onLogout,
   onOpenLots,
   onOpenCertification,
+  onNavigate,
 }) {
   const { colors, t } = usePreferences();
   const rolePresentation = getRolePresentation(session.role, t);
@@ -84,9 +85,11 @@ export default function DashboardScreen({
   const summary = buildRoleSummary(session, lots, users);
 
   return (
-    <ScreenShell onRefresh={refresh} refreshing={isRefreshing}>
+    <ScreenShell onRefresh={refresh} refreshing={isRefreshing} session={session} onNavigate={onNavigate} onLogout={onLogout}>
+      {({ onOpenMenu }) => (
+      <>
       <AnimatedEntrance delay={0}>
-        <TopBar onRefresh={refresh} onLogout={onLogout} isRefreshing={isRefreshing} />
+        <TopBar onOpenMenu={onOpenMenu} />
       </AnimatedEntrance>
 
       <AnimatedEntrance delay={70}>
@@ -206,6 +209,8 @@ export default function DashboardScreen({
           ) : null}
         </View>
       </AnimatedEntrance>
+      </>
+      )}
     </ScreenShell>
   );
 }

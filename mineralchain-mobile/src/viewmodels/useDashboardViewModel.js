@@ -65,6 +65,8 @@ export function useDashboardViewModel(session) {
 
   useEffect(() => {
     load();
+    const interval = setInterval(() => load('refresh'), 30000);
+    return () => clearInterval(interval);
   }, [session?.id, session?.role, session?.username]);
 
   return {

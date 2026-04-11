@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import { Linking, Pressable, StyleSheet, Text, View } from 'react-native';
 import ScreenShell from '../components/ScreenShell';
+import PageHeader from '../components/PageHeader';
 import FormField from '../components/FormField';
 import AnimatedEntrance from '../components/AnimatedEntrance';
 import { usePreferences } from '../../contexts/PreferencesContext';
@@ -8,7 +9,7 @@ import { useCertificationViewModel } from '../../viewmodels/useCertificationView
 import { getApiBaseUrl, getDefaultApiBaseUrl } from '../../config/api';
 import { CONTRACT_ADDRESS, GANACHE_NETWORK_LABEL } from '../../config/blockchain';
 
-export default function CertificationScreen({ session, navigation }) {
+export default function CertificationScreen({ session, navigation, onCertified }) {
   const { colors, t } = usePreferences();
   const [apiBaseUrl, setApiBaseUrl] = useState(getDefaultApiBaseUrl());
   const canCertify = session?.role === 'producer';
@@ -22,6 +23,11 @@ export default function CertificationScreen({ session, navigation }) {
     submit,
     resetForm,
   } = useCertificationViewModel(session);
+
+  const handleSubmit = async () => {
+    await submit();
+    if (onCertified) onCertified();
+  };
 
   useEffect(() => {
     let active = true;
@@ -44,6 +50,9 @@ export default function CertificationScreen({ session, navigation }) {
     return (
       <ScreenShell>
         <AnimatedEntrance delay={0}>
+          <PageHeader />
+        </AnimatedEntrance>
+        <AnimatedEntrance delay={20}>
           <View style={styles.header}>
             <Text style={[styles.eyebrow, { color: colors.accent }]}>{t('access_restricted')}</Text>
             <Text style={[styles.title, { color: colors.text }]}>{t('certification')}</Text>
@@ -75,6 +84,10 @@ export default function CertificationScreen({ session, navigation }) {
   return (
     <ScreenShell keyboardShouldPersistTaps="always">
       <AnimatedEntrance delay={0}>
+        <PageHeader />
+      </AnimatedEntrance>
+
+      <AnimatedEntrance delay={20}>
         <View style={styles.header}>
           <Text style={[styles.eyebrow, { color: colors.accent }]}>{t('issuance')}</Text>
           <Text style={[styles.title, { color: colors.text }]}>{t('certification')}</Text>
@@ -178,7 +191,7 @@ export default function CertificationScreen({ session, navigation }) {
           />
 
           <View style={styles.actionRow}>
-            <Pressable onPress={submit} style={[styles.button, { backgroundColor: colors.brand, shadowColor: colors.shadow }, isSubmitting ? styles.buttonDisabled : null]} disabled={isSubmitting}>
+            <Pressable onPress={handleSubmit} style={[styles.button, { backgroundColor: colors.brand, shadowColor: colors.shadow }, isSubmitting ? styles.buttonDisabled : null]} disabled={isSubmitting}>
               <Text style={styles.buttonText}>
                 {isSubmitting ? t('processing') : t('launch_certification')}
               </Text>
@@ -201,17 +214,48 @@ export default function CertificationScreen({ session, navigation }) {
 
       {result ? (
         <AnimatedEntrance delay={170}>
-          <View style={[styles.resultCard, { backgroundColor: colors.successBg, borderColor: colors.successBorder }]}>
+          <View style={[styles.resultCard, { backgroundColor: colors.card, borderColor: colors.successBorder }]}>
             <Text style={[styles.resultEyebrow, { color: colors.successText }]}>{t('certificate_issued')}</Text>
             <Text style={[styles.resultTitle, { color: colors.text }]}>{result.lotId}</Text>
-            <Text style={[styles.resultLine, { color: colors.text }]}>Statut: {result.status}</Text>
-            <Text style={[styles.resultLine, { color: colors.text }]}>Type: {result.mineralType}</Text>
-            <Text style={[styles.resultLine, { color: colors.text }]}>Confiance: {(result.confidence * 100).toFixed(1)}%</Text>
-            <Text style={[styles.resultLine, { color: colors.text }]}>Token: {result.tokenId ?? 'non cree'}</Text>
-            <Text style={[styles.resultLine, { color: colors.text }]}>Bloc: {result.blockNumber ?? 'non disponible'}</Text>
-            <Text style={[styles.resultLine, { color: colors.text }]}>Reseau: {result.network || GANACHE_NETWORK_LABEL}</Text>
-            <Text style={[styles.resultLine, { color: colors.text }]}>Contrat: {result.contractAddress || CONTRACT_ADDRESS}</Text>
-            <Text style={[styles.resultLine, { color: colors.text }]}>IPFS: {result.ipfsHash ?? 'absent'}</Text>
+
+            {/* Jauge de confiance */}
+            <View style={styles.gaugeRow}>
+              <View style={styles.gaugeTrack}>
+                <View style={[
+                  styles.gaugeFill,
+                  {
+                    width: `${Math.round((result.confidence ?? 0) * 100)}%`,
+                    backgroundColor:
+                      (result.confidence ?? 0) >= 0.85 ? colors.brand
+                      : (result.confidence ?? 0) >= 0.65 ? colors.accent
+                      : colors.errorText,
+                  },
+                ]} />
+              </View>
+              <Text style={[styles.gaugeLabel, {
+                color:
+                  (result.confidence ?? 0) >= 0.85 ? colors.brand
+                  : (result.confidence ?? 0) >= 0.65 ? colors.accent
+                  : colors.errorText,
+              }]}>
+                {Math.round((result.confidence ?? 0) * 100)}%
+              </Text>
+            </View>
+
+            <View style={[styles.divider, { borderColor: colors.border }]} />
+            {[
+              ['Statut', result.status],
+              ['Type', result.mineralType],
+              ['Token', result.tokenId ?? 'non créé'],
+              ['Bloc', result.blockNumber ?? 'non disponible'],
+              ['Réseau', result.network || GANACHE_NETWORK_LABEL],
+              ['IPFS', result.ipfsHash ?? 'absent'],
+            ].map(([label, val]) => (
+              <View key={label} style={[styles.infoRow, { borderColor: colors.border }]}>
+                <Text style={[styles.infoRowLabel, { color: colors.muted }]}>{label}</Text>
+                <Text style={[styles.infoRowValue, { color: colors.text }]} numberOfLines={1}>{val}</Text>
+              </View>
+            ))}
 
             {result.gatewayUrl ? (
               <Pressable onPress={() => Linking.openURL(result.gatewayUrl)} style={[styles.linkButton, { backgroundColor: colors.surfaceStrong }]}>
@@ -354,9 +398,50 @@ const styles = StyleSheet.create({
     fontSize: 22,
     fontWeight: '900',
   },
-  resultLine: {
-    fontSize: 14,
-    lineHeight: 20,
+  gaugeRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 10,
+    marginVertical: 4,
+  },
+  gaugeTrack: {
+    flex: 1,
+    height: 10,
+    backgroundColor: 'rgba(0,0,0,0.08)',
+    borderRadius: 999,
+    overflow: 'hidden',
+  },
+  gaugeFill: {
+    height: '100%',
+    borderRadius: 999,
+  },
+  gaugeLabel: {
+    fontSize: 16,
+    fontWeight: '900',
+    minWidth: 48,
+    textAlign: 'right',
+  },
+  divider: {
+    borderTopWidth: 1,
+    marginVertical: 4,
+  },
+  infoRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    paddingVertical: 7,
+    borderBottomWidth: 1,
+  },
+  infoRowLabel: {
+    fontSize: 12,
+    fontWeight: '700',
+  },
+  infoRowValue: {
+    fontSize: 13,
+    fontWeight: '600',
+    flex: 1,
+    textAlign: 'right',
+    marginLeft: 8,
   },
   linkButton: {
     alignSelf: 'flex-start',

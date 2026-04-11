@@ -42,6 +42,7 @@ export const apiService = {
   getTransactions: () => API.get('/blockchain/transactions'),
   validateDGMR:    (data) => API.post('/blockchain/validate-dgmr', data),
   updateIPFS:      (data) => API.post('/blockchain/update-ipfs', data),
+  autoValidateLot: (lotId) => API.post(`/lots/${lotId}/auto-validate`),
 };
 
 // ── Simulation IA locale UNIQUEMENT (mode démo sans backend) ─────────────────

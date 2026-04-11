@@ -46,6 +46,10 @@ class Lot(db.Model):
     owner_username = db.Column(db.String(80))
     owner_name = db.Column(db.String(120))
     
+    # Validation régulateur
+    regulator_validated = db.Column(db.Boolean, default=False)
+    regulator_validated_at = db.Column(db.DateTime)
+    
     # Relations
     history = db.relationship('LotHistory', backref='lot', lazy=True, cascade='all, delete-orphan')
     
