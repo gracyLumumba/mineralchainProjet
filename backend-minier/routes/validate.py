@@ -1,18 +1,19 @@
 from flask import Blueprint, request, jsonify
 from datetime import datetime
-from database.models import db, Lot, LotHistory
+from database.models import db, LotHistory
 from routes.auth import get_current_user
+from routes.lots import get_lot_record
 
 validate_bp = Blueprint('validate', __name__)
 
 # Tolérances DGMR (mêmes que sur le web)
-TOLERANCES = {
-    'cu_grade_percent': 0.5,
-    'co_grade_percent': 0.3,
-    'fe_percent': 1.0,
-    's_percent': 0.5,
-    'density_t_m3': 0.15,
-    'weight_tonnes': 5.0,
+FIELD_SPECS = {
+    'cu_grade': {'label': 'cu_grade_percent', 'tolerance': 0.5},
+    'co_grade': {'label': 'co_grade_percent', 'tolerance': 0.3},
+    'fe_grade': {'label': 'fe_percent', 'tolerance': 1.0},
+    's_grade': {'label': 's_percent', 'tolerance': 0.5},
+    'density': {'label': 'density_t_m3', 'tolerance': 0.15},
+    'weight': {'label': 'weight_tonnes', 'tolerance': 5.0},
 }
 
 def auto_validate_lot(lot):
@@ -24,9 +25,14 @@ def auto_validate_lot(lot):
     results = []
     all_ok = True
     
+    import hashlib
     import random
-    
-    for field, tolerance in TOLERANCES.items():
+
+    seed = int(hashlib.sha256(str(lot.lot_id).encode('utf-8')).hexdigest()[:16], 16)
+    rng = random.Random(seed)
+
+    for field, spec in FIELD_SPECS.items():
+        tolerance = spec['tolerance']
         prod_val = getattr(lot, field, None)
         
         if prod_val is None:
@@ -39,11 +45,11 @@ def auto_validate_lot(lot):
             print(f"[AUTO_VALIDATE] {field}: erreur conversion {prod_val}")
             continue
         
-        # 80% conforme, 20% divergence
-        if random.random() < 0.8:
-            variation = random.uniform(-tolerance * 0.3, tolerance * 0.3)
+        # Variation pseudo-aléatoire mais déterministe pour rendre les tests rejouables.
+        if rng.random() < 0.8:
+            variation = rng.uniform(-tolerance * 0.3, tolerance * 0.3)
         else:
-            variation = random.uniform(-tolerance * 0.8, tolerance * 0.8)
+            variation = rng.uniform(-tolerance * 0.8, tolerance * 0.8)
         
         reg_val = max(0, prod_val + variation)
         diff = abs(prod_val - reg_val)
@@ -56,7 +62,7 @@ def auto_validate_lot(lot):
         
         results.append({
             'field': field,
-            'label': TOLERANCES.get(field, field),
+            'label': spec['label'],
             'prodVal': float(prod_val),
             'regVal': float(reg_val),
             'diff': float(diff),
@@ -75,7 +81,8 @@ def auto_validate_lot(lot):
         'allOk': all_ok,
         'compared_at': datetime.utcnow().isoformat(),
         'params_compared': len(results),
-        'conformes': len([r for r in results if r['ok']])
+        'conformes': len([r for r in results if r['ok']]),
+        'seed': seed,
     }
 
 
@@ -107,7 +114,7 @@ def auto_validate(lot_id):
             print("[AUTO_VALIDATE] ERREUR: Pas régulateur")
             return jsonify({"success": False, "error": "Accès réservé au régulateur"}), 403
         
-        lot = Lot.query.filter_by(lot_id=lot_id).first()
+        lot = get_lot_record(lot_id, sync_json_to_db=True)
         if not lot:
             print(f"[AUTO_VALIDATE] ERREUR: Lot {lot_id} non trouvé")
             return jsonify({"success": False, "error": "Lot non trouvé"}), 404

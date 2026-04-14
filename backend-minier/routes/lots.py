@@ -40,6 +40,48 @@ def database_enabled():
     return bool(current_app.config.get('DATABASE_ENABLED'))
 
 
+def json_lot_to_database_payload(payload):
+    composition = payload.get('composition') or {}
+    return {
+        "lot_id": payload.get('lot_id'),
+        "site": payload.get('site'),
+        "extraction_date": payload.get('extraction_date'),
+        "status": payload.get('status'),
+        "weight": payload.get('weight'),
+        "cu_grade": composition.get('cu'),
+        "co_grade": composition.get('co'),
+        "fe_grade": composition.get('fe'),
+        "s_grade": composition.get('s'),
+        "ni_grade": composition.get('ni'),
+        "silica_grade": composition.get('silica'),
+        "token_id": payload.get('token_id'),
+        "tx_hash": payload.get('tx_hash'),
+        "block_number": payload.get('block_number'),
+        "contract_address": payload.get('contract_address'),
+        "certificate_id": payload.get('certificate_id'),
+        "owner_user_id": payload.get('owner_user_id'),
+        "owner_username": payload.get('owner_username'),
+        "owner_name": payload.get('owner_name'),
+    }
+
+
+def get_lot_record(lot_id, sync_json_to_db=False):
+    db_lot = Lot.query.filter_by(lot_id=lot_id).first() if database_enabled() else None
+    if db_lot:
+        return db_lot
+
+    json_lot = lots_db.get(lot_id)
+    if not json_lot or not database_enabled() or not sync_json_to_db:
+        return None
+
+    synced = upsert_database_lot(
+        json_lot_to_database_payload(json_lot),
+        history_event='SYNCED_FROM_JSON',
+        history_extra={"source": "json_store"},
+    )
+    return synced
+
+
 def parse_date(value):
     if not value:
         return None
