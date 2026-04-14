@@ -16,14 +16,36 @@ from dotenv import load_dotenv
 
 from routes.analyze import analyze_bp
 from routes.lots import lots_bp
-from routes.certify import certify_bp
-from routes.blockchain import blockchain_bp
 from routes.auth import auth_bp
 from routes.validate import validate_bp
 from routes.cache import cache_bp
 from models.load_models import model_loader
-from routes.ipfs import ipfs_bp
 from database.models import db
+
+# Imports optionnels (blockchain)
+try:
+    from routes.certify import certify_bp
+    CERTIFY_AVAILABLE = True
+except ImportError as e:
+    print(f"[WARN] Module certify non disponible: {e}")
+    CERTIFY_AVAILABLE = False
+    certify_bp = None
+
+try:
+    from routes.blockchain import blockchain_bp
+    BLOCKCHAIN_AVAILABLE = True
+except ImportError as e:
+    print(f"[WARN] Module blockchain non disponible: {e}")
+    BLOCKCHAIN_AVAILABLE = False
+    blockchain_bp = None
+
+try:
+    from routes.ipfs import ipfs_bp
+    IPFS_AVAILABLE = True
+except ImportError as e:
+    print(f"[WARN] Module IPFS non disponible: {e}")
+    IPFS_AVAILABLE = False
+    ipfs_bp = None
 
 load_dotenv()
 
@@ -49,7 +71,7 @@ db.init_app(app)
 
 # Charger les modèles au démarrage
 print("="*60)
-print("🚀 DÉMARRAGE DU BACKEND IA MINIER")
+print("DEMARRAGE DU BACKEND IA MINIER")
 print("="*60)
 
 # Chemin vers vos modèles
@@ -78,12 +100,16 @@ except Exception as error:
 # Enregistrer les blueprints
 app.register_blueprint(analyze_bp, url_prefix='/api')
 app.register_blueprint(lots_bp, url_prefix='/api')
-app.register_blueprint(certify_bp, url_prefix='/api')
-app.register_blueprint(ipfs_bp, url_prefix='/api')
 app.register_blueprint(auth_bp, url_prefix='/api')
 app.register_blueprint(validate_bp, url_prefix='/api')
 app.register_blueprint(cache_bp, url_prefix='/api')
-app.register_blueprint(blockchain_bp, url_prefix='/api/blockchain')
+
+if CERTIFY_AVAILABLE and certify_bp:
+    app.register_blueprint(certify_bp, url_prefix='/api')
+if IPFS_AVAILABLE and ipfs_bp:
+    app.register_blueprint(ipfs_bp, url_prefix='/api')
+if BLOCKCHAIN_AVAILABLE and blockchain_bp:
+    app.register_blueprint(blockchain_bp, url_prefix='/api/blockchain')
 
 @app.route('/api/health', methods=['GET'])
 def health():
@@ -109,33 +135,56 @@ def health():
 
 @app.route('/', methods=['GET'])
 def home():
+    endpoints = [
+        "/",
+        "/api/health",
+        "/api/auth/login (POST)",
+        "/api/auth/register (POST)",
+        "/api/analyze (POST)",
+        "/api/lots (GET, POST)",
+        "/api/lots/<lot_id> (GET)",
+        "/api/lots/<lot_id>/auto-validate (POST)",
+        "/api/status (GET)",
+    ]
+    
+    if CERTIFY_AVAILABLE:
+        endpoints.append("/api/analyze-and-certify (POST)")
+        endpoints.append("/api/lots/<lot_id>/certify (POST)")
+    
+    if BLOCKCHAIN_AVAILABLE:
+        endpoints.append("/api/contract-info (GET)")
+        endpoints.append("/api/blockchain/status (GET)")
+    
+    if IPFS_AVAILABLE:
+        endpoints.append("/api/ipfs-status (GET)")
+        endpoints.append("/api/token/<token_id> (GET)")
+        endpoints.append("/api/verify (GET)")
+    
     return jsonify({
         "name": "API IA Minière",
         "version": "1.0.0",
         "status": "online",
-        "endpoints": [
-            "/",
-            "/api/health",
-            "/api/auth/login (POST)",
-            "/api/auth/register (POST)",
-            "/api/analyze (POST)",
-            "/api/analyze-and-certify (POST)",
-            "/api/lots (GET, POST)",
-            "/api/lots/<lot_id> (GET)",
-            "/api/lots/<lot_id>/certify (POST)",
-            "/api/lots/<lot_id>/auto-validate (POST)",
-            "/api/status (GET)",
-            "/api/contract-info (GET)",
-            "/api/ipfs-status (GET)",
-            "/api/token/<token_id> (GET)",
-            "/api/verify (GET)",
-            "/api/blockchain/status (GET)"
-        ]
+        "certify_available": CERTIFY_AVAILABLE,
+        "blockchain_available": BLOCKCHAIN_AVAILABLE,
+        "ipfs_available": IPFS_AVAILABLE,
+        "endpoints": endpoints
     })
 
 if __name__ == '__main__':
     port = int(os.environ.get('PORT', 5000))
-    print(f"\n✅ Serveur démarré sur http://localhost:{port}")
-    print("🔍 Pour tester: http://localhost:5000/api/health")
+    print(f"\n[OK] Serveur demarré sur http://localhost:{port}")
+    print("[INFO] Pour tester: http://localhost:5000/api/health")
+    print(f"[MODULES] Disponibles:")
+    print(f"   - Certify: {'OK' if CERTIFY_AVAILABLE else 'INDISPONIBLE'}")
+    print(f"   - Blockchain: {'OK' if BLOCKCHAIN_AVAILABLE else 'INDISPONIBLE'}")
+    print(f"   - IPFS: {'OK' if IPFS_AVAILABLE else 'INDISPONIBLE'}")
     print("="*60)
-    app.run(host='0.0.0.0', port=port, debug=False, use_reloader=False)
+    try:
+        app.run(host='0.0.0.0', port=port, debug=False, use_reloader=False, threaded=True)
+    except OSError as e:
+        if 'Address already in use' in str(e):
+            print(f"\n[ERROR] Le port {port} est déjà utilisé!")
+            print(f"   Tuez le processus ou changez le PORT dans .env")
+        else:
+            print(f"\n[ERROR] {e}")
+        sys.exit(1)

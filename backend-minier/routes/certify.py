@@ -9,6 +9,8 @@ import os
 import traceback
 import requests
 from dotenv import load_dotenv
+from requests.adapters import HTTPAdapter
+from urllib3.util.retry import Retry
 
 # Charger les variables d'environnement
 load_dotenv()
@@ -190,11 +192,32 @@ PINATA_JWT = os.getenv('PINATA_JWT')
 PINATA_API_KEY = os.getenv('PINATA_API_KEY')
 PINATA_API_SECRET = os.getenv('PINATA_API_SECRET')
 PINATA_GATEWAY = os.getenv('PINATA_GATEWAY', 'https://gateway.pinata.cloud')
+PINATA_PIN_JSON_URL = os.getenv('PINATA_PIN_JSON_URL', 'https://api.pinata.cloud/pinning/pinJSONToIPFS')
+PINATA_TIMEOUT = float(os.getenv('PINATA_TIMEOUT', '20'))
 
 print(f"\n[IPFS] Configuration IPFS:")
 print(f"   • JWT charge: {'Oui' if PINATA_JWT else 'Non'}")
 print(f"   • API Key: {'Oui' if PINATA_API_KEY else 'Non'}")
 print(f"   • Gateway: {PINATA_GATEWAY}")
+print(f"   • API URL: {PINATA_PIN_JSON_URL}")
+print(f"   • Timeout: {PINATA_TIMEOUT}s")
+
+
+def build_pinata_session():
+    session = requests.Session()
+    retry = Retry(
+        total=2,
+        connect=2,
+        read=2,
+        backoff_factor=1,
+        status_forcelist=[429, 500, 502, 503, 504],
+        allowed_methods={"POST"},
+        raise_on_status=False,
+    )
+    adapter = HTTPAdapter(max_retries=retry)
+    session.mount("https://", adapter)
+    session.mount("http://", adapter)
+    return session
 
 def upload_to_pinata(certificate_data, lot_id):
     """
@@ -218,7 +241,6 @@ def upload_to_pinata(certificate_data, lot_id):
         }
         
         # Appel à l'API Pinata avec JWT
-        url = 'https://api.pinata.cloud/pinning/pinJSONToIPFS'
         headers = {
             'Authorization': f'Bearer {PINATA_JWT}',
             'Content-Type': 'application/json'
@@ -234,7 +256,13 @@ def upload_to_pinata(certificate_data, lot_id):
         }
         
         print(f"   [IPFS] Envoi a Pinata...")
-        response = requests.post(url, json=payload, headers=headers, timeout=8)
+        session = build_pinata_session()
+        response = session.post(
+            PINATA_PIN_JSON_URL,
+            json=payload,
+            headers=headers,
+            timeout=PINATA_TIMEOUT
+        )
         
         if response.status_code == 200:
             result = response.json()
@@ -248,6 +276,14 @@ def upload_to_pinata(certificate_data, lot_id):
             f"Erreur Pinata {response.status_code}: {response.text[:200]}"
         )
 
+    except requests.exceptions.Timeout as e:
+        raise RuntimeError(
+            f"Upload IPFS impossible: Pinata n'a pas repondu avant {PINATA_TIMEOUT}s"
+        ) from e
+    except requests.exceptions.ConnectionError as e:
+        raise RuntimeError(
+            "Upload IPFS impossible: connexion reseau vers Pinata echouee"
+        ) from e
     except Exception as e:
         raise RuntimeError(f"Erreur upload IPFS: {str(e)}") from e
 

@@ -117,9 +117,14 @@ try:
         lot_data["weight"],
     )
 
+    estimated_gas = func.estimate_gas({"from": owner})
+    gas_limit = max(int(estimated_gas * 1.2), 500000)
+    print(f"Gas estime      : {estimated_gas}")
+    print(f"Gas retenu      : {gas_limit}")
+
     tx = func.build_transaction({
         "from": owner,
-        "gas": 350000,
+        "gas": gas_limit,
         "gasPrice": w3.eth.gas_price,
         "nonce": w3.eth.get_transaction_count(owner),
     })
