@@ -329,25 +329,30 @@ def create_lot():
 
 @lots_bp.route('/lots/<lot_id>/auto-validate', methods=['POST'])
 def auto_validate_lot(lot_id):
+    print(f"[AUTO_VALIDATE] Debut - lot_id: {lot_id}")
     user = get_current_user()
+    print(f"[AUTO_VALIDATE] User: {user}")
     
-    # Permettre l'accès sans authentification en mode demo
     if not user:
         print(f"[AUTO_VALIDATE] Pas d'authentification - mode demo")
-        # En mode demo, on accepte la validation
     elif user.get('role') != 'regulator':
+        print(f"[AUTO_VALIDATE] Role non regulator: {user.get('role')}")
         return jsonify({"error": "Seul un regulateur peut valider"}), 403
     
     lot = None
     if database_enabled():
         lot = Lot.query.filter_by(lot_id=lot_id).first()
+        print(f"[AUTO_VALIDATE] Lot DB: {lot}")
     
     if not lot and lot_id in lots_db:
         lot = lots_db[lot_id]
+        print(f"[AUTO_VALIDATE] Lot JSON: {lot}")
     
     if not lot:
+        print(f"[AUTO_VALIDATE] Lot non trouve")
         return jsonify({"error": "Lot non trouve"}), 404
     
+    print(f"[AUTO_VALIDATE] Mise a jour du statut")
     if isinstance(lot, dict):
         lots_db[lot_id]['status'] = "VALIDE"
         lots_db[lot_id]['updated_at'] = datetime.now().isoformat()
@@ -368,6 +373,7 @@ def auto_validate_lot(lot_id):
         db.session.commit()
         result = db_lot_to_payload(lot)
     
+    print(f"[AUTO_VALIDATE] Succes")
     return jsonify({
         "success": True,
         "lot_id": lot_id,
