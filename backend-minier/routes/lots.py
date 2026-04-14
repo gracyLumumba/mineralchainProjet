@@ -327,8 +327,56 @@ def create_lot():
     return jsonify(new_lot), 201
 
 
-@lots_bp.route('/lots/<lot_id>/certify', methods=['POST'])
-def certify_lot(lot_id):
+
+@lots_bp.route('/lots/<lot_id>/auto-validate', methods=['POST'])
+def auto_validate_lot(lot_id):
+    user = get_current_user()
+    if not user:
+        return jsonify({"error": "Authentification requise"}), 401
+    
+    if user.get('role') != 'regulator':
+        return jsonify({"error": "Seul un regulateur peut valider"}), 403
+    
+    # Chercher le lot
+    lot = None
+    if database_enabled():
+        lot = Lot.query.filter_by(lot_id=lot_id).first()
+    
+    if not lot and lot_id in lots_db:
+        lot = lots_db[lot_id]
+    
+    if not lot:
+        return jsonify({"error": "Lot non trouve"}), 404
+    
+    # Mettre a jour le statut
+    if isinstance(lot, dict):
+        lots_db[lot_id]['status'] = "VALIDE"
+        lots_db[lot_id]['updated_at'] = datetime.now().isoformat()
+        lots_db[lot_id]['history'].append(json_history_entry("Validation automatique", {
+            "validated_by": user.get('username')
+        }))
+        save_json_store()
+        result = lots_db[lot_id]
+    else:
+        lot.status = "VALIDE"
+        lot.updated_at = datetime.utcnow()
+        db.session.add(LotHistory(
+            lot=lot,
+            event="AUTO_VALIDATED",
+            status="VALIDE",
+            details={"validated_by": user.get('username')}
+        ))
+        db.session.commit()
+        result = db_lot_to_payload(lot)
+    
+    return jsonify({
+        "success": True,
+        "lot_id": lot_id,
+        "status": "VALIDE",
+        "validated_by": user.get('username'),
+        "validated_at": datetime.now().isoformat(),
+        "lot": result
+    }), 200
     user = get_current_user()
     if not user:
         return jsonify({"error": "Authentification requise"}), 401
