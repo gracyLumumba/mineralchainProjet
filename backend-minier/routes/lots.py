@@ -176,7 +176,7 @@ def upsert_database_lot(data, history_event=None, history_extra=None):
     if is_new:
         lot.created_at = datetime.utcnow()
 
-    lot.status = data.get('status', lot.status or 'CRÉÉ')
+    lot.status = data.get('status', lot.status or 'CREE')
     lot.weight = data.get('weight_tonnes', data.get('weight', lot.weight))
     lot.cu_grade = data.get('cu_grade_percent', data.get('cu_grade', lot.cu_grade))
     lot.co_grade = data.get('co_grade_percent', data.get('co_grade', lot.co_grade))
@@ -265,15 +265,15 @@ def get_lot(lot_id):
         if db_lot:
             payload = db_lot_to_payload(db_lot)
             if user and not can_access_lot(user, payload):
-                return jsonify({"error": "Accès refusé"}), 403
+                return jsonify({"error": "Acces refuse"}), 403
             return jsonify(redact_history_for_user(user, payload))
 
     lot = lots_db.get(lot_id)
     if lot:
         if user and not can_access_lot(user, lot):
-            return jsonify({"error": "Accès refusé"}), 403
+            return jsonify({"error": "Acces refuse"}), 403
         return jsonify(redact_history_for_user(user, lot))
-    return jsonify({"error": "Lot non trouvé"}), 404
+    return jsonify({"error": "Lot non trouve"}), 404
 
 
 @lots_bp.route('/lots', methods=['POST'])
@@ -289,14 +289,14 @@ def create_lot():
     lot_id = data['lot_id']
 
     if lot_id in lots_db or (database_enabled() and Lot.query.filter_by(lot_id=lot_id).first()):
-        return jsonify({"error": "Lot existe déjà"}), 409
+        return jsonify({"error": "Lot existe deja"}), 409
 
     new_lot = {
         "lot_id": lot_id,
         "site": data.get('site', 'inconnu'),
         "created_at": datetime.now().isoformat(),
         "updated_at": datetime.now().isoformat(),
-        "status": "CRÉÉ",
+        "status": "CREE",
         "weight": data.get('weight_tonnes', 0),
         "composition": {
             "cu": data.get('cu_grade_percent', 0),
@@ -307,7 +307,7 @@ def create_lot():
         "owner_user_id": user.get('id'),
         "owner_username": user.get('username'),
         "owner_name": user.get('name'),
-        "history": [json_history_entry("Création du lot", {
+        "history": [json_history_entry("Creation du lot", {
             "owner_username": user.get('username')
         })]
     }
@@ -327,7 +327,6 @@ def create_lot():
     return jsonify(new_lot), 201
 
 
-
 @lots_bp.route('/lots/<lot_id>/auto-validate', methods=['POST'])
 def auto_validate_lot(lot_id):
     user = get_current_user()
@@ -337,7 +336,6 @@ def auto_validate_lot(lot_id):
     if user.get('role') != 'regulator':
         return jsonify({"error": "Seul un regulateur peut valider"}), 403
     
-    # Chercher le lot
     lot = None
     if database_enabled():
         lot = Lot.query.filter_by(lot_id=lot_id).first()
@@ -348,7 +346,6 @@ def auto_validate_lot(lot_id):
     if not lot:
         return jsonify({"error": "Lot non trouve"}), 404
     
-    # Mettre a jour le statut
     if isinstance(lot, dict):
         lots_db[lot_id]['status'] = "VALIDE"
         lots_db[lot_id]['updated_at'] = datetime.now().isoformat()
@@ -377,17 +374,21 @@ def auto_validate_lot(lot_id):
         "validated_at": datetime.now().isoformat(),
         "lot": result
     }), 200
+
+
+@lots_bp.route('/lots/<lot_id>/certify', methods=['POST'])
+def certify_lot(lot_id):
     user = get_current_user()
     if not user:
         return jsonify({"error": "Authentification requise"}), 401
     if lot_id not in lots_db:
-        return jsonify({"error": "Lot non trouvé"}), 404
+        return jsonify({"error": "Lot non trouve"}), 404
     if user.get('role') == 'producer' and not can_access_lot(user, lots_db[lot_id]):
-        return jsonify({"error": "Accès refusé"}), 403
+        return jsonify({"error": "Acces refuse"}), 403
 
     data = request.get_json() or {}
 
-    lots_db[lot_id]['status'] = "CERTIFIÉ"
+    lots_db[lot_id]['status'] = "CERTIFIE"
     lots_db[lot_id]['certificate_id'] = data.get('certificate_id', f"CERT-{lot_id}")
     lots_db[lot_id]['updated_at'] = datetime.now().isoformat()
     lots_db[lot_id]['history'].append(json_history_entry("Certification", {
@@ -399,7 +400,7 @@ def auto_validate_lot(lot_id):
         upsert_database_lot({
             "lot_id": lot_id,
             "site": lots_db[lot_id].get('site'),
-            "status": "CERTIFIÉ",
+            "status": "CERTIFIE",
             "certificate_id": lots_db[lot_id]['certificate_id'],
             "owner_user_id": lots_db[lot_id].get('owner_user_id'),
             "owner_username": lots_db[lot_id].get('owner_username'),
