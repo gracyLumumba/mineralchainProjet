@@ -10,7 +10,7 @@ if hasattr(sys.stdout, 'reconfigure'):
 if hasattr(sys.stderr, 'reconfigure'):
     sys.stderr.reconfigure(encoding='utf-8')
 
-from flask import request
+from flask import request, Flask, jsonify
 from flask_cors import CORS
 from dotenv import load_dotenv
 
@@ -52,13 +52,8 @@ load_dotenv()
 # Créer l'application Flask
 app = Flask(__name__)
 
-# Configuration CORS améliorée
-CORS(app, 
-     origins=["http://localhost:3000", "http://localhost:3001", "http://127.0.0.1:3000"],
-     methods=["GET", "POST", "PUT", "DELETE", "OPTIONS"],
-     allow_headers=["Content-Type", "Authorization"],
-     supports_credentials=True,
-     max_age=3600)
+# Configuration CORS simple et efficace
+CORS(app, resources={r"/api/*": {"origins": "*", "methods": ["GET", "POST", "PUT", "DELETE", "OPTIONS"], "allow_headers": ["Content-Type", "Authorization"]}})
 
 BASE_DIR = Path(__file__).resolve().parent
 PROJECT_DIR = BASE_DIR.parent
@@ -139,16 +134,6 @@ def health():
         "database": database_status,
         "models_loaded": True,
     })
-
-@app.before_request
-def handle_preflight():
-    if request.method == "OPTIONS":
-        response = jsonify({"status": "ok"})
-        response.headers.add("Access-Control-Allow-Origin", request.headers.get("Origin", "*"))
-        response.headers.add("Access-Control-Allow-Headers", "Content-Type,Authorization")
-        response.headers.add("Access-Control-Allow-Methods", "GET,POST,PUT,DELETE,OPTIONS")
-        response.headers.add("Access-Control-Max-Age", "3600")
-        return response, 200
 
 @app.route('/', methods=['GET'])
 def home():
