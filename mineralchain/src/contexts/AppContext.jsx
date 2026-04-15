@@ -1,4 +1,5 @@
 import React, { createContext, useContext, useState, useCallback, useEffect } from 'react';
+import { getBackendUrl } from '../config/backend';
 
 //  localStorage helpers 
 const LS = {
@@ -8,6 +9,9 @@ const LS = {
   },
   set: (key, value) => { try { localStorage.setItem(key, JSON.stringify(value)); } catch (error) { void error; } },
 };
+
+const BACKEND_URL = getBackendUrl();
+const BACKEND_TOKEN_KEY = 'mc_backend_token';
 
 function stableTokenId(seed) {
   const text = String(seed || 'mineralchain');
@@ -44,6 +48,20 @@ function normalizeTokenValue(tokenId, seed) {
   return stableTokenId(seed);
 }
 
+function normalizeBackendLot(lot) {
+  const composition = lot?.composition || {};
+  return {
+    ...lot,
+    cu_grade_percent: lot?.cu_grade_percent ?? composition.cu ?? null,
+    co_grade_percent: lot?.co_grade_percent ?? composition.co ?? null,
+    fe_percent: lot?.fe_percent ?? composition.fe ?? null,
+    ni_percent: lot?.ni_percent ?? composition.ni ?? null,
+    s_percent: lot?.s_percent ?? composition.s ?? null,
+    silica_percent: lot?.silica_percent ?? composition.silica ?? null,
+    weight_tonnes: lot?.weight_tonnes ?? lot?.weight ?? null,
+  };
+}
+
 //  Context 
 const AppContext = createContext(null);
 
@@ -59,6 +77,62 @@ export function AppProvider({ children }) {
   useEffect(() => { LS.set('mc_lots',    lots);    }, [lots]);
   useEffect(() => { LS.set('mc_tokens',  tokens);  }, [tokens]);
   useEffect(() => { LS.set('mc_profile', profile); }, [profile]);
+
+  const syncLotsFromBackend = useCallback(async () => {
+    try {
+      const raw = localStorage.getItem(BACKEND_TOKEN_KEY);
+      const token = raw ? JSON.parse(raw) : null;
+      if (!token) return false;
+
+      const response = await fetch(`${BACKEND_URL}/api/lots?limit=200`, {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      if (!response.ok) return false;
+
+      const payload = await response.json();
+      const backendLots = Array.isArray(payload?.lots) ? payload.lots.map(normalizeBackendLot) : [];
+
+      setLots((prev) => {
+        const prevById = new Map(prev.map((lot) => [lot.lot_id, lot]));
+        const merged = backendLots.map((backendLot) => {
+          const existing = prevById.get(backendLot.lot_id) || {};
+          return {
+            ...existing,
+            ...backendLot,
+            transport_status: existing.transport_status ?? backendLot.transport_status ?? null,
+            destination: existing.destination ?? backendLot.destination ?? null,
+            transferred_at: existing.transferred_at ?? backendLot.transferred_at ?? null,
+            delivered_at: existing.delivered_at ?? backendLot.delivered_at ?? null,
+            audit_trail: existing.audit_trail || backendLot.audit_trail || [],
+            token_id: normalizeTokenValue(
+              backendLot.token_id ?? existing.token_id,
+              backendLot.lot_id || backendLot.tx_hash || backendLot.created_at,
+            ),
+          };
+        });
+
+        prev.forEach((localLot) => {
+          if (!merged.find((lot) => lot.lot_id === localLot.lot_id)) {
+            merged.push(localLot);
+          }
+        });
+
+        LS.set('mc_lots', merged);
+        return merged;
+      });
+
+      setApiStatus('connected');
+      return true;
+    } catch (error) {
+      void error;
+      setApiStatus('error');
+      return false;
+    }
+  }, []);
+
+  useEffect(() => {
+    syncLotsFromBackend();
+  }, [syncLotsFromBackend]);
 
   //  Profil 
   const setProfile = useCallback((p) => { setProfileState(p); }, []);
@@ -194,7 +268,7 @@ export function AppProvider({ children }) {
   return (
     <AppContext.Provider value={{
       profile, setProfile,
-      lots, addLot, updateLot, deleteLot,
+      lots, addLot, updateLot, deleteLot, syncLotsFromBackend,
       tokens, addToken,
       toasts, addToast, removeToast,
       apiStatus, setApiStatus,

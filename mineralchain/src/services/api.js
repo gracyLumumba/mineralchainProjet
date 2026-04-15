@@ -1,7 +1,8 @@
 import axios from 'axios';
 import { CONTRACT_ADDRESS } from '../config/blockchain';
+import { getBackendUrl } from '../config/backend';
 
-const BACKEND_URL = process.env.REACT_APP_BACKEND_URL || 'http://localhost:5000';
+const BACKEND_URL = getBackendUrl();
 const BACKEND_TOKEN_KEY = 'mc_backend_token';
 
 const API = axios.create({

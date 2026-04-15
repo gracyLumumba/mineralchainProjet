@@ -419,13 +419,22 @@ def analyze_and_certify():
         # ÉTAPE 3: UPLOAD VERS IPFS
         # -------------------------------------------------
         print("\n[ETAPE 3/4] Upload vers IPFS...")
-        
-        ipfs_hash = upload_to_pinata(certificate, lot_id)
-        ipfs_uri = f"ipfs://{ipfs_hash}"
-        gateway_url = f"{PINATA_GATEWAY}/ipfs/{ipfs_hash}"
-        print(f"   [OK] Certificat sur IPFS")
-        print(f"   • CID: {ipfs_hash}")
-        print(f"   • URL: {gateway_url}")
+
+        ipfs_hash = None
+        ipfs_uri = None
+        gateway_url = None
+        ipfs_error = None
+        try:
+            ipfs_hash = upload_to_pinata(certificate, lot_id)
+            ipfs_uri = f"ipfs://{ipfs_hash}"
+            gateway_url = f"{PINATA_GATEWAY}/ipfs/{ipfs_hash}"
+            print(f"   [OK] Certificat sur IPFS")
+            print(f"   • CID: {ipfs_hash}")
+            print(f"   • URL: {gateway_url}")
+        except Exception as ipfs_exc:
+            ipfs_error = str(ipfs_exc)
+            print(f"   [WARN] Upload IPFS indisponible: {ipfs_error}")
+            print("   [INFO] La certification continue sans hash IPFS.")
         
         # -------------------------------------------------
         # ÉTAPE 4: MINT DU NFT (seulement si authentique)
@@ -473,7 +482,7 @@ def analyze_and_certify():
                         f"0x{cert_hash[:16]}",  # iaSignature
                         True,                   # isAuthentic
                         cert_hash,              # certificateHash
-                        ipfs_hash,              # ipfsHash
+                        ipfs_hash or "",        # ipfsHash
                         cu_int,
                         co_int,
                         fe_int,
@@ -539,7 +548,8 @@ def analyze_and_certify():
                 "gateway_url": gateway_url if ipfs_hash else None
             },
             "blockchain": blockchain_result,
-            "blockchain_error": blockchain_error
+            "blockchain_error": blockchain_error,
+            "ipfs_error": ipfs_error
         }
 
         if database_enabled():
@@ -577,6 +587,7 @@ def analyze_and_certify():
                     "ipfs_hash": ipfs_hash,
                     "token_id": blockchain_result.get("token_id") if blockchain_result else None,
                     "simulated_blockchain": blockchain_result.get("simulated") if blockchain_result else None,
+                    "ipfs_error": ipfs_error,
                 })
             except Exception as db_error:
                 print(f"   [WARN] Persistance PostgreSQL impossible: {db_error}")
@@ -587,8 +598,8 @@ def analyze_and_certify():
         print(f"[LOT] {lot_id}")
         print(f"[STATUS] {status}")
         print(f"[TOKEN] {token_id if token_id else 'Non cree'}")
-        print(f"[IPFS] CID: {ipfs_hash[:20]}...")
-        print(f"[LINK] Voir certificat: {gateway_url}")
+        print(f"[IPFS] CID: {(ipfs_hash[:20] + '...') if ipfs_hash else 'Non disponible'}")
+        print(f"[LINK] Voir certificat: {gateway_url or 'Non disponible'}")
         
         return jsonify(result), 200
         

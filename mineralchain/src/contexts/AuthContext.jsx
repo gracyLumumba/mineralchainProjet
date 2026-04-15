@@ -1,8 +1,9 @@
 import React, { createContext, useContext, useState, useCallback, useEffect } from 'react';
 import { DEFAULT_OWNER_ADDRESS } from '../config/blockchain';
+import { getBackendUrl } from '../config/backend';
 
 const AuthContext = createContext(null);
-const BACKEND_URL = process.env.REACT_APP_BACKEND_URL || 'http://localhost:5000';
+const BACKEND_URL = getBackendUrl();
 
 const LS = {
   get: (k, fb = null) => { try { const v = localStorage.getItem(k); return v ? JSON.parse(v) : fb; } catch (error) { void error; return fb; } },

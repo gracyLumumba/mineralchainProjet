@@ -120,8 +120,9 @@ function LotTransportCard({ lot, tokens, updateLot, addToast }) {
 
 //  TRANSPORTER DASHBOARD 
 export function TransporterDashboard() {
-  const { lots, tokens, updateLot, addToast } = useApp();
+  const { lots, tokens, updateLot, addToast, syncLotsFromBackend } = useApp();
   const { t } = useI18n();
+  React.useEffect(() => { syncLotsFromBackend(); }, [syncLotsFromBackend]);
   const assigned  = lots.filter(l => isTransportReady(l) && l.token_id != null && !l.transport_status);
   const inRoute   = lots.filter(l => l.transport_status === 'en_route');
   const delivered = lots.filter(l => l.transport_status === 'delivered');
@@ -183,8 +184,9 @@ export function TransporterDashboard() {
 
 //  ASSIGNED LOTS 
 export function AssignedLotsPage() {
-  const { lots, tokens, updateLot, addToast } = useApp();
+  const { lots, tokens, updateLot, addToast, syncLotsFromBackend } = useApp();
   const { t } = useI18n();
+  React.useEffect(() => { syncLotsFromBackend(); }, [syncLotsFromBackend]);
   const [filter, setFilter] = useState('ready'); // ready | all | delivered
   const readyLots    = lots.filter(l => isTransportReady(l) && l.token_id != null && !l.transport_status);
   const inRouteLots  = lots.filter(l => l.transport_status === 'en_route');
@@ -220,8 +222,9 @@ export function AssignedLotsPage() {
 
 //  QR SCANNER 
 export function QRScannerPage() {
-  const { lots, tokens } = useApp();
+  const { lots, tokens, syncLotsFromBackend } = useApp();
   const { t } = useI18n();
+  React.useEffect(() => { syncLotsFromBackend(); }, [syncLotsFromBackend]);
   const [manualInput, setManualInput] = useState('');
   const [result, setResult]           = useState(null);
   const [showCert, setShowCert]       = useState(false);
@@ -344,8 +347,9 @@ export function QRScannerPage() {
 
 //  TRANSPORT HISTORY — Registre complet des livraisons 
 export function TransportHistoryPage() {
-  const { lots, tokens } = useApp();
+  const { lots, tokens, syncLotsFromBackend } = useApp();
   const { t } = useI18n();
+  React.useEffect(() => { syncLotsFromBackend(); }, [syncLotsFromBackend]);
   const [filter, setFilter]   = useState('all');
   const [search, setSearch]   = useState('');
   const [showCert, setShowCert] = useState(null);

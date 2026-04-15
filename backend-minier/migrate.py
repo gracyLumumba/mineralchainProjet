@@ -16,18 +16,25 @@ def migrate():
             db.create_all()
             print("[MIGRATION] Tables créées")
             
-            # Ajouter les colonnes
-            db.session.execute(db.text("""
-                ALTER TABLE lots 
-                ADD COLUMN IF NOT EXISTS regulator_validated BOOLEAN DEFAULT FALSE
-            """))
-            print("[MIGRATION] Colonne regulator_validated ajoutée")
+            # Ajouter les colonnes (compatible SQLite et PostgreSQL)
+            import sqlalchemy
+            dialect = db.engine.dialect.name
             
-            db.session.execute(db.text("""
-                ALTER TABLE lots 
-                ADD COLUMN IF NOT EXISTS regulator_validated_at TIMESTAMP
-            """))
-            print("[MIGRATION] Colonne regulator_validated_at ajoutée")
+            for col_name, col_def in [
+                ('regulator_validated', 'BOOLEAN DEFAULT FALSE'),
+                ('regulator_validated_at', 'TIMESTAMP'),
+            ]:
+                try:
+                    if dialect == 'sqlite':
+                        db.session.execute(db.text(f'ALTER TABLE lots ADD COLUMN {col_name} {col_def}'))
+                    else:
+                        db.session.execute(db.text(f'ALTER TABLE lots ADD COLUMN IF NOT EXISTS {col_name} {col_def}'))
+                    print(f"[MIGRATION] Colonne {col_name} ajoutée")
+                except Exception as col_err:
+                    if 'duplicate column' in str(col_err).lower() or 'already exists' in str(col_err).lower():
+                        print(f"[MIGRATION] Colonne {col_name} existe déjà")
+                    else:
+                        raise
             
             db.session.commit()
             print("[MIGRATION] Commit réussi")
