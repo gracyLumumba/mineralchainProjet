@@ -86,11 +86,8 @@ def auto_validate_lot(lot):
 @validate_bp.route('/lots/<lot_id>/auto-validate', methods=['POST', 'OPTIONS'])
 def auto_validate(lot_id):
     if request.method == 'OPTIONS':
-        response = jsonify({'status': 'ok'})
-        response.headers.add('Access-Control-Allow-Origin', 'http://localhost:3000')
-        response.headers.add('Access-Control-Allow-Headers', 'Content-Type,Authorization')
-        response.headers.add('Access-Control-Allow-Methods', 'POST,OPTIONS')
-        return response, 200
+        # Let Flask-CORS apply the correct origin dynamically.
+        return jsonify({'status': 'ok'}), 200
 
     try:
         print(f"\n[AUTO_VALIDATE] Requete recue pour lot_id={lot_id}")
