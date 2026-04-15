@@ -390,7 +390,12 @@ export default function RegulatorAnalysisPage() {
     setParsedRows([]); setMatchedRow(null); setComparison(null); setFileError('');
   };
 
-  const pendingLots = lots.filter(l => !l.regulator_validated && l.analyzed_at && l.status!=='SUSPECT');
+  const pendingLots = lots.filter(l =>
+    !l.regulator_validated &&
+    l.analyzed_at &&
+    l.status !== 'SUSPECT' &&
+    l.status !== 'AUTHENTIQUE'
+  );
 
   const handleAutoValidate = useCallback(async (lot) => {
     if (validatingLotId) return;

@@ -21,7 +21,7 @@ export function RegulatorDashboard() {
   const { lots, stats } = useApp();
   const { t } = useI18n();
   const suspects      = lots.filter(l => l.status === 'SUSPECT');
-  const pendingVal    = stats.pending_validation || 0;
+  const pendingVal    = lots.filter(l => !l.regulator_validated && l.analyzed_at && l.status !== 'SUSPECT' && l.status !== 'AUTHENTIQUE').length;
   const recentActivity= lots.slice(0, 5);
 
   const barData = [
