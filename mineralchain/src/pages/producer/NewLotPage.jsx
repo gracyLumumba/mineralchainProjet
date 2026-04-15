@@ -105,6 +105,29 @@ export default function NewLotPage() {
       const backendIpfsHash = res.certificate?.ipfs_hash ?? null;
       const backendIpfsUrl = res.certificate?.gateway_url ?? null;
 
+      if (submitMode === 'analyze' && !res?._simulated) {
+        try {
+          await apiService.createLot({
+            lot_id: payload.lot_id,
+            site: payload.site,
+            extraction_date: payload.extraction_date,
+            status: iaResult.status,
+            weight_tonnes: payload.weight_tonnes,
+            cu_grade_percent: payload.cu_grade_percent,
+            co_grade_percent: payload.co_grade_percent,
+            fe_percent: payload.fe_percent,
+            ni_percent: payload.ni_percent,
+            s_percent: payload.s_percent,
+            silica_percent: payload.silica_percent,
+            density_t_m3: payload.density_t_m3,
+            moisture_percent: payload.moisture_percent,
+            hardness_mohs: payload.hardness_mohs,
+          });
+        } catch (createErr) {
+          console.warn('[BACKEND] Creation lot PostgreSQL impossible:', createErr);
+        }
+      }
+
       const lot = {
         lot_id: data.lot_id, site: data.site, extraction_date: data.extraction_date,
         created_at: new Date().toISOString(), analyzed_at: new Date().toISOString(),

@@ -398,7 +398,34 @@ export default function RegulatorAnalysisPage() {
     setValidatingLotId(lot.lot_id);
     try {
       console.log('[AUTO_VALIDATE] Appel API...');
-      const result = await apiService.autoValidateLot(lot.lot_id);
+      let result;
+      try {
+        result = await apiService.autoValidateLot(lot.lot_id);
+      } catch (err) {
+        const errorMessage = err?.error || err?.message || '';
+        if (!errorMessage.toLowerCase().includes('lot non trouv')) {
+          throw err;
+        }
+
+        console.warn('[AUTO_VALIDATE] Lot absent en base, synchronisation PostgreSQL...');
+        await apiService.createLot({
+          lot_id: lot.lot_id,
+          site: lot.site,
+          extraction_date: lot.extraction_date,
+          status: lot.status,
+          weight_tonnes: lot.weight_tonnes ?? lot.weight,
+          cu_grade_percent: lot.cu_grade_percent ?? lot.composition?.cu,
+          co_grade_percent: lot.co_grade_percent ?? lot.composition?.co,
+          fe_percent: lot.fe_percent ?? lot.composition?.fe,
+          ni_percent: lot.ni_percent ?? lot.composition?.ni,
+          s_percent: lot.s_percent ?? lot.composition?.s,
+          silica_percent: lot.silica_percent ?? lot.composition?.silica,
+          density_t_m3: lot.density_t_m3,
+          moisture_percent: lot.moisture_percent,
+          hardness_mohs: lot.hardness_mohs,
+        });
+        result = await apiService.autoValidateLot(lot.lot_id);
+      }
       console.log('[AUTO_VALIDATE] Réponse API:', result);
       
       if (result.success) {
@@ -428,6 +455,7 @@ export default function RegulatorAnalysisPage() {
         
         // Afficher la comparaison détaillée
         setFoundLot(lot);
+        setMatchedRow(result.dgmr_data || {});
         setComparison({
           results: result.comparison,
           allOk: result.status === 'AUTHENTIQUE',

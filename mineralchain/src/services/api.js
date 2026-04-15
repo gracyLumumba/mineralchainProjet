@@ -35,6 +35,7 @@ export const apiService = {
   contractInfo:    () => API.get('/blockchain/status'),
   analyze:         (data) => API.post('/analyze', data),
   certify:         (data) => API.post('/analyze-and-certify', data, { timeout: 120000 }),
+  createLot:       (data) => API.post('/lots', data),
   getLots:         (params) => API.get('/lots', { params }),
   getLot:          (id) => API.get(`/lots/${id}`),
   updateLot:       (id, d) => API.put(`/lots/${id}`, d),
