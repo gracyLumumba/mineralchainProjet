@@ -69,6 +69,8 @@ PROJECT_DIR = BASE_DIR.parent
 database_url = (os.environ.get('DATABASE_URL') or os.environ.get('SQLALCHEMY_DATABASE_URI') or '').strip()
 if database_url.startswith('postgres://'):
     database_url = f"postgresql://{database_url[len('postgres://'):]}"
+if database_url.startswith('postgresql://') and '+psycopg' not in database_url and '+psycopg2' not in database_url:
+    database_url = f"postgresql+psycopg://{database_url[len('postgresql://'):]}"
 
 app.config['SQLALCHEMY_DATABASE_URI'] = database_url
 app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
