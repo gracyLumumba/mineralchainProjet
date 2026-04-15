@@ -18,7 +18,7 @@ Le backend est concu pour fonctionner avec les autres modules du projet :
 - upload du certificat sur IPFS via Pinata
 - connexion reelle a Ganache pour le mint NFT
 - mint d'un NFT pour les lots authentiques
-- gestion locale des lots via API REST
+- gestion des lots via API REST stockee dans PostgreSQL
 
 ## Structure
 
@@ -65,11 +65,13 @@ pip install -r requirements.txt
 Copiez `.env.example` en `.env` puis renseignez vos variables :
 
 ```env
+DATABASE_URL=postgresql://postgres:motdepasse@localhost:5432/mineralchain
 PINATA_JWT=your_real_jwt_here
 ```
 
 Variables utiles selon votre configuration :
 
+- `DATABASE_URL`
 - `PINATA_JWT`
 - `PINATA_API_KEY`
 - `PINATA_API_SECRET`
@@ -164,9 +166,9 @@ http://localhost:5000
 
 ## Remarques techniques
 
-- `app.py` force actuellement un chemin absolu pour charger les modeles IA.
+- `app.py` attend une variable `DATABASE_URL` valide vers PostgreSQL.
+- au demarrage, les anciens lots presents dans `lots_data.json` sont importes vers PostgreSQL s'ils ne sont pas deja en base.
 - `routes/certify.py` utilise aussi un chemin absolu pour charger l'ABI du smart contract.
-- `routes/lots.py` stocke les lots dans un fichier JSON local.
 - les routes de certification et IPFS echouent explicitement si Ganache, le contrat ou Pinata ne sont pas disponibles.
 
 ## Fichiers de test

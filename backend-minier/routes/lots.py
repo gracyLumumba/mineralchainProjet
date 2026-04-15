@@ -1,43 +1,32 @@
-from flask import Blueprint, request, jsonify, current_app
 from datetime import datetime
 import json
 import os
 
-from database.models import db, Lot, LotHistory
+from flask import Blueprint, current_app, jsonify, request
+
+from database.models import Lot, LotHistory, db
 from routes.auth import get_current_user
 
 lots_bp = Blueprint('lots', __name__)
 
 BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
-lots_db_file = os.path.join(BASE_DIR, 'lots_data.json')
-lots_db = {}
+LOTS_JSON_FILE = os.path.join(BASE_DIR, 'lots_data.json')
+legacy_lots_db = {}
 
-if os.path.exists(lots_db_file):
+if os.path.exists(LOTS_JSON_FILE):
     try:
-        with open(lots_db_file, 'r', encoding='utf-8') as f:
-            lots_db = json.load(f)
+        with open(LOTS_JSON_FILE, 'r', encoding='utf-8') as f:
+            legacy_lots_db = json.load(f)
     except Exception:
-        lots_db = {}
-
-
-def json_history_entry(event, extra=None):
-    payload = {
-        "event": event,
-        "timestamp": datetime.now().isoformat(),
-        "user": "system"
-    }
-    if extra:
-        payload.update(extra)
-    return payload
-
-
-def save_json_store():
-    with open(lots_db_file, 'w', encoding='utf-8') as f:
-        json.dump(lots_db, f, indent=2, ensure_ascii=False)
+        legacy_lots_db = {}
 
 
 def database_enabled():
     return bool(current_app.config.get('DATABASE_ENABLED'))
+
+
+def database_required_response():
+    return jsonify({"error": "PostgreSQL indisponible ou non configure"}), 503
 
 
 def json_lot_to_database_payload(payload):
@@ -63,23 +52,6 @@ def json_lot_to_database_payload(payload):
         "owner_username": payload.get('owner_username'),
         "owner_name": payload.get('owner_name'),
     }
-
-
-def get_lot_record(lot_id, sync_json_to_db=False):
-    db_lot = Lot.query.filter_by(lot_id=lot_id).first() if database_enabled() else None
-    if db_lot:
-        return db_lot
-
-    json_lot = lots_db.get(lot_id)
-    if not json_lot or not database_enabled() or not sync_json_to_db:
-        return None
-
-    synced = upsert_database_lot(
-        json_lot_to_database_payload(json_lot),
-        history_event='SYNCED_FROM_JSON',
-        history_extra={"source": "json_store"},
-    )
-    return synced
 
 
 def parse_date(value):
@@ -121,7 +93,7 @@ def redact_history_for_user(user, payload):
 
 
 def db_lot_to_payload(lot):
-    payload = {
+    return {
         "lot_id": lot.lot_id,
         "site": lot.site,
         "created_at": lot.created_at.isoformat() if lot.created_at else None,
@@ -155,9 +127,8 @@ def db_lot_to_payload(lot):
         "owner_user_id": lot.owner_user_id,
         "owner_username": lot.owner_username,
         "owner_name": lot.owner_name,
-        "storage": "postgres"
+        "storage": "postgres",
     }
-    return payload
 
 
 def upsert_database_lot(data, history_event=None, history_extra=None):
@@ -209,11 +180,50 @@ def upsert_database_lot(data, history_event=None, history_extra=None):
             lot=lot,
             event=history_event,
             status=lot.status,
-            details=history_extra or {}
+            details=history_extra or {},
         ))
 
     db.session.commit()
     return lot
+
+
+def get_lot_record(lot_id, sync_json_to_db=False):
+    if not database_enabled():
+        return None
+
+    db_lot = Lot.query.filter_by(lot_id=lot_id).first()
+    if db_lot:
+        return db_lot
+
+    if not sync_json_to_db:
+        return None
+
+    json_lot = legacy_lots_db.get(lot_id)
+    if not json_lot:
+        return None
+
+    return upsert_database_lot(
+        json_lot_to_database_payload(json_lot),
+        history_event='SYNCED_FROM_JSON',
+        history_extra={"source": "legacy_json_store"},
+    )
+
+
+def migrate_json_store_to_database():
+    if not current_app.config.get('DATABASE_CONFIGURED'):
+        return 0
+
+    migrated = 0
+    for lot_id, payload in legacy_lots_db.items():
+        if Lot.query.filter_by(lot_id=lot_id).first():
+            continue
+        upsert_database_lot(
+            json_lot_to_database_payload(payload),
+            history_event='SYNCED_FROM_JSON',
+            history_extra={"source": "legacy_json_store"},
+        )
+        migrated += 1
+    return migrated
 
 
 @lots_bp.route('/lots', methods=['GET'])
@@ -221,20 +231,17 @@ def get_all_lots():
     user = get_current_user()
     if not user:
         return jsonify({"error": "Authentification requise"}), 401
+    if not database_enabled():
+        return database_required_response()
+
     page = int(request.args.get('page', 1))
     limit = int(request.args.get('limit', 20))
     site = request.args.get('site')
     status = request.args.get('status')
 
-    lots_list = list(lots_db.values())
-    if database_enabled():
-        db_lots = [db_lot_to_payload(item) for item in Lot.query.order_by(Lot.created_at.desc()).all()]
-        merged = {lot['lot_id']: lot for lot in lots_list}
-        for lot in db_lots:
-            merged[lot['lot_id']] = lot
-        lots_list = list(merged.values())
+    lots_list = [db_lot_to_payload(item) for item in Lot.query.order_by(Lot.created_at.desc()).all()]
 
-    if user and user.get('role') == 'producer':
+    if user.get('role') == 'producer':
         lots_list = [l for l in lots_list if can_access_lot(user, l)]
 
     if site:
@@ -251,7 +258,7 @@ def get_all_lots():
         "total": len(lots_list),
         "page": page,
         "limit": limit,
-        "lots": lots_list[start:end]
+        "lots": lots_list[start:end],
     })
 
 
@@ -260,20 +267,17 @@ def get_lot(lot_id):
     user = get_current_user()
     if not user:
         return jsonify({"error": "Authentification requise"}), 401
-    if database_enabled():
-        db_lot = Lot.query.filter_by(lot_id=lot_id).first()
-        if db_lot:
-            payload = db_lot_to_payload(db_lot)
-            if user and not can_access_lot(user, payload):
-                return jsonify({"error": "Acces refuse"}), 403
-            return jsonify(redact_history_for_user(user, payload))
+    if not database_enabled():
+        return database_required_response()
 
-    lot = lots_db.get(lot_id)
-    if lot:
-        if user and not can_access_lot(user, lot):
-            return jsonify({"error": "Acces refuse"}), 403
-        return jsonify(redact_history_for_user(user, lot))
-    return jsonify({"error": "Lot non trouve"}), 404
+    lot = Lot.query.filter_by(lot_id=lot_id).first()
+    if not lot:
+        return jsonify({"error": "Lot non trouve"}), 404
+
+    payload = db_lot_to_payload(lot)
+    if not can_access_lot(user, payload):
+        return jsonify({"error": "Acces refuse"}), 403
+    return jsonify(redact_history_for_user(user, payload))
 
 
 @lots_bp.route('/lots', methods=['POST'])
@@ -283,51 +287,27 @@ def create_lot():
 
     if not user:
         return jsonify({"error": "Authentification requise"}), 401
-    if not data or 'lot_id' not in data:
+    if not database_enabled():
+        return database_required_response()
+    if 'lot_id' not in data:
         return jsonify({"error": "lot_id requis"}), 400
 
     lot_id = data['lot_id']
-
-    if lot_id in lots_db or (database_enabled() and Lot.query.filter_by(lot_id=lot_id).first()):
+    if Lot.query.filter_by(lot_id=lot_id).first():
         return jsonify({"error": "Lot existe deja"}), 409
 
-    new_lot = {
-        "lot_id": lot_id,
-        "site": data.get('site', 'inconnu'),
-        "created_at": datetime.now().isoformat(),
-        "updated_at": datetime.now().isoformat(),
-        "status": "CREE",
-        "weight": data.get('weight_tonnes', 0),
-        "composition": {
-            "cu": data.get('cu_grade_percent', 0),
-            "co": data.get('co_grade_percent', 0),
-            "fe": data.get('fe_percent', 0),
-            "s": data.get('s_percent', 0)
-        },
-        "owner_user_id": user.get('id'),
-        "owner_username": user.get('username'),
-        "owner_name": user.get('name'),
-        "history": [json_history_entry("Creation du lot", {
-            "owner_username": user.get('username')
-        })]
-    }
-
-    lots_db[lot_id] = new_lot
-    save_json_store()
-
-    if database_enabled():
-        upsert_database_lot({
+    created_lot = upsert_database_lot(
+        {
             **data,
             "owner_user_id": user.get('id'),
             "owner_username": user.get('username'),
             "owner_name": user.get('name'),
-        }, history_event='CREATED', history_extra={"source": "json_route"})
+        },
+        history_event='CREATED',
+        history_extra={"source": "postgres"},
+    )
 
-    new_lot["storage"] = "json+postgres" if database_enabled() else "json"
-    return jsonify(new_lot), 201
-
-
-
+    return jsonify(db_lot_to_payload(created_lot)), 201
 
 
 @lots_bp.route('/lots/<lot_id>/certify', methods=['POST'])
@@ -335,33 +315,32 @@ def certify_lot(lot_id):
     user = get_current_user()
     if not user:
         return jsonify({"error": "Authentification requise"}), 401
-    if lot_id not in lots_db:
+    if not database_enabled():
+        return database_required_response()
+
+    lot = Lot.query.filter_by(lot_id=lot_id).first()
+    if not lot:
         return jsonify({"error": "Lot non trouve"}), 404
-    if user.get('role') == 'producer' and not can_access_lot(user, lots_db[lot_id]):
+
+    payload = db_lot_to_payload(lot)
+    if user.get('role') == 'producer' and not can_access_lot(user, payload):
         return jsonify({"error": "Acces refuse"}), 403
 
     data = request.get_json() or {}
+    certificate_id = data.get('certificate_id', f"CERT-{lot_id}")
 
-    lots_db[lot_id]['status'] = "CERTIFIE"
-    lots_db[lot_id]['certificate_id'] = data.get('certificate_id', f"CERT-{lot_id}")
-    lots_db[lot_id]['updated_at'] = datetime.now().isoformat()
-    lots_db[lot_id]['history'].append(json_history_entry("Certification", {
-        "certificate_id": lots_db[lot_id]['certificate_id']
-    }))
-    save_json_store()
-
-    if database_enabled():
-        upsert_database_lot({
+    updated_lot = upsert_database_lot(
+        {
             "lot_id": lot_id,
-            "site": lots_db[lot_id].get('site'),
+            "site": lot.site,
             "status": "CERTIFIE",
-            "certificate_id": lots_db[lot_id]['certificate_id'],
-            "owner_user_id": lots_db[lot_id].get('owner_user_id'),
-            "owner_username": lots_db[lot_id].get('owner_username'),
-            "owner_name": lots_db[lot_id].get('owner_name'),
-        }, history_event='CERTIFIED', history_extra={
-            "certificate_id": lots_db[lot_id]['certificate_id']
-        })
+            "certificate_id": certificate_id,
+            "owner_user_id": lot.owner_user_id,
+            "owner_username": lot.owner_username,
+            "owner_name": lot.owner_name,
+        },
+        history_event='CERTIFIED',
+        history_extra={"certificate_id": certificate_id},
+    )
 
-    lots_db[lot_id]['storage'] = "json+postgres" if database_enabled() else "json"
-    return jsonify(lots_db[lot_id])
+    return jsonify(db_lot_to_payload(updated_lot))
