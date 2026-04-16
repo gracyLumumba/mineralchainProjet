@@ -114,8 +114,9 @@ else:
                         db.session.execute(db.text(statement))
                 db.session.commit()
 
-            migrated = migrate_json_store_to_database()
+            # Enable database-backed helpers before importing legacy JSON lots.
             app.config['DATABASE_ENABLED'] = True
+            migrated = migrate_json_store_to_database()
 
         print(f"[DB] PostgreSQL actif: {app.config['DATABASE_URL_MASKED']}")
         if migrated:

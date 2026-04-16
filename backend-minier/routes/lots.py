@@ -21,6 +21,15 @@ if os.path.exists(LOTS_JSON_FILE):
         legacy_lots_db = {}
 
 
+def normalize_optional_float(value):
+    if value in (None, ''):
+        return None
+    try:
+        return float(value)
+    except (TypeError, ValueError):
+        return None
+
+
 def database_enabled():
     return bool(current_app.config.get('DATABASE_ENABLED'))
 
@@ -36,13 +45,13 @@ def json_lot_to_database_payload(payload):
         "site": payload.get('site'),
         "extraction_date": payload.get('extraction_date'),
         "status": payload.get('status'),
-        "weight": payload.get('weight'),
-        "cu_grade": composition.get('cu'),
-        "co_grade": composition.get('co'),
-        "fe_grade": composition.get('fe'),
-        "s_grade": composition.get('s'),
-        "ni_grade": composition.get('ni'),
-        "silica_grade": composition.get('silica'),
+        "weight": normalize_optional_float(payload.get('weight')),
+        "cu_grade": normalize_optional_float(composition.get('cu')),
+        "co_grade": normalize_optional_float(composition.get('co')),
+        "fe_grade": normalize_optional_float(composition.get('fe')),
+        "s_grade": normalize_optional_float(composition.get('s')),
+        "ni_grade": normalize_optional_float(composition.get('ni')),
+        "silica_grade": normalize_optional_float(composition.get('silica')),
         "token_id": payload.get('token_id'),
         "tx_hash": payload.get('tx_hash'),
         "block_number": payload.get('block_number'),

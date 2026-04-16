@@ -1,183 +1,214 @@
-# Structure des Donnees - Guide d'Utilisation
+# Structure des dossiers de donnees et des sorties
 
-## Organisation des Dossiers
+Ce document decrit l'organisation du dossier `modele_ia_minier` et le contenu attendu dans chaque sous-dossier. Il sert de guide pratique pour ranger correctement les donnees, les modeles, les visualisations et les rapports du projet.
 
-```
+## Arborescence recommandee
+
+```text
 modele_ia_minier/
-├── Data/
-│   ├── raw/                    Donnees brutes (originales)
-│   │   └── dataset_minier_complet_50000.csv
-│   ├── processed/              Donnees nettoyees et pretraitees
-│   ├── train/                  Donnees d'entrainement (70-80%)
-│   ├── val/                    Donnees de validation (10-15%)
-│   └── test/                   Donnees de test (10-15%)
-├── modeles/                    Modeles entraines (.pkl)
-├── visualisations/             Graphiques et visualisations
-├── rapports/                   Rapports et metriques
-├── ia_de_id_et_aut.ipynb      Notebook principal
-└── load_data.py               Script utilitaire pour charger les donnees
+|-- data/
+|   |-- raw/
+|   |   `-- dataset_minier_complet_50000.csv
+|   |-- processed/
+|   |-- train/
+|   |-- val/
+|   `-- test/
+|-- modeles/
+|-- visualisations/
+|-- rapports/
+|-- ia_de_id_et_aut.ipynb
+|-- DATA_TRAINING_FR.md
+`-- DATA_STRUCTURE.md
 ```
 
-## Utilisation
+## `data/raw/`
 
-### 1. Charger le Dataset
+Contenu :
+- donnees originales, non modifiees
+- copie de reference du dataset source
 
-```python
-from load_data import load_dataset, setup_directories
+Fichiers attendus :
+- `dataset_minier_complet_50000.csv`
 
-# Creer la structure de repertoires
-dirs = setup_directories()
+Utilisation :
+- archivage du jeu de donnees initial
+- point de depart pour le pretraitement
+- conservation de la version brute avant nettoyage ou transformation
 
-# Charger le dataset
-df = load_dataset()
-```
+Remarque :
+- aucun nettoyage manuel ne doit etre fait directement dans ce dossier
 
-### 2. Chemins des Fichiers
+## `data/processed/`
 
-```python
-import os
+Contenu :
+- donnees nettoyees
+- donnees transformees ou normalisees
+- versions prêtes pour l'apprentissage
 
-# Acceder aux repertoires
-data_raw = dirs['data_raw']
-models_dir = dirs['models']
-viz_dir = dirs['visualizations']
+Fichiers attendus :
+- fichiers CSV issus du pretraitement
+- eventuellement des donnees encodees ou enrichies
 
-# Exemple: sauvegarder un modele
-model_path = os.path.join(models_dir, 'mon_modele.pkl')
-```
+Fichier present :
+- `dataset_minier_processed.csv`
 
-### 3. Workflow Recommande
+Utilisation :
+- fournir une base propre pour la preparation des ensembles de train, validation et test
+- stocker les donnees apres suppression des incoherences ou standardisation
 
-#### Etape 1: Donnees Brutes -> Donnees Traitees
-```
-Data/raw/ -> [Nettoyage] -> Data/processed/
-```
+Exemples de fichiers possibles :
+- `dataset_minier_clean.csv`
+- `dataset_minier_processed.csv`
 
-#### Etape 2: Donnees Traitees -> Donnees Divisees
-```
-Data/processed/ -> [Split 70/10/10] -> Data/train/, Data/val/, Data/test/
-```
+## `data/train/`
 
-#### Etape 3: Entrainement et Evaluation
-```
-Data/train/ -> [Modele] -> modeles/
-Data/test/ -> [Evaluation] -> rapports/
-```
+Contenu :
+- sous-ensemble d'entrainement
+- environ 70 % a 80 % des donnees
 
-## Contenu de Chaque Dossier
+Utilisation :
+- entrainer les modeles de machine learning
+- apprendre les relations entre les caracteristiques minieres et les classes cibles
 
-### Data/raw/
-- Contenu: Donnees originales, non modifiees
-- Fichiers: dataset_minier_complet_50000.csv
-- Utilisation: Reference, archivage
+Exemples de fichiers possibles :
+- `train.csv`
+- `X_train.csv`
+- `y_train.csv`
 
-### Data/processed/
-- Contenu: Donnees nettoyees, normalisees
-- Fichiers: CSV avec donnees pretraitees
-- Utilisation: Entree pour la division train/val/test
+Fichier present :
+- `train.csv`
 
-### Data/train/
-- Contenu: 70-80% des donnees pour l'entrainement
-- Utilisation: Entrainer les modeles
+## `data/val/`
 
-### Data/val/
-- Contenu: 10-15% des donnees pour la validation
-- Utilisation: Ajuster les hyperparametres
+Contenu :
+- sous-ensemble de validation
+- environ 10 % a 15 % des donnees
 
-### Data/test/
-- Contenu: 10-15% des donnees pour le test final
-- Utilisation: Evaluer la performance finale
+Utilisation :
+- ajuster les hyperparametres
+- comparer plusieurs versions d'un modele
+- surveiller le surapprentissage pendant la phase de mise au point
 
-### modeles/
-- Contenu: Modeles entraines (.pkl)
-- Fichiers:
-  - model_mineral_type.pkl
-  - model_impurity_level.pkl
-  - model_fraud_detection.pkl
-  - scaler.pkl
-  - label_encoder_*.pkl
+Exemples de fichiers possibles :
+- `val.csv`
+- `X_val.csv`
+- `y_val.csv`
 
-### visualisations/
-- Contenu: Graphiques et visualisations
-- Fichiers: PNG, JPG des analyses
+Fichier present :
+- `val.csv`
 
-### rapports/
-- Contenu: Metriques et rapports
-- Fichiers: JSON, CSV avec resultats
+## `data/test/`
 
-## Sauvegarde des Modeles
+Contenu :
+- sous-ensemble de test final
+- environ 10 % a 15 % des donnees
 
-```python
-import joblib
-import os
+Utilisation :
+- evaluer objectivement la performance finale
+- mesurer la capacite de generalisation sur des donnees non vues
 
-models_dir = dirs['models']
+Exemples de fichiers possibles :
+- `test.csv`
+- `X_test.csv`
+- `y_test.csv`
 
-# Sauvegarder un modele
-joblib.dump(model, os.path.join(models_dir, 'model_name.pkl'))
+Fichier present :
+- `test.csv`
 
-# Charger un modele
-model = joblib.load(os.path.join(models_dir, 'model_name.pkl'))
-```
+## `modeles/`
 
-## Bonnes Pratiques
+Contenu :
+- modeles entraines au format `.pkl`
+- objets de pretraitement necessaires a l'inference
 
-1. Ne jamais modifier les fichiers dans Data/raw/
-2. Toujours creer des copies dans Data/processed/
-3. Documenter les transformations appliquees
-4. Versionner les modeles avec des noms explicites
-5. Sauvegarder les metriques pour chaque experience
+Fichiers presents dans votre projet :
+- `model_mineral_type.pkl`
+- `model_impurity_level.pkl`
+- `model_fraud_detection.pkl`
+- `scaler.pkl`
+- `label_encoder_mineral.pkl`
+- `label_encoder_impurity.pkl`
+- `feature_columns.pkl`
+- `analyze_function.pkl`
 
-## Exemple Complet
+Utilisation :
+- charger les modeles dans le backend
+- reutiliser les transformations appliquees pendant l'entrainement
+- produire des predictions cohérentes sur de nouveaux lots
 
-```python
-from load_data import load_dataset, setup_directories
-import pandas as pd
-import joblib
-import os
+## `visualisations/`
 
-# 1. Configuration
-dirs = setup_directories()
+Contenu :
+- graphiques
+- figures d'analyse
+- matrices de confusion
+- visualisations des resultats et de l'importance des variables
 
-# 2. Charger les donnees brutes
-df = load_dataset()
+Fichiers presents dans votre projet :
+- `1_distribution_generale.png`
+- `2_confusion_identification.png`
+- `3_feature_importance_identification.png`
+- `4_confusion_impurity.png`
+- `5_confusion_fraude.png`
+- `5_confusion_fraude_seuil30.png`
 
-# 3. Pretraitement
-df_processed = df.copy()
-# ... nettoyage, normalisation, etc.
+Utilisation :
+- illustrer les resultats du modele
+- alimenter le memoire, la soutenance ou les rapports techniques
+- faciliter l'interpretation des performances
 
-# 4. Sauvegarder les donnees traitees
-processed_path = os.path.join(dirs['data_processed'], 'data_processed.csv')
-df_processed.to_csv(processed_path, index=False)
+## `rapports/`
 
-# 5. Division train/val/test
-from sklearn.model_selection import train_test_split
+Contenu :
+- metriques d'evaluation
+- fichiers de synthese
+- rapports techniques ou exports JSON/CSV
 
-X_train, X_temp = train_test_split(df_processed, test_size=0.2)
-X_val, X_test = train_test_split(X_temp, test_size=0.5)
+Fichiers presents dans votre projet :
+- `metrics.json`
+- `blockchain_mapping.json`
 
-# 6. Sauvegarder les donnees divisees
-X_train.to_csv(os.path.join(dirs['data_train'], 'train.csv'), index=False)
-X_val.to_csv(os.path.join(dirs['data_val'], 'val.csv'), index=False)
-X_test.to_csv(os.path.join(dirs['data_test'], 'test.csv'), index=False)
+Utilisation :
+- conserver les performances finales des modeles
+- documenter les sorties utiles a l'integration applicative
+- centraliser les resultats exploitables par d'autres modules
 
-# 7. Entrainer et sauvegarder le modele
-model = train_model(X_train)
-joblib.dump(model, os.path.join(dirs['models'], 'model_v1.pkl'))
+Exemples de fichiers possibles en plus :
+- `validation_metrics.json`
+- `test_metrics.json`
+- `classification_report.csv`
 
-print("Workflow complet termine!")
-```
+## Fichiers de documentation
 
-## Questions Frequentes
+### `DATA_TRAINING_FR.md`
 
-Q: Ou mettre mes donnees brutes?
-R: Dans Data/raw/
+Contenu :
+- explication en francais du processus d'entrainement
+- description du dataset, des modeles et des metriques
 
-Q: Comment charger le dataset?
-R: Utilisez load_dataset() du script load_data.py
+Utilisation :
+- support de redaction pour le memoire
+- documentation fonctionnelle du pipeline IA
 
-Q: Ou sauvegarder mes modeles?
-R: Dans modeles/ avec un nom explicite (ex: model_v1.pkl)
+### `DATA_STRUCTURE.md`
 
-Q: Comment organiser les resultats?
-R: Mettez les metriques dans rapports/ et les graphiques dans visualisations/
+Contenu :
+- description de l'arborescence des donnees et des sorties
+- role de chaque dossier
+
+Utilisation :
+- standardiser l'organisation du projet
+- faciliter la maintenance et la comprehension de la structure
+
+## Regle simple d'organisation
+
+Pour garder un projet propre :
+
+- les donnees brutes vont dans `data/raw/`
+- les donnees preparees vont dans `data/processed/`
+- les splits vont dans `data/train/`, `data/val/` et `data/test/`
+- les modeles sauvegardes vont dans `modeles/`
+- les images d'analyse vont dans `visualisations/`
+- les mesures de performance et rapports vont dans `rapports/`
+
+Cette organisation permet de separer clairement les donnees sources, les donnees transformees, les sorties d'entrainement et les elements de documentation.

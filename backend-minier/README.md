@@ -60,6 +60,12 @@ venv\Scripts\activate
 pip install -r requirements.txt
 ```
 
+Important :
+
+- utilisez l'environnement `.venv` du projet pour lancer le backend ;
+- les modeles IA sauvegardes ont ete entraines avec `scikit-learn 1.6.1` ;
+- evitez de lancer le backend avec un autre environnement Python si vous voulez supprimer les warnings de compatibilite lors du chargement des `.pkl`.
+
 ## Configuration
 
 Copiez `.env.example` en `.env` puis renseignez vos variables :
