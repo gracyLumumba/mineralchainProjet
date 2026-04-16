@@ -1,0 +1,285 @@
+STRUCTURE DES DONNEES - GUIDE D'UTILISATION
+============================================
+
+ORGANISATION DES DOSSIERS
+=========================
+
+modele_ia_minier/
+|
++-- Data/
+|   +-- raw/                    Donnees brutes (originales)
+|   |   +-- dataset_minier_complet_50000.csv
+|   |
+|   +-- processed/              Donnees nettoyees et pretraitees
+|   |   +-- dataset_processed.csv
+|   |
+|   +-- train/                  Donnees d'entrainement (70-80%)
+|   |   +-- train.csv
+|   |
+|   +-- val/                    Donnees de validation (10-15%)
+|   |   +-- val.csv
+|   |
+|   +-- test/                   Donnees de test (10-15%)
+|       +-- test.csv
+|
++-- modeles/                    Modeles entraines (.pkl)
+|   +-- model_mineral_type.pkl
+|   +-- model_impurity_level.pkl
+|   +-- model_fraud_detection.pkl
+|   +-- scaler.pkl
+|   +-- feature_columns.pkl
+|   +-- label_encoder_mineral.pkl
+|   +-- label_encoder_impurity.pkl
+|
++-- visualisations/            Graphiques et visualisations
+|   +-- 1_distribution_generale.png
+|   +-- 2_confusion_identification.png
+|   +-- ...
+|
++-- rapports/                  Rapports et metriques
+|   +-- metrics.json
+|   +-- blockchain_mapping.json
+|
++-- config.py                  Configuration des chemins
++-- data_manager.py            Gestionnaire de donnees
++-- ia_de_id_et_aut.ipynb      Notebook principal
+
+
+UTILISATION
+===========
+
+1. CHARGER LE DATASET BRUT
+---------------------------
+
+from data_manager import DataManager
+
+manager = DataManager()
+df = manager.load_raw_dataset()
+
+
+2. SAUVEGARDER LES DONNEES TRAITEES
+------------------------------------
+
+manager.save_processed_dataset(df_processed)
+
+
+3. DIVISER LES DONNEES
+----------------------
+
+from sklearn.model_selection import train_test_split
+
+X_train, X_temp = train_test_split(df, test_size=0.2, random_state=42)
+X_val, X_test = train_test_split(X_temp, test_size=0.5, random_state=42)
+
+manager.save_train_val_test(X_train, X_val, X_test)
+
+
+4. CHARGER LES DONNEES DIVISEES
+--------------------------------
+
+X_train, X_val, X_test = manager.load_train_val_test()
+
+
+5. SAUVEGARDER LES MODELES
+---------------------------
+
+import joblib
+from config import MODEL_MINERAL, SCALER
+
+joblib.dump(model, MODEL_MINERAL)
+joblib.dump(scaler, SCALER)
+
+
+6. CHARGER LES MODELES
+----------------------
+
+import joblib
+from config import MODEL_MINERAL, SCALER
+
+model = joblib.load(MODEL_MINERAL)
+scaler = joblib.load(SCALER)
+
+
+7. ACCEDER AUX CHEMINS
+----------------------
+
+from config import get_all_paths
+
+paths = get_all_paths()
+print(paths['data_raw'])
+print(paths['models'])
+
+
+CONTENU DE CHAQUE DOSSIER
+=========================
+
+Data/raw/
+---------
+Contenu: Donnees originales, non modifiees
+Fichiers: dataset_minier_complet_50000.csv
+Utilisation: Reference, archivage
+Acces: Ne pas modifier directement
+
+Data/processed/
+---------------
+Contenu: Donnees nettoyees, normalisees
+Fichiers: dataset_processed.csv
+Utilisation: Entree pour la division train/val/test
+Acces: Genere par le preprocessing
+
+Data/train/
+-----------
+Contenu: 70-80% des donnees pour l'entrainement
+Fichiers: train.csv
+Utilisation: Entrainer les modeles
+Acces: Charge par DataManager
+
+Data/val/
+---------
+Contenu: 10-15% des donnees pour la validation
+Fichiers: val.csv
+Utilisation: Ajuster les hyperparametres
+Acces: Charge par DataManager
+
+Data/test/
+----------
+Contenu: 10-15% des donnees pour le test final
+Fichiers: test.csv
+Utilisation: Evaluer la performance finale
+Acces: Charge par DataManager
+
+modeles/
+--------
+Contenu: Modeles entraines (.pkl)
+Fichiers:
+  - model_mineral_type.pkl
+  - model_impurity_level.pkl
+  - model_fraud_detection.pkl
+  - scaler.pkl
+  - feature_columns.pkl
+  - label_encoder_mineral.pkl
+  - label_encoder_impurity.pkl
+Utilisation: Charger les modeles pour les predictions
+Acces: joblib.load()
+
+visualisations/
+---------------
+Contenu: Graphiques et visualisations
+Fichiers: PNG, JPG des analyses
+Utilisation: Documentation et rapports
+Acces: Genere par matplotlib/seaborn
+
+rapports/
+---------
+Contenu: Metriques et rapports
+Fichiers: JSON, CSV avec resultats
+Utilisation: Archivage des resultats
+Acces: Genere par les scripts d'evaluation
+
+
+WORKFLOW RECOMMANDE
+===================
+
+Etape 1: Donnees Brutes -> Donnees Traitees
+--------------------------------------------
+Data/raw/ -> [Nettoyage] -> Data/processed/
+
+Code:
+  df = manager.load_raw_dataset()
+  df_processed = preprocess(df)
+  manager.save_processed_dataset(df_processed)
+
+
+Etape 2: Donnees Traitees -> Donnees Divisees
+----------------------------------------------
+Data/processed/ -> [Split 70/10/10] -> Data/train/, Data/val/, Data/test/
+
+Code:
+  df = manager.load_processed_dataset()
+  X_train, X_val, X_test = split_data(df)
+  manager.save_train_val_test(X_train, X_val, X_test)
+
+
+Etape 3: Entrainement et Evaluation
+------------------------------------
+Data/train/ -> [Modele] -> modeles/
+Data/test/ -> [Evaluation] -> rapports/
+
+Code:
+  X_train, X_val, X_test = manager.load_train_val_test()
+  model = train_model(X_train, X_val)
+  joblib.dump(model, MODEL_MINERAL)
+  metrics = evaluate_model(model, X_test)
+  save_metrics(metrics)
+
+
+BONNES PRATIQUES
+================
+
+1. Ne jamais modifier les fichiers dans Data/raw/
+2. Toujours creer des copies dans Data/processed/
+3. Documenter les transformations appliquees
+4. Versionner les modeles avec des noms explicites
+5. Sauvegarder les metriques pour chaque experience
+6. Utiliser DataManager pour toutes les operations
+7. Verifier l'etat des donnees avec manager.get_data_info()
+
+
+EXEMPLE COMPLET
+===============
+
+from data_manager import DataManager
+from config import MODEL_MINERAL, SCALER
+import joblib
+
+# 1. Configuration
+manager = DataManager()
+
+# 2. Charger les donnees brutes
+df = manager.load_raw_dataset()
+
+# 3. Pretraitement
+df_processed = df.copy()
+# ... nettoyage, normalisation, etc.
+
+# 4. Sauvegarder les donnees traitees
+manager.save_processed_dataset(df_processed)
+
+# 5. Division train/val/test
+from sklearn.model_selection import train_test_split
+
+X_train, X_temp = train_test_split(df_processed, test_size=0.2)
+X_val, X_test = train_test_split(X_temp, test_size=0.5)
+
+# 6. Sauvegarder les donnees divisees
+manager.save_train_val_test(X_train, X_val, X_test)
+
+# 7. Entrainer et sauvegarder le modele
+model = train_model(X_train)
+joblib.dump(model, MODEL_MINERAL)
+
+# 8. Evaluer
+metrics = evaluate_model(model, X_test)
+print("Workflow complet termine!")
+
+
+QUESTIONS FREQUENTES
+====================
+
+Q: Ou mettre mes donnees brutes?
+R: Dans Data/raw/
+
+Q: Comment charger le dataset?
+R: Utilisez DataManager.load_raw_dataset()
+
+Q: Ou sauvegarder mes modeles?
+R: Dans modeles/ avec joblib.dump()
+
+Q: Comment organiser les resultats?
+R: Metriques dans rapports/, graphiques dans visualisations/
+
+Q: Puis-je modifier les donnees dans Data/raw/?
+R: Non, Data/raw/ est reserve aux donnees originales
+
+Q: Comment acceder aux chemins?
+R: Utilisez get_all_paths() depuis config.py
