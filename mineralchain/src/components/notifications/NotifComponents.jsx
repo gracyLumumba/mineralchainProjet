@@ -421,7 +421,24 @@ export function NotifPanel({ onClose }) {
           {notifs.length} notification{notifs.length!==1?'s':''}
         </span>
         <button
-          onClick={() => { if('Notification' in window && Notification.permission==='default') Notification.requestPermission(); }}
+          onClick={async () => {
+            if('Notification' in window) {
+              if (Notification.permission === 'granted') {
+                alert('Les alertes sont déjà activées');
+              } else if (Notification.permission === 'denied') {
+                alert('Les alertes ont été refusées. Vérifiez les paramètres de votre navigateur.');
+              } else {
+                const permission = await Notification.requestPermission();
+                if (permission === 'granted') {
+                  alert('Alertes activées avec succès!');
+                } else {
+                  alert('Vous avez refusé les alertes.');
+                }
+              }
+            } else {
+              alert('Les notifications ne sont pas supportées par votre navigateur.');
+            }
+          }}
           style={{ display:'flex', alignItems:'center', gap:5, background:'none', border:'none', cursor:'pointer', color:'var(--text-muted)', fontSize:'0.72rem', padding:'4px 8px', borderRadius:6 }}>
           <Ic name="bell" size={12}/> Activer les alertes
         </button>
