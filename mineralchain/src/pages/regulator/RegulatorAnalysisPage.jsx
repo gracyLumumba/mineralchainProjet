@@ -393,8 +393,7 @@ export default function RegulatorAnalysisPage() {
   const pendingLots = lots.filter(l =>
     !l.regulator_validated &&
     l.analyzed_at &&
-    l.status !== 'SUSPECT' &&
-    l.status !== 'AUTHENTIQUE'
+    l.status === 'AUTHENTIQUE'
   );
 
   const handleAutoValidate = useCallback(async (lot) => {

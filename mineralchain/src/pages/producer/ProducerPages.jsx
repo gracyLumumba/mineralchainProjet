@@ -15,7 +15,7 @@ export function ProducerDashboard() {
   const { t } = useI18n();
   const navigate = useNavigate();
   const recentLots = lots.slice(0, 6);
-  const pendingValidationCount = lots.filter(l => l.analyzed_at && !l.regulator_validated && l.status !== 'SUSPECT').length;
+  const pendingValidationCount = lots.filter(l => l.analyzed_at && !l.regulator_validated && l.status === 'AUTHENTIQUE').length;
   const PIE_COLORS = ['var(--brand)', 'var(--brand-light)', 'var(--emerald)'];
   const pieData = [
     { name: t('mineral.copper'), value: stats.copper_count || 0 },
