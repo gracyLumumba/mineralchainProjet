@@ -261,7 +261,7 @@ export function AppProvider({ children }) {
     cobalt_count:    lots.filter(l => l.mineral_type === 'cobalt').length,
     mixed_count:     lots.filter(l => l.mineral_type === 'mixed').length,
     in_transport:         lots.filter(l => l.transport_status === 'en_route').length,
-    pending_validation:   lots.filter(l => l.analyzed_at && !l.regulator_validated && l.status !== 'SUSPECT').length,
+    pending_validation:   lots.filter(l => l.analyzed_at && !l.regulator_validated && l.status === 'AUTHENTIQUE').length,
     regulator_validated:  lots.filter(l => l.regulator_validated).length,
   };
 
