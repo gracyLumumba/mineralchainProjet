@@ -123,7 +123,7 @@ export function TransporterDashboard() {
   const { lots, tokens, updateLot, addToast, syncLotsFromBackend } = useApp();
   const { t } = useI18n();
   React.useEffect(() => { syncLotsFromBackend(); }, [syncLotsFromBackend]);
-  const assigned  = lots.filter(l => isTransportReady(l) && l.token_id != null && !l.transport_status);
+  const assigned  = lots.filter(l => isTransportReady(l) && !l.transport_status);
   const inRoute   = lots.filter(l => l.transport_status === 'en_route');
   const delivered = lots.filter(l => l.transport_status === 'delivered');
   const blocked   = [];
@@ -188,9 +188,9 @@ export function AssignedLotsPage() {
   const { t } = useI18n();
   React.useEffect(() => { syncLotsFromBackend(); }, [syncLotsFromBackend]);
   const [filter, setFilter] = useState('ready'); // ready | all | delivered
-  const readyLots    = lots.filter(l => isTransportReady(l) && l.token_id != null && !l.transport_status);
+  const readyLots    = lots.filter(l => isTransportReady(l) && !l.transport_status);
   const inRouteLots  = lots.filter(l => l.transport_status === 'en_route');
-  const allCertified = lots.filter(l => isTransportReady(l) && l.token_id != null);
+  const allCertified = lots.filter(l => isTransportReady(l));
 
   const displayLots = filter === 'ready'     ? readyLots
     : filter === 'delivered' ? lots.filter(l => l.transport_status==='delivered')
