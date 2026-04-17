@@ -222,8 +222,8 @@ export function RegulatorLotsPage() {
         <SI value={fType}   onChange={setFType}   placeholder={t('mylots.filter.all_types')} options={[
           {v:'copper',l:t('mineral.copper')},{v:'cobalt',l:t('mineral.cobalt')},{v:'mixed',l:t('mineral.mixed')}
         ]}/>
-        <SI value={fValid}  onChange={setFValid}  placeholder="Toutes validations" options={[
-          {v:'validated',l:'Validés'},{v:'pending',l:t('trans.awaiting_dgmr')},{v:'suspect',l:'SUSPECT'}
+        <SI value={fValid}  onChange={setFValid}  placeholder={t('admin.filter.all')} options={[
+          {v:'validated',l:t('admin.dgmr.validated')},{v:'pending',l:t('trans.awaiting_dgmr')},{v:'suspect',l:t('status.SUSPECT')}
         ]}/>
         {(search||fStatus!=='all'||fSite!=='all'||fType!=='all'||fValid!=='all') && (
           <button className="btn btn-ghost btn-sm" onClick={()=>{ setSearch('');setFStatus('all');setFSite('all');setFType('all');setFValid('all');setPage(1); }}>{t('action.clear')}</button>
