@@ -19,6 +19,7 @@ sys.path.append(os.path.dirname(os.path.dirname(__file__)))
 from models.load_models import model_loader
 from routes.lots import upsert_database_lot, database_enabled
 from routes.auth import get_current_user
+from utils.analysis_rules import evaluate_consistency_rules
 from utils.blockchain_config import load_contract_config, GANACHE_URL, DEFAULT_CONTRACT_ADDRESS
 
 certify_bp = Blueprint('certify', __name__)
@@ -334,6 +335,8 @@ def analyze_and_certify():
             inferred_type, inferred_conf = infer_mineral_type_from_payload(data)
             mineral_type = inferred_type
             mineral_conf = max(mineral_conf, inferred_conf)
+
+        rule_check = evaluate_consistency_rules(data)
         
         # Vérifier la fraude
         if 'fraud' in ia_results:
@@ -358,6 +361,11 @@ def analyze_and_certify():
                 print(f"   [ALERT] REGLE 3: Cu > 25%")
         
         # Déterminer le statut
+        if rule_check['is_suspect']:
+            is_fraud = True
+            for reason in rule_check['reasons']:
+                print(f"   [ALERT] {reason}")
+
         mineral_unknown = is_unknown_mineral(mineral_type) or mineral_type == "Non determine"
         if is_fraud:
             status = "SUSPECT"
@@ -390,6 +398,7 @@ def analyze_and_certify():
                 "confidence": mineral_conf,
                 "impurity_level": impurity_level,
                 "is_fraud": is_fraud,
+                "fraud_reasons": rule_check['reasons'],
                 "status": status
             },
             "composition": {
