@@ -93,7 +93,7 @@ function SearchField({ value, onChange, placeholder, maxWidth = 280 }) {
 }
 
 function UsersTab() {
-  const { currentUser, users, approveUser, rejectUser, revokeUser } = useAuth();
+  const { currentUser, users, approveUser, rejectUser, revokeUser, deleteUser } = useAuth();
   const { notify } = useNotif();
   const { t } = useI18n();
   const [tab, setTab] = useState('pending');
@@ -101,13 +101,6 @@ function UsersTab() {
   const [rejectId, setRejectId] = useState(null);
   const [rejectReason, setRejectReason] = useState('');
   const [deleteId, setDeleteId] = useState(null);
-
-  const handleDelete = (userId) => {
-    const allUsers = JSON.parse(localStorage.getItem('mc_users') || '[]');
-    const updated = allUsers.filter((user) => user.id !== userId);
-    localStorage.setItem('mc_users', JSON.stringify(updated));
-    window.location.reload();
-  };
 
   const counts = {
     pending: users.filter((user) => user.account_status === 'pending' && user.id !== currentUser?.id).length,
@@ -289,6 +282,7 @@ function UsersTab() {
                     {user.account_status === 'pending' && (
                       <>
                         <button
+                          type="button"
                           onClick={() => {
                             approveUser(user.id, currentUser.id);
                             notify(NOTIF_TYPES.USER_APPROVED, { userName: user.full_name, role: user.role });
@@ -300,6 +294,7 @@ function UsersTab() {
                         </button>
 
                         <button
+                          type="button"
                           onClick={() => setRejectId(user.id)}
                           title={t('admin.action.reject')}
                           style={{ padding: '7px 12px', borderRadius: 'var(--r-sm)', border: '1px solid rgba(192,57,43,0.25)', background: 'rgba(192,57,43,0.07)', color: 'var(--crimson)', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 5, fontSize: '0.78rem', fontWeight: 600, fontFamily: 'var(--font-body)' }}
@@ -311,6 +306,7 @@ function UsersTab() {
 
                     {user.account_status === 'approved' && (
                       <button
+                        type="button"
                         onClick={() => revokeUser(user.id, currentUser.id)}
                         title={t('admin.action.revoke')}
                         style={{ padding: '7px 12px', borderRadius: 'var(--r-sm)', border: '1px solid var(--border-soft)', background: 'transparent', color: 'var(--text-muted)', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 5, fontSize: '0.75rem', fontFamily: 'var(--font-body)' }}
@@ -320,6 +316,7 @@ function UsersTab() {
                     )}
 
                     <button
+                      type="button"
                       onClick={() => setDeleteId(user.id)}
                       title={t('admin.action.delete_account')}
                       style={{ padding: '7px 10px', borderRadius: 'var(--r-sm)', border: '1px solid rgba(192,57,43,0.2)', background: 'transparent', color: 'var(--crimson)', cursor: 'pointer' }}
@@ -329,41 +326,55 @@ function UsersTab() {
                   </div>
                 )}
               </div>
-
-              {rejectId === user.id && (
-                <div style={{ borderTop: '1px solid var(--border-dim)', marginTop: 12, paddingTop: 12 }}>
-                  <input
-                    className="form-input"
-                    placeholder={t('admin.reject.placeholder')}
-                    value={rejectReason}
-                    onChange={(event) => setRejectReason(event.target.value)}
-                    style={{ marginBottom: 8 }}
-                  />
-                  <div style={{ display: 'flex', gap: 8 }}>
-                    <button
-                      disabled={!rejectReason.trim()}
-                      onClick={() => {
-                        rejectUser(user.id, currentUser.id, rejectReason);
-                        setRejectId(null);
-                        setRejectReason('');
-                      }}
-                      style={{ padding: '7px 16px', borderRadius: 'var(--r-sm)', background: 'var(--crimson)', color: '#fff', border: 'none', cursor: 'pointer', fontSize: '0.8rem', fontWeight: 600, fontFamily: 'var(--font-body)', opacity: rejectReason.trim() ? 1 : 0.5 }}
-                    >
-                      {t('admin.reject.confirm')}
-                    </button>
-                    <button
-                      onClick={() => { setRejectId(null); setRejectReason(''); }}
-                      style={{ padding: '7px 14px', borderRadius: 'var(--r-sm)', background: 'transparent', border: '1px solid var(--border-soft)', color: 'var(--text-muted)', cursor: 'pointer', fontSize: '0.8rem', fontFamily: 'var(--font-body)' }}
-                    >
-                      {t('action.cancel')}
-                    </button>
-                  </div>
-                </div>
-              )}
             </div>
           );
         })}
       </div>
+
+      {rejectId && (
+        <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.5)', zIndex: 9999, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+          <div style={{ background: 'var(--bg-surface)', borderRadius: 'var(--r-xl)', padding: '28px 32px', maxWidth: 420, width: '92%', boxShadow: 'var(--shadow-xl)', border: '1px solid var(--border-soft)' }}>
+            <div style={{ width: 44, height: 44, borderRadius: '50%', background: 'var(--crimson-dim)', display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 14px', color: 'var(--crimson)' }}>
+              <Ic name="x" size={20}/>
+            </div>
+            <h3 style={{ textAlign: 'center', fontFamily: 'var(--font-display)', fontSize: '1.1rem', marginBottom: 8, color: 'var(--text-primary)' }}>
+              {t('admin.action.reject')}
+            </h3>
+            <p style={{ textAlign: 'center', fontSize: '0.85rem', color: 'var(--text-secondary)', lineHeight: 1.6, marginBottom: 16 }}>
+              {t('admin.reject.placeholder')}
+            </p>
+            <textarea
+              className="form-input"
+              placeholder={t('admin.reject.placeholder')}
+              value={rejectReason}
+              onChange={(event) => setRejectReason(event.target.value)}
+              rows={4}
+              style={{ width: '100%', resize: 'vertical', marginBottom: 16, paddingTop: 10 }}
+            />
+            <div style={{ display: 'flex', gap: 10 }}>
+              <button
+                type="button"
+                onClick={() => { setRejectId(null); setRejectReason(''); }}
+                style={{ flex: 1, padding: '10px', borderRadius: 'var(--r-md)', border: '1px solid var(--border-soft)', background: 'transparent', color: 'var(--text-secondary)', cursor: 'pointer', fontFamily: 'var(--font-body)', fontSize: '0.85rem' }}
+              >
+                {t('action.cancel')}
+              </button>
+              <button
+                type="button"
+                disabled={!rejectReason.trim()}
+                onClick={() => {
+                  rejectUser(rejectId, currentUser.id, rejectReason.trim());
+                  setRejectId(null);
+                  setRejectReason('');
+                }}
+                style={{ flex: 1, padding: '10px', borderRadius: 'var(--r-md)', border: 'none', background: 'var(--crimson)', color: '#fff', cursor: rejectReason.trim() ? 'pointer' : 'not-allowed', fontFamily: 'var(--font-body)', fontSize: '0.85rem', fontWeight: 700, opacity: rejectReason.trim() ? 1 : 0.55 }}
+              >
+                {t('admin.reject.confirm')}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
 
       {deleteId && (
         <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.5)', zIndex: 9999, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
@@ -379,13 +390,15 @@ function UsersTab() {
             </p>
             <div style={{ display: 'flex', gap: 10 }}>
               <button
+                type="button"
                 onClick={() => setDeleteId(null)}
                 style={{ flex: 1, padding: '10px', borderRadius: 'var(--r-md)', border: '1px solid var(--border-soft)', background: 'transparent', color: 'var(--text-secondary)', cursor: 'pointer', fontFamily: 'var(--font-body)', fontSize: '0.85rem' }}
               >
                 {t('action.cancel')}
               </button>
               <button
-                onClick={() => { handleDelete(deleteId); setDeleteId(null); }}
+                type="button"
+                onClick={() => { deleteUser(deleteId); setDeleteId(null); }}
                 style={{ flex: 1, padding: '10px', borderRadius: 'var(--r-md)', border: 'none', background: 'var(--crimson)', color: '#fff', cursor: 'pointer', fontFamily: 'var(--font-body)', fontSize: '0.85rem', fontWeight: 700 }}
               >
                 {t('admin.action.delete')}

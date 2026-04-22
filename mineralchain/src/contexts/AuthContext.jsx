@@ -303,6 +303,19 @@ export function AuthProvider({ children }) {
     setUsers(updated);
   }, []);
 
+  const deleteUser = useCallback((userId) => {
+    const allUsers = LS.get(KEYS.users, []);
+    const updated = allUsers.filter((user) => user.id !== userId);
+    LS.set(KEYS.users, updated);
+    setUsers(updated);
+
+    if (currentUser?.id === userId) {
+      setCurrentUser(null);
+      LS.del(KEYS.currentUser);
+      LS.del(KEYS.backendToken);
+    }
+  }, [currentUser]);
+
   //  Logout 
   const logout = useCallback(() => {
     setCurrentUser(null);
@@ -332,7 +345,7 @@ export function AuthProvider({ children }) {
       pendingUsers,
       demoCredentials: DEMO_CREDENTIALS,
       login, register, logout, updateProfile,
-      approveUser, rejectUser, revokeUser,
+      approveUser, rejectUser, revokeUser, deleteUser,
     }}>
       {children}
     </AuthContext.Provider>
