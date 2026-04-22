@@ -9,6 +9,17 @@ import { fmt } from '../../contexts/AppContext';
 
 import { Ic } from '../../components/common/Icons';
 
+const HIDDEN_REGULATOR_LOT_IDS = new Set([
+  'KAMOA-2604-192',
+  'CERTPG-CA22AB',
+  'KAMOA-2604-043',
+  'KANSOKO-2603-805',
+]);
+
+function visibleRegulatorLots(lots = []) {
+  return lots.filter((lot) => !HIDDEN_REGULATOR_LOT_IDS.has(lot.lot_id));
+}
+
 const TT = ({ active, payload, label }) => !active ? null : (
   <div style={{ background: 'var(--bg-surface)', border: '1px solid var(--border-soft)', borderRadius: 8, padding: '10px 14px', fontSize: '0.8rem' }}>
     <div style={{ fontWeight: 600, marginBottom: 4 }}>{label}</div>
@@ -18,15 +29,22 @@ const TT = ({ active, payload, label }) => !active ? null : (
 
 //  REGULATOR DASHBOARD 
 export function RegulatorDashboard() {
-  const { lots, stats } = useApp();
+  const { lots } = useApp();
   const { t } = useI18n();
-  const suspects      = lots.filter(l => l.status === 'SUSPECT');
-  const pendingVal    = lots.filter(l => !l.regulator_validated && l.analyzed_at && l.status === 'AUTHENTIQUE').length;
-  const recentActivity= lots.slice(0, 5);
+  const regulatorLots = visibleRegulatorLots(lots);
+  const suspects      = regulatorLots.filter(l => l.status === 'SUSPECT');
+  const pendingVal    = regulatorLots.filter(l => !l.regulator_validated && l.analyzed_at && l.status === 'AUTHENTIQUE').length;
+  const recentActivity= regulatorLots.slice(0, 5);
+  const regulatorStats = {
+    total_lots: regulatorLots.length,
+    certified_count: regulatorLots.filter(l => l.token_id != null).length,
+    auth_rate: regulatorLots.length === 0 ? 0 : ((regulatorLots.filter(l => l.status === 'AUTHENTIQUE').length / regulatorLots.length) * 100).toFixed(1),
+    suspect_count: suspects.length,
+  };
 
   const barData = [
-    { site: 'KAMOA', [t('regulator.bar.authentic')]: lots.filter(l => l.site==='KAMOA' && l.status==='AUTHENTIQUE').length, [t('regulator.bar.suspects')]: lots.filter(l => l.site==='KAMOA' && l.status==='SUSPECT').length },
-    { site: 'KANSOKO', [t('regulator.bar.authentic')]: lots.filter(l => l.site==='KANSOKO' && l.status==='AUTHENTIQUE').length, [t('regulator.bar.suspects')]: lots.filter(l => l.site==='KANSOKO' && l.status==='SUSPECT').length },
+    { site: 'KAMOA', [t('regulator.bar.authentic')]: regulatorLots.filter(l => l.site==='KAMOA' && l.status==='AUTHENTIQUE').length, [t('regulator.bar.suspects')]: regulatorLots.filter(l => l.site==='KAMOA' && l.status==='SUSPECT').length },
+    { site: 'KANSOKO', [t('regulator.bar.authentic')]: regulatorLots.filter(l => l.site==='KANSOKO' && l.status==='AUTHENTIQUE').length, [t('regulator.bar.suspects')]: regulatorLots.filter(l => l.site==='KANSOKO' && l.status==='SUSPECT').length },
   ];
 
   return (
@@ -74,10 +92,10 @@ export function RegulatorDashboard() {
       )}
 
       <div style={{ display:'grid', gridTemplateColumns:'repeat(5,1fr)', gap:16, marginBottom:28 }}>
-        <StatCard label={t('stat.total_lots')}   value={stats.total_lots}      icon="dashboard"  color="var(--brand)"   delay={0}/>
-        <StatCard label={t('stat.certified')}    value={stats.certified_count} icon="gem"  color="var(--emerald)" delay={100}/>
-        <StatCard label={t('stat.auth_rate')}    value={`${stats.auth_rate}%`} icon="check"  color="var(--emerald)" delay={200}/>
-        <StatCard label={t('stat.suspects')}     value={stats.suspect_count}   icon="block" color="var(--crimson)"  delay={300}/>
+        <StatCard label={t('stat.total_lots')}   value={regulatorStats.total_lots}      icon="dashboard"  color="var(--brand)"   delay={0}/>
+        <StatCard label={t('stat.certified')}    value={regulatorStats.certified_count} icon="gem"  color="var(--emerald)" delay={100}/>
+        <StatCard label={t('stat.auth_rate')}    value={`${regulatorStats.auth_rate}%`} icon="check"  color="var(--emerald)" delay={200}/>
+        <StatCard label={t('stat.suspects')}     value={regulatorStats.suspect_count}   icon="block" color="var(--crimson)"  delay={300}/>
         <StatCard label="En attente validation"  value={pendingVal}             icon="clock" color="var(--amber)"    delay={400}/>
       </div>
 
@@ -125,7 +143,7 @@ export function RegulatorDashboard() {
         </div>
       </div>
 
-      {lots.length > 0 && (
+      {regulatorLots.length > 0 && (
         <div className="card" style={{ padding:0, overflow:'hidden' }}>
           <div style={{ padding:'18px 24px', borderBottom:'1px solid var(--border-dim)', display:'flex', justifyContent:'space-between' }}>
             <h3 style={{ fontFamily:'var(--font-display)', fontSize:'1.1rem' }}>{t('regulator.overview.title')}</h3>
@@ -139,7 +157,7 @@ export function RegulatorDashboard() {
                 <th>Validation</th><th>{t('label.date')}</th><th>NFT</th>
               </tr></thead>
               <tbody>
-                {lots.slice(0, 8).map(lot => (
+                {regulatorLots.slice(0, 8).map(lot => (
                   <tr key={lot.lot_id} style={{ background: lot.status==='SUSPECT'?'rgba(239,68,68,0.04)':undefined }}>
                     <td><span style={{ fontFamily:'var(--font-mono)', fontSize:'0.82rem' }}>{lot.lot_id}</span></td>
                     <td><span style={{ fontSize:'0.78rem', color:'var(--text-muted)' }}>{lot.site}</span></td>
@@ -171,6 +189,7 @@ export function RegulatorDashboard() {
 export function RegulatorLotsPage() {
   const { lots } = useApp();
   const { t } = useI18n();
+  const regulatorLots = visibleRegulatorLots(lots);
   const [search, setSearch]   = useState('');
   const [fStatus, setFStatus] = useState('all');
   const [fSite, setFSite]     = useState('all');
@@ -179,7 +198,7 @@ export function RegulatorLotsPage() {
   const [page, setPage]       = useState(1);
   const PER = 20;
 
-  const filtered = lots.filter(l => {
+  const filtered = regulatorLots.filter(l => {
     if (search  && !l.lot_id.toLowerCase().includes(search.toLowerCase())) return false;
     if (fStatus !== 'all' && l.status  !== fStatus)       return false;
     if (fSite   !== 'all' && l.site    !== fSite)         return false;
@@ -279,7 +298,7 @@ export function RegulatorLotsPage() {
           )}
         </>
       ) : (
-        <div className="card"><EmptyState icon="dashboard" title={lots.length===0?t('empty.no_lots'):t('empty.no_data')} subtitle={t('empty.modify_filters')}/></div>
+        <div className="card"><EmptyState icon="dashboard" title={regulatorLots.length===0?t('empty.no_lots'):t('empty.no_data')} subtitle={t('empty.modify_filters')}/></div>
       )}
     </div>
   );
@@ -287,11 +306,12 @@ export function RegulatorLotsPage() {
 
 //  FRAUD ALERTS 
 export function AlertsPage() {
-  const { lots, stats } = useApp();
+  const { lots } = useApp();
   const { t } = useI18n();
-  const pendingVal = stats ? (stats.pending_validation || 0) : 0;
-  const suspects   = lots.filter(l => l.status === 'SUSPECT');
-  const toVerify   = lots.filter(l => l.status === 'À VÉRIFIER');
+  const regulatorLots = visibleRegulatorLots(lots);
+  const pendingVal = regulatorLots.filter(l => !l.regulator_validated && l.analyzed_at && l.status === 'AUTHENTIQUE').length;
+  const suspects   = regulatorLots.filter(l => l.status === 'SUSPECT');
+  const toVerify   = regulatorLots.filter(l => l.status === 'À VÉRIFIER');
 
   const AlertCard = ({ lot }) => (
     <div style={{
@@ -378,6 +398,7 @@ export function AlertsPage() {
 export function RegulatorVerifyPage() {
   const { lots, tokens } = useApp();
   const { t } = useI18n();
+  const regulatorLots = visibleRegulatorLots(lots);
   const [query, setQuery]   = useState('');
   const [result, setResult] = useState(null);
   const [showCert, setShowCert] = useState(false);
@@ -388,7 +409,7 @@ export function RegulatorVerifyPage() {
     if (!query.trim()) return;
     setSearching(true); setResult(null); setNotFound(false);
     await new Promise(r => setTimeout(r, 800));
-    const lot   = lots.find(l => l.lot_id.toLowerCase()===query.trim().toLowerCase() || String(l.token_id)===query.trim());
+    const lot   = regulatorLots.find(l => l.lot_id.toLowerCase()===query.trim().toLowerCase() || String(l.token_id)===query.trim());
     const token = lot ? tokens.find(tk => tk.token_id===lot.token_id) : null;
     if (lot) setResult({ lot, token }); else setNotFound(true);
     setSearching(false);

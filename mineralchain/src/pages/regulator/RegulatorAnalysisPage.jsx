@@ -8,6 +8,17 @@ import { apiService } from '../../services/api';
 
 import { Ic } from '../../components/common/Icons';
 
+const HIDDEN_REGULATOR_LOT_IDS = new Set([
+  'KAMOA-2604-192',
+  'CERTPG-CA22AB',
+  'KAMOA-2604-043',
+  'KANSOKO-2603-805',
+]);
+
+function visibleRegulatorLots(lots = []) {
+  return lots.filter((lot) => !HIDDEN_REGULATOR_LOT_IDS.has(lot.lot_id));
+}
+
 const TOLERANCES = {
   cu_grade_percent: 0.5, co_grade_percent: 0.3, fe_percent: 1.0,
   ni_percent: 0.2, s_percent: 0.5, silica_percent: 1.0,
@@ -251,6 +262,7 @@ export default function RegulatorAnalysisPage() {
   const { lots, updateLot, addToast } = useApp();
   const { notify } = useNotif();
   const { t } = useI18n();
+  const regulatorLots = visibleRegulatorLots(lots);
 
   const [step,       setStep]       = useState(1);
   const [lotQuery,   setLotQuery]   = useState('');
@@ -273,11 +285,11 @@ export default function RegulatorAnalysisPage() {
     setNotFound(false); setFoundLot(null); setScanAnim(true);
     setTimeout(() => {
       setScanAnim(false);
-      const lot = lots.find(l => l.lot_id.toLowerCase()===query.toLowerCase() || String(l.token_id)===query);
+      const lot = regulatorLots.find(l => l.lot_id.toLowerCase()===query.toLowerCase() || String(l.token_id)===query);
       if (lot) { setFoundLot(lot); setStep(2); }
       else setNotFound(true);
     }, 700);
-  }, [lots, lotQuery]);
+  }, [regulatorLots, lotQuery]);
 
   const handleFile = useCallback(async (f) => {
     setFileError(''); setParsedRows([]); setMatchedRow(null); setComparison(null);
@@ -390,7 +402,7 @@ export default function RegulatorAnalysisPage() {
     setParsedRows([]); setMatchedRow(null); setComparison(null); setFileError('');
   };
 
-  const pendingLots = lots.filter(l =>
+  const pendingLots = regulatorLots.filter(l =>
     !l.regulator_validated &&
     l.analyzed_at &&
     l.status === 'AUTHENTIQUE'
