@@ -12,6 +12,7 @@
  */
 
 const MineralNFT = artifacts.require("MineralNFT");
+const { recordExperiment } = require("./test_logger");
 
 contract("MineralNFT", (accounts) => {
   const owner     = accounts[0]; // Propriétaire du contrat (minter)
@@ -222,6 +223,15 @@ contract("MineralNFT", (accounts) => {
       assert.equal(data.dgmrValidated, true,           "dgmrValidated devrait être true");
       assert.equal(data.dgmrStatus,    "AUTHENTIQUE",  "dgmrStatus devrait être AUTHENTIQUE");
       console.log(`  dgmrValidated: ${data.dgmrValidated} | dgmrStatus: ${data.dgmrStatus}`);
+      recordExperiment({
+        test_name: "TC-04 Auto-validation d'un lot conforme DGMR",
+        lot_id: LOT.lotId,
+        site: LOT.site,
+        mineral_type: LOT.mineralType,
+        success: true,
+        result_status: "Partiellement conforme",
+        message: "Validation DGMR on-chain observee avec statut AUTHENTIQUE",
+      });
     });
 
     it("3.3 — isLotDGMRValidated retourne true", async () => {
@@ -255,6 +265,15 @@ contract("MineralNFT", (accounts) => {
       const data = await instance.getMineralData(tokenId);
       assert.equal(data.ipfsHash, NEW_IPFS, "ipfsHash non mis à jour");
       console.log(`  getMineralData.ipfsHash: ${data.ipfsHash}`);
+      recordExperiment({
+        test_name: "TC-08 Mise a jour du certificat IPFS",
+        lot_id: LOT.lotId,
+        site: LOT.site,
+        mineral_type: LOT.mineralType,
+        success: true,
+        result_status: "Conforme",
+        message: "Le hash IPFS du certificat a bien ete mis a jour",
+      });
     });
   });
 
@@ -287,6 +306,15 @@ contract("MineralNFT", (accounts) => {
       assert.equal(data.isAuthentic,  false,     "isAuthentic devrait être false");
       assert.equal(data.dgmrValidated, true,     "dgmrValidated devrait être true");
       console.log(`  SUSPECT validated — dgmrStatus: ${data.dgmrStatus}`);
+      recordExperiment({
+        test_name: "TC-05 Detection d'un lot suspect",
+        lot_id: LOT_SUSPECT.lotId,
+        site: LOT_SUSPECT.site,
+        mineral_type: LOT_SUSPECT.mineralType,
+        success: true,
+        result_status: "Conforme",
+        message: "Le lot suspect a ete valide avec le statut SUSPECT",
+      });
     });
   });
 
@@ -323,6 +351,15 @@ contract("MineralNFT", (accounts) => {
           `Erreur attendue 'Ownable', reçu: ${err.message}`
         );
         console.log("  onlyOwner respecte — validateByDGMR revert pour non-owner");
+        recordExperiment({
+          test_name: "TC-07 Controles d'acces onlyOwner",
+          lot_id: LOT.lotId,
+          site: LOT.site,
+          mineral_type: LOT.mineralType,
+          success: true,
+          result_status: "Conforme",
+          message: "Le contrat bloque bien validateByDGMR depuis un compte non owner",
+        });
       }
     });
 
@@ -343,6 +380,15 @@ contract("MineralNFT", (accounts) => {
           `Erreur attendue 'already certified', reçu: ${err.message}`
         );
         console.log("  Double certification bloquee correctement");
+        recordExperiment({
+          test_name: "TC-06 Prevention de double certification",
+          lot_id: LOT.lotId,
+          site: LOT.site,
+          mineral_type: LOT.mineralType,
+          success: true,
+          result_status: "Conforme",
+          message: "Le second mint du meme lot est correctement bloque",
+        });
       }
     });
 

@@ -20,6 +20,7 @@ if str(BACKEND_DIR) not in sys.path:
     sys.path.insert(0, str(BACKEND_DIR))
 
 from utils.blockchain_config import load_contract_config
+from utils.experiment_logger import record_auto_validation_run
 
 
 CONTRACT_CONFIG = load_contract_config()
@@ -39,6 +40,19 @@ w3 = Web3(Web3.HTTPProvider(GANACHE_URL))
 if not w3.is_connected():
     print("ERREUR : Ganache non connecte !")
     print("Verifiez que Ganache est demarre sur le port configure")
+    try:
+        record_auto_validation_run(
+            lot_id="",
+            http_status=500,
+            success=False,
+            result_status="Partiellement conforme",
+            message="Test transaction blockchain impossible: Ganache non connecte",
+            error="Ganache non connecte",
+            test_name="TC-09 Transaction blockchain reelle sur Ganache",
+            source="nft-minier.test_transaction",
+        )
+    except Exception as log_error:
+        print(f"WARN export resultats impossible: {log_error}")
     sys.exit(1)
 
 print(f"Connecte ! Block courant : #{w3.eth.block_number}")
@@ -192,6 +206,24 @@ try:
     print("=" * 60)
     print("  TEST REUSSI - La transaction est visible dans Ganache !")
     print("=" * 60)
+    try:
+        record_auto_validation_run(
+            lot_id=lot_data["lotId"],
+            site=lot_data["site"],
+            mineral_type=lot_data["mineralType"],
+            http_status=200,
+            success=True,
+            result_status="Partiellement conforme",
+            params_compared=0,
+            conformes=0,
+            validated_by="ganache",
+            message=f"Transaction confirmee, token cree #{token_id}",
+            comparison=[],
+            test_name="TC-09 Transaction blockchain reelle sur Ganache",
+            source="nft-minier.test_transaction",
+        )
+    except Exception as log_error:
+        print(f"WARN export resultats impossible: {log_error}")
 
 except Exception as error:
     print(f"\nERREUR lors de la transaction : {error}")
@@ -199,4 +231,23 @@ except Exception as error:
     print("  1. Ganache est demarre sur le port configure")
     print("  2. Le contrat est deploye")
     print("  3. L'adresse du contrat active est correcte")
+    try:
+        record_auto_validation_run(
+            lot_id=lot_data.get("lotId", ""),
+            site=lot_data.get("site", ""),
+            mineral_type=lot_data.get("mineralType", ""),
+            http_status=500,
+            success=False,
+            result_status="Partiellement conforme",
+            params_compared=0,
+            conformes=0,
+            validated_by="ganache",
+            message="Echec de la transaction blockchain reelle",
+            error=str(error),
+            comparison=[],
+            test_name="TC-09 Transaction blockchain reelle sur Ganache",
+            source="nft-minier.test_transaction",
+        )
+    except Exception as log_error:
+        print(f"WARN export resultats impossible: {log_error}")
     sys.exit(1)

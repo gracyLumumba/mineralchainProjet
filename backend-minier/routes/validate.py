@@ -5,6 +5,7 @@ from flask import Blueprint, jsonify, request
 from database.models import Lot, LotHistory, db
 from routes.auth import get_current_user
 from routes.lots import database_enabled, get_lot_record
+from utils.experiment_logger import record_auto_validation_run
 
 validate_bp = Blueprint('validate', __name__)
 
@@ -95,12 +96,42 @@ def auto_validate(lot_id):
         user = get_current_user()
         if not user:
             print("[AUTO_VALIDATE] ERREUR: Pas d'authentification")
+            try:
+                record_auto_validation_run(
+                    lot_id=lot_id,
+                    site="",
+                    mineral_type="",
+                    http_status=401,
+                    success=False,
+                    result_status="NON_AUTHENTIFIE",
+                    validated_by="",
+                    message="Authentification requise",
+                    error="Authentification requise",
+                    comparison=[],
+                )
+            except Exception as log_error:
+                print(f"[AUTO_VALIDATE] WARN export resultats impossible: {log_error}")
             return jsonify({"success": False, "error": "Authentification requise"}), 401
 
         print(f"[AUTO_VALIDATE] User: {user.get('username')} ({user.get('role')})")
 
         if user.get('role') != 'regulator':
             print("[AUTO_VALIDATE] ERREUR: Pas regulateur")
+            try:
+                record_auto_validation_run(
+                    lot_id=lot_id,
+                    site="",
+                    mineral_type="",
+                    http_status=403,
+                    success=False,
+                    result_status="ACCES_REFUSE",
+                    validated_by=user.get('username', ''),
+                    message="Acces reserve au regulateur",
+                    error="Acces reserve au regulateur",
+                    comparison=[],
+                )
+            except Exception as log_error:
+                print(f"[AUTO_VALIDATE] WARN export resultats impossible: {log_error}")
             return jsonify({"success": False, "error": "Acces reserve au regulateur"}), 403
 
         if database_enabled():
@@ -110,6 +141,21 @@ def auto_validate(lot_id):
 
         if not lot:
             print(f"[AUTO_VALIDATE] ERREUR: Lot {lot_id} non trouve")
+            try:
+                record_auto_validation_run(
+                    lot_id=lot_id,
+                    site="",
+                    mineral_type="",
+                    http_status=404,
+                    success=False,
+                    result_status="LOT_INTROUVABLE",
+                    validated_by=user.get('username', ''),
+                    message="Lot non trouve",
+                    error="Lot non trouve",
+                    comparison=[],
+                )
+            except Exception as log_error:
+                print(f"[AUTO_VALIDATE] WARN export resultats impossible: {log_error}")
             return jsonify({"success": False, "error": "Lot non trouve"}), 404
 
         already_validated = getattr(lot, 'regulator_validated', False)
@@ -117,7 +163,7 @@ def auto_validate(lot_id):
 
         if already_validated:
             print("[AUTO_VALIDATE] IGNORE: Lot deja valide")
-            return jsonify({
+            response_payload = {
                 "success": True,
                 "lot_id": lot_id,
                 "status": lot.status,
@@ -125,7 +171,25 @@ def auto_validate(lot_id):
                 "dgmr_data": {},
                 "message": f"Lot {lot_id} deja valide",
                 "already_validated": True,
-            }), 200
+            }
+            try:
+                record_auto_validation_run(
+                    lot_id=lot_id,
+                    site=getattr(lot, 'site', ''),
+                    mineral_type=getattr(lot, 'mineral_type', ''),
+                    http_status=200,
+                    success=True,
+                    result_status=lot.status,
+                    already_validated=True,
+                    params_compared=0,
+                    conformes=0,
+                    validated_by=user.get('username', ''),
+                    message=response_payload["message"],
+                    comparison=[],
+                )
+            except Exception as log_error:
+                print(f"[AUTO_VALIDATE] WARN export resultats impossible: {log_error}")
+            return jsonify(response_payload), 200
 
         comparison = auto_validate_lot(lot)
 
@@ -175,6 +239,24 @@ def auto_validate(lot_id):
         print(f"[AUTO_VALIDATE] Reponse: success={response['success']}, status={response['status']}")
         print("[AUTO_VALIDATE] Fin\n")
 
+        try:
+            record_auto_validation_run(
+                lot_id=lot_id,
+                site=getattr(lot, 'site', ''),
+                mineral_type=getattr(lot, 'mineral_type', ''),
+                http_status=200,
+                success=True,
+                result_status=lot.status,
+                already_validated=False,
+                params_compared=comparison['params_compared'],
+                conformes=comparison['conformes'],
+                validated_by=user.get('username', ''),
+                message=response["message"],
+                comparison=comparison['results'],
+            )
+        except Exception as log_error:
+            print(f"[AUTO_VALIDATE] WARN export resultats impossible: {log_error}")
+
         return jsonify(response)
 
     except Exception as e:
@@ -182,4 +264,22 @@ def auto_validate(lot_id):
         print(f"[AUTO_VALIDATE] EXCEPTION: {type(e).__name__}: {str(e)}")
         import traceback
         traceback.print_exc()
+        try:
+            record_auto_validation_run(
+                lot_id=lot_id,
+                site="",
+                mineral_type="",
+                http_status=500,
+                success=False,
+                result_status="ERREUR",
+                already_validated=False,
+                params_compared=0,
+                conformes=0,
+                validated_by="",
+                message="Echec auto-validation",
+                error=f"{type(e).__name__}: {str(e)}",
+                comparison=[],
+            )
+        except Exception as log_error:
+            print(f"[AUTO_VALIDATE] WARN export resultats impossible: {log_error}")
         return jsonify({"success": False, "error": f"{type(e).__name__}: {str(e)}"}), 500

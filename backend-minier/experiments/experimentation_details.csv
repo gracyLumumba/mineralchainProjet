@@ -1,0 +1,13 @@
+﻿recorded_at,test_name,lot_id,site,result_status,field,label,prodVal,regVal,diff,tolerance,ok
+2026-04-14T09:00:00,TC-01 Authentification du regulateur,,,Conforme,,,,,,,
+2026-04-14T09:07:00,TC-02 Creation d'un lot par un producteur,LOT_24772,KAMOA,Conforme,,,,,,,
+2026-04-14T09:14:00,TC-03 Restriction d'acces aux lots cote producteur,,,Conforme,,,,,,,
+2026-04-14T09:21:00,TC-04 Auto-validation d'un lot conforme DGMR,LOT_24772,KAMOA,Partiellement conforme,,,,,,,
+2026-04-14T09:28:00,TC-05 Detection d'un lot suspect,LOT_SUSPECT,KCC,Conforme,,,,,,,
+2026-04-14T09:35:00,TC-06 Prevention de double certification,KAMOA-2603-142,KAMOA,Conforme,,,,,,,
+2026-04-14T09:42:00,TC-07 Controles d'acces onlyOwner,,,Conforme,,,,,,,
+2026-04-14T09:49:00,TC-08 Mise a jour du certificat IPFS,KAMOA-2603-142,KAMOA,Conforme,,,,,,,
+2026-04-14T09:56:00,TC-09 Transaction blockchain reelle sur Ganache,KAMOA-TEST-XXXX,KAMOA,Partiellement conforme,,,,,,,
+2026-04-14T10:03:00,TC-10 Persistance apres redemarrage du backend,LOT_24772,KAMOA,Non conforme,,,,,,,
+2026-04-14T10:10:00,TC-11 Portabilite du chargement des modeles IA,,,Non conforme,,,,,,,
+2026-04-14T10:17:00,TC-12 Exhaustivite de la documentation d'API,,,Bloque / amelioration requise,,,,,,,
