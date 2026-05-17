@@ -6,6 +6,9 @@ const BACKEND_DIR = path.resolve(__dirname, "..", "..", "backend-minier");
 const EXPERIMENTS_DIR = path.join(BACKEND_DIR, "experiments");
 const RAW_LOG_PATH = path.join(EXPERIMENTS_DIR, "experimentation_runs.jsonl");
 const REBUILD_SCRIPT = path.join(BACKEND_DIR, "rebuild_experiment_exports.py");
+const PROJECT_ROOT = path.resolve(__dirname, "..", "..", "..");
+const VENV_PYTHON = path.join(PROJECT_ROOT, ".venv", "Scripts", "python.exe");
+const PYTHON_EXE = fs.existsSync(VENV_PYTHON) ? VENV_PYTHON : "python";
 
 function ensureDir() {
   fs.mkdirSync(EXPERIMENTS_DIR, { recursive: true });
@@ -33,7 +36,7 @@ function recordExperiment(entry) {
   };
 
   fs.appendFileSync(RAW_LOG_PATH, JSON.stringify(record) + "\n", "utf8");
-  const rebuild = spawnSync("python", [REBUILD_SCRIPT], {
+  const rebuild = spawnSync(PYTHON_EXE, [REBUILD_SCRIPT], {
     cwd: BACKEND_DIR,
     encoding: "utf8",
   });

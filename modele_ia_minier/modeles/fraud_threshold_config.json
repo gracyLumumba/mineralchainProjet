@@ -1,0 +1,16 @@
+{
+  "threshold": 0.4,
+  "validation_f1_fraud": 0.040320921621065625,
+  "test_accuracy": 0.3781333333333333,
+  "test_f1_weighted": 0.5282287727848396,
+  "test_precision_fraud": 0.023103009749894023,
+  "test_recall_fraud": 0.6646341463414634,
+  "test_f1_fraud": 0.04465383039737812,
+  "test_roc_auc": 0.5153993337234354,
+  "test_pr_auc": 0.02300212617488691,
+  "smote_sampling_strategy": 0.35,
+  "class_weight": {
+    "0": 1,
+    "1": 8
+  }
+}

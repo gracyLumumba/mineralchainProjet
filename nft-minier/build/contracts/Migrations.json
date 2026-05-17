@@ -52,7 +52,7 @@
   "sourceMap": "66:358:13:-:0;;;;;;;115:10;66:358;;-1:-1:-1;;;;;;66:358:13;115:10;66:358;;;;;;;;;;;;;",
   "deployedSourceMap": "66:358:13:-:0;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;-1:-1:-1;;66:358:13;;;;;;-1:-1:-1;;;;;66:358:13;214:10;:19;66:358;;;;;;;;;;;-1:-1:-1;;;66:358:13;;;;;;;;;;;;;;;;;-1:-1:-1;;;66:358:13;;;;;;;;;;;;;;;;;;;;;;;;;;-1:-1:-1;;;;;66:358:13;;;;;;;;;;;;;;;;;;;;;;;;131:36;66:358;;;;;;;",
   "source": "// SPDX-License-Identifier: MIT\npragma solidity >=0.4.22 <0.9.0;\n\ncontract Migrations {\n    address public owner = msg.sender;\n    uint public last_completed_migration;\n\n    modifier restricted() {\n        require(msg.sender == owner, \"This function is restricted to the contract's owner\");\n        _;\n    }\n\n    function setCompleted(uint completed) public restricted {\n        last_completed_migration = completed;\n    }\n}\n",
-  "sourcePath": "C:\\Users\\Dr_Denise\\Desktop\\Gracy\\memoire\\nft-minier\\contracts\\Migrations.sol",
+  "sourcePath": "C:\\Users\\Dr_Denise\\Desktop\\Gracy\\memoire\\mineralchainProjet\\nft-minier\\contracts\\Migrations.sol",
   "ast": {
     "absolutePath": "project:/contracts/Migrations.sol",
     "exportedSymbols": {
@@ -465,12 +465,12 @@
     "5777": {
       "events": {},
       "links": {},
-      "address": "0xbcC189a7665bd7DEeeF2D5092A15C65E5d5d4032",
-      "transactionHash": "0x42e7cd2e2134106086b7056fe6d72cce81d41d867b3c7349ccb3ce2dbc7254be"
+      "address": "0xE21707Bd8D98d2cB4164e0265c8Af8cc5E34117A",
+      "transactionHash": "0x3340d07b2d2286a9fdcbf210ca71561c59b396a73382e9a9358826f3be70384b"
     }
   },
   "schemaVersion": "3.4.16",
-  "updatedAt": "2026-03-21T11:20:43.302Z",
+  "updatedAt": "2026-05-22T13:24:54.432Z",
   "networkType": "ethereum",
   "devdoc": {
     "kind": "dev",

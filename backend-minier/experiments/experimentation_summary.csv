@@ -11,3 +11,13 @@
 2026-04-14T10:03:00,TC-10 Persistance apres redemarrage du backend,historique.plan_de_test,LOT_24772,KAMOA,copper,500,non,Non conforme,non,0,0,0,historique,Le lot ne reste pas toujours accessible et auto-validable,Persistance JSON / SQL / memoire incoherente
 2026-04-14T10:10:00,TC-11 Portabilite du chargement des modeles IA,historique.plan_de_test,,,,500,non,Non conforme,non,0,0,0,historique,Le backend ne charge pas les modeles via un chemin portable,Chemin absolu local des modeles IA
 2026-04-14T10:17:00,TC-12 Exhaustivite de la documentation d'API,historique.plan_de_test,,,,206,non,Bloque / amelioration requise,non,0,0,0,historique,La documentation ne reflete pas encore tous les endpoints reels,Documentation incomplete
+2026-05-22T13:23:10.699Z,TC-04 Auto-validation d'un lot conforme DGMR,nft-minier.truffle,KAMOA-2603-142,KAMOA,copper,,oui,Partiellement conforme,non,0,0,0,truffle,Validation DGMR on-chain observee avec statut AUTHENTIQUE,
+2026-05-22T13:23:11.260Z,TC-08 Mise a jour du certificat IPFS,nft-minier.truffle,KAMOA-2603-142,KAMOA,copper,,oui,Conforme,non,0,0,0,truffle,Le hash IPFS du certificat a bien ete mis a jour,
+2026-05-22T13:23:11.785Z,TC-05 Detection d'un lot suspect,nft-minier.truffle,KCC-2603-999,KCC,cobalt,,oui,Conforme,non,0,0,0,truffle,Le lot suspect a ete valide avec le statut SUSPECT,
+2026-05-22T13:23:12.273Z,TC-07 Controles d'acces onlyOwner,nft-minier.truffle,KAMOA-2603-142,KAMOA,copper,,oui,Conforme,non,0,0,0,truffle,Le contrat bloque bien validateByDGMR depuis un compte non owner,
+2026-05-22T13:23:12.526Z,TC-06 Prevention de double certification,nft-minier.truffle,KAMOA-2603-142,KAMOA,copper,,oui,Conforme,non,0,0,0,truffle,Le second mint du meme lot est correctement bloque,
+2026-05-22T13:27:30.222Z,TC-04 Auto-validation d'un lot conforme DGMR,nft-minier.truffle,KAMOA-2603-142,KAMOA,copper,,oui,Partiellement conforme,non,0,0,0,truffle,Validation DGMR on-chain observee avec statut AUTHENTIQUE,
+2026-05-22T13:27:31.280Z,TC-08 Mise a jour du certificat IPFS,nft-minier.truffle,KAMOA-2603-142,KAMOA,copper,,oui,Conforme,non,0,0,0,truffle,Le hash IPFS du certificat a bien ete mis a jour,
+2026-05-22T13:27:32.284Z,TC-05 Detection d'un lot suspect,nft-minier.truffle,KCC-2603-999,KCC,cobalt,,oui,Conforme,non,0,0,0,truffle,Le lot suspect a ete valide avec le statut SUSPECT,
+2026-05-22T13:27:33.283Z,TC-07 Controles d'acces onlyOwner,nft-minier.truffle,KAMOA-2603-142,KAMOA,copper,,oui,Conforme,non,0,0,0,truffle,Le contrat bloque bien validateByDGMR depuis un compte non owner,
+2026-05-22T13:27:34.104Z,TC-06 Prevention de double certification,nft-minier.truffle,KAMOA-2603-142,KAMOA,copper,,oui,Conforme,non,0,0,0,truffle,Le second mint du meme lot est correctement bloque,

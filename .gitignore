@@ -1,6 +1,8 @@
 # Logs
 logs
 *.log
+**/codex_run_*.bat
+**/codex_run_*.ps1
 npm-debug.log*
 yarn-debug.log*
 yarn-error.log*
@@ -43,11 +45,24 @@ build/Release
 node_modules/
 jspm_packages/
 venv/
+.venv/
+.venv-*/
+env/
+ENV/
+**/venv/
+**/.venv/
+**/env/
+modele_ia_minier/gracy/
 __pycache__/
 *.py[cod]
 backend-minier/lots_data.json
 backend-minier/users_data.json
 modele_ia_minier/dataset_minier_complet_50000.csv
+
+# Generated app artifacts
+mineralchain/build/
+mineralchain-mobile/.expo/
+mineralchain-mobile/.expo-shared/
 
 # Snowpack dependency directory (https://snowpack.dev/)
 web_modules/
