@@ -29,6 +29,42 @@ FIELD_SPECS = {
     'weight': {'field': 'weight_tonnes', 'label': 'Poids (t)', 'tolerance': 5.0},
 }
 
+REQUIRED_LAB_FILENAME = "sample_lab_results_dgmr.xlsx"
+
+
+def _has_lab_values(dgmr_data):
+    if not isinstance(dgmr_data, dict):
+        return False
+    accepted_fields = {spec['field'] for spec in FIELD_SPECS.values()}
+    for key, value in dgmr_data.items():
+        if key in accepted_fields and value not in (None, ""):
+            return True
+    return False
+
+
+def _validate_lab_file_payload(payload, status):
+    lab_file = payload.get('lab_file') or {}
+    dgmr_data = payload.get('dgmr_data') or {}
+    comparison = payload.get('comparison') or []
+
+    if not isinstance(lab_file, dict) or not str(lab_file.get('name') or '').strip():
+        return "Fichier laboratoire requis pour la double analyse"
+
+    filename = str(lab_file.get('name') or '').lower()
+    if filename != REQUIRED_LAB_FILENAME:
+        return f"Fichier labo invalide: utilisez uniquement {REQUIRED_LAB_FILENAME}"
+
+    if not isinstance(dgmr_data, dict) or not dgmr_data:
+        return "Donnees laboratoire importees requises"
+
+    if status == "AUTHENTIQUE":
+        if not isinstance(comparison, list) or not comparison:
+            return "Comparaison laboratoire requise avant certification"
+        if not _has_lab_values(dgmr_data):
+            return "Le fichier labo ne contient aucun parametre comparable"
+
+    return None
+
 
 def auto_validate_lot(lot):
     print(f"[AUTO_VALIDATE] Debut validation pour lot {lot.lot_id}")
@@ -202,6 +238,10 @@ def regulator_certify(lot_id):
     if status not in {"AUTHENTIQUE", "SUSPECT"}:
         return jsonify({"success": False, "error": "status doit etre AUTHENTIQUE ou SUSPECT"}), 400
 
+    lab_error = _validate_lab_file_payload(payload, status)
+    if lab_error:
+        return jsonify({"success": False, "error": lab_error}), 400
+
     try:
         lot = Lot.query.filter_by(lot_id=lot_id).with_for_update().first()
         if not lot:
@@ -209,6 +249,7 @@ def regulator_certify(lot_id):
 
         comparison = payload.get('comparison') or []
         dgmr_data = payload.get('dgmr_data') or {}
+        lab_file = payload.get('lab_file') or {}
         forced = bool(payload.get('forced'))
 
         lot.regulator_validated = True
@@ -258,6 +299,7 @@ def regulator_certify(lot_id):
             details={
                 "validated_by": user.get('username'),
                 "forced": forced,
+                "lab_file": lab_file,
                 "comparison": comparison,
                 "dgmr_data": dgmr_data,
                 "certificate_hash": certificate_hash,
@@ -339,6 +381,24 @@ def auto_validate(lot_id):
             except Exception as log_error:
                 print(f"[AUTO_VALIDATE] WARN export resultats impossible: {log_error}")
             return jsonify({"success": False, "error": "Acces reserve au regulateur"}), 403
+
+        message = "Auto-validation desactivee: importez le fichier laboratoire DGMR pour lancer la double analyse"
+        try:
+            record_auto_validation_run(
+                lot_id=lot_id,
+                site="",
+                mineral_type="",
+                http_status=400,
+                success=False,
+                result_status="FICHIER_LABO_REQUIS",
+                validated_by=user.get('username', ''),
+                message=message,
+                error=message,
+                comparison=[],
+            )
+        except Exception as log_error:
+            print(f"[AUTO_VALIDATE] WARN export resultats impossible: {log_error}")
+        return jsonify({"success": False, "error": message}), 400
 
         if database_enabled():
             lot = Lot.query.filter_by(lot_id=lot_id).with_for_update().first()

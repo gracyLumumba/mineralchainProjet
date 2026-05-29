@@ -1,6 +1,8 @@
 import { useState } from 'react';
 import { login } from '../services/api/authService';
 import { register } from '../services/api/registerService';
+import { isNetworkUnavailableError } from '../services/api/client';
+import { createUserSession } from '../models/UserSession';
 
 const REGISTER_INITIAL = {
   full_name: '',
@@ -18,6 +20,55 @@ const DEMO_CREDENTIALS = [
   { key: 'transporter',label: 'Transporteur',identifier: 'transporteur',password: 'Demo2025!',  icon: 'truck-outline',  iconLib: 'MaterialCommunityIcons', description: 'Suivi logistique et expedition' },
   { key: 'admin',      label: 'Admin',       identifier: 'admin',       password: 'Admin2025!', icon: 'shield-account', iconLib: 'MaterialCommunityIcons', description: 'Supervision et gestion des comptes', isAdmin: true },
 ];
+
+const DEMO_USERS = {
+  producteur: {
+    id: 'demo-producer-001',
+    name: 'Jean Mutombo',
+    role: 'producer',
+    username: 'producteur',
+    email: 'producteur@mineralchain.cd',
+    organization: 'Kamoa-Kansoko',
+  },
+  regulateur: {
+    id: 'demo-regulator-001',
+    name: 'Marie-Claire Kabongo',
+    role: 'regulator',
+    username: 'regulateur',
+    email: 'regulateur@dgmr.gouv.cd',
+    organization: 'DGMR',
+  },
+  transporteur: {
+    id: 'demo-transporter-001',
+    name: 'Patrick Tshisekedi',
+    role: 'transporter',
+    username: 'transporteur',
+    email: 'transporteur@logistique.cd',
+    organization: 'Kamoa Logistics',
+  },
+  admin: {
+    id: 'demo-admin-001',
+    name: 'Admin MineralChain',
+    role: 'admin',
+    username: 'admin',
+    email: 'admin@mineralchain.cd',
+    organization: 'MineralChain',
+  },
+};
+
+function createOfflineDemoSession(identifier, password) {
+  const normalized = String(identifier || '').trim().toLowerCase();
+  const credential = DEMO_CREDENTIALS.find((item) => item.identifier === normalized);
+  if (!credential || (password && credential.password !== password)) {
+    return null;
+  }
+
+  return createUserSession({
+    ...DEMO_USERS[normalized],
+    site: 'Kamoa-Kansoko',
+    token: `offline-demo-${credential.key}`,
+  });
+}
 
 export function useAuthViewModel({ onLogin }) {
   const [mode, setMode] = useState('login');
@@ -44,7 +95,11 @@ export function useAuthViewModel({ onLogin }) {
   };
 
   const submitLogin = async () => {
-    if (!identifier.trim() || !password) {
+    const normalizedIdentifier = identifier.trim().toLowerCase();
+    const demoCredential = DEMO_CREDENTIALS.find((item) => item.identifier === normalizedIdentifier);
+    const loginPassword = password || demoCredential?.password || '';
+
+    if (!identifier.trim() || !loginPassword) {
       setError('Renseignez l identifiant et le mot de passe.');
       setNotice('');
       return;
@@ -56,10 +111,17 @@ export function useAuthViewModel({ onLogin }) {
       setNotice('');
       const session = await login({
         identifier: identifier.trim(),
-        password,
+        password: loginPassword,
       });
       onLogin(session);
     } catch (submitError) {
+      const offlineSession = isNetworkUnavailableError(submitError)
+        ? createOfflineDemoSession(identifier, loginPassword)
+        : null;
+      if (offlineSession) {
+        onLogin(offlineSession);
+        return;
+      }
       setError(submitError.message || 'Connexion impossible');
       setNotice('Verifiez l URL API ci-dessous puis relancez la connexion.');
     } finally {

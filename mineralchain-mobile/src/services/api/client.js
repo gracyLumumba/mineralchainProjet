@@ -3,6 +3,16 @@ import { getSessionSync } from '../storage/sessionStorage';
 
 const REQUEST_TIMEOUT_MS = 12000;
 
+export function isNetworkUnavailableError(error) {
+  const message = String(error?.message || '').toLowerCase();
+  return Boolean(
+    error?.isNetworkUnavailable ||
+    message.includes('delai depasse') ||
+    message.includes('délai dépassé') ||
+    message.includes('connexion impossible')
+  );
+}
+
 async function parseResponse(response) {
   const text = await response.text();
 
@@ -41,7 +51,10 @@ export async function request(path, options = {}) {
     const message = isTimeout
       ? `Delai depasse vers ${apiBaseUrl}`
       : `Connexion impossible vers ${apiBaseUrl}`;
-    throw new Error(message);
+    const networkError = new Error(message);
+    networkError.isNetworkUnavailable = true;
+    networkError.isTimeout = isTimeout;
+    throw networkError;
   } finally {
     clearTimeout(timeoutId);
   }

@@ -15,6 +15,8 @@ const HIDDEN_REGULATOR_LOT_IDS = new Set([
   'KANSOKO-2603-805',
 ]);
 
+const REQUIRED_LAB_FILENAME = 'sample_lab_results_dgmr.xlsx';
+
 function visibleRegulatorLots(lots = []) {
   return lots.filter((lot) => !HIDDEN_REGULATOR_LOT_IDS.has(lot.lot_id));
 }
@@ -46,18 +48,6 @@ const COL_MAP = {
   lot_id:'lot_id',lot:'lot_id',id:'lot_id',
 };
 
-function parseCSV(text) {
-  const lines = text.trim().split(/\r?\n/);
-  if (lines.length < 2) throw new Error('CSV : au moins 2 lignes requises.');
-  const sep  = lines[0].includes(';') ? ';' : lines[0].includes('\t') ? '\t' : ',';
-  const hdrs = lines[0].split(sep).map(h => COL_MAP[h.trim().toLowerCase().replace(/"/g,'')] || h.trim().toLowerCase());
-  return lines.slice(1).filter(l => l.trim()).map(line => {
-    const vals = line.split(sep).map(v => v.trim().replace(/"/g,''));
-    const row  = {};
-    hdrs.forEach((h, i) => { if (vals[i]!==undefined && vals[i]!=='') row[h] = isNaN(+vals[i]) ? vals[i] : +vals[i]; });
-    return row;
-  });
-}
 
 // Normalise une clé d'en-tête : supprime accents, Unicode, unités, espaces
 function normalizeKey(k) {
@@ -271,12 +261,12 @@ export default function RegulatorAnalysisPage() {
   const [notFound,   setNotFound]   = useState(false);
   const [parsedRows, setParsedRows] = useState([]);
   const [matchedRow, setMatchedRow] = useState(null);
+  const [labFile,    setLabFile]    = useState(null);
   const [fileError,  setFileError]  = useState('');
   const [parsing,    setParsing]    = useState(false);
   const [dragOver,   setDragOver]   = useState(false);
   const [comparison, setComparison] = useState(null);
   const [validating, setValidating] = useState(false);
-  const [validatingLotId, setValidatingLotId] = useState(null);
   const fileRef = useRef(null);
 
   const searchLot = useCallback((q) => {
@@ -292,13 +282,21 @@ export default function RegulatorAnalysisPage() {
   }, [regulatorLots, lotQuery]);
 
   const handleFile = useCallback(async (f) => {
-    setFileError(''); setParsedRows([]); setMatchedRow(null); setComparison(null);
+    setFileError(''); setParsedRows([]); setMatchedRow(null); setComparison(null); setLabFile(null);
     setParsing(true);
     try {
+      if (f.name.toLowerCase() !== REQUIRED_LAB_FILENAME) {
+        throw new Error(`Fichier labo invalide. Utilisez uniquement ${REQUIRED_LAB_FILENAME}.`);
+      }
       let rows;
-      if (f.name.match(/\.xlsx?$/i)) rows = await parseExcel(f);
-      else { const txt = await f.text(); rows = parseCSV(txt); }
+      rows = await parseExcel(f);
       if (!rows.length) throw new Error('Aucune donnée dans ce fichier.');
+      setLabFile({
+        name: f.name,
+        size: f.size,
+        type: f.type || '',
+        lastModified: f.lastModified || null,
+      });
       setParsedRows(rows);
       // Stratégie de matching robuste
       // 1. Correspondance exacte lot_id
@@ -361,6 +359,11 @@ export default function RegulatorAnalysisPage() {
 
   const handleValidate = useCallback(async (forceOk=false) => {
     if (!foundLot || !comparison) return;
+    if (!labFile || !matchedRow) {
+      addToast('Importez le fichier laboratoire avant de faire la double analyse.', 'error');
+      setStep(2);
+      return;
+    }
     setValidating(true);
     await new Promise(r => setTimeout(r, 1000));
     const status = (comparison.allOk || forceOk) ? 'AUTHENTIQUE' : 'SUSPECT';
@@ -370,6 +373,7 @@ export default function RegulatorAnalysisPage() {
         status,
         dgmr_data: matchedRow || {},
         comparison: comparison.results || [],
+        lab_file: labFile,
         forced: forceOk && !comparison.allOk,
       });
     } catch (error) {
@@ -430,11 +434,21 @@ export default function RegulatorAnalysisPage() {
     addToast(status==='AUTHENTIQUE' ? `ok Lot ${foundLot.lot_id} validé` : `! Lot ${foundLot.lot_id} marqué SUSPECT`,
       status==='AUTHENTIQUE' ? 'success' : 'warning');
     setStep(4); setValidating(false);
-  }, [foundLot, comparison, matchedRow, updateLot, addToken, addToast, syncLotsFromBackend]);
+  }, [foundLot, comparison, matchedRow, labFile, updateLot, addToken, addToast, syncLotsFromBackend, notify]);
+  const startLabFileAnalysis = useCallback((lot) => {
+    setFoundLot(lot);
+    setLotQuery(lot.lot_id);
+    setParsedRows([]);
+    setMatchedRow(null);
+    setLabFile(null);
+    setComparison(null);
+    setFileError('');
+    setStep(2);
+  }, []);
 
   const reset = () => {
     setStep(1); setLotQuery(''); setFoundLot(null); setNotFound(false);
-    setParsedRows([]); setMatchedRow(null); setComparison(null); setFileError('');
+    setParsedRows([]); setMatchedRow(null); setLabFile(null); setComparison(null); setFileError('');
   };
 
   const pendingLots = regulatorLots.filter(l =>
@@ -442,93 +456,6 @@ export default function RegulatorAnalysisPage() {
     l.analyzed_at &&
     l.status === 'AUTHENTIQUE'
   );
-
-  const handleAutoValidate = useCallback(async (lot) => {
-    if (validatingLotId) return;
-    console.log('[AUTO_VALIDATE] Début validation pour:', lot.lot_id);
-    setValidatingLotId(lot.lot_id);
-    try {
-      console.log('[AUTO_VALIDATE] Appel API...');
-      let result;
-      try {
-        result = await apiService.autoValidateLot(lot.lot_id);
-      } catch (err) {
-        const errorMessage = err?.error || err?.message || '';
-        if (!errorMessage.toLowerCase().includes('lot non trouv')) {
-          throw err;
-        }
-
-        console.warn('[AUTO_VALIDATE] Lot absent en base, synchronisation PostgreSQL...');
-        await apiService.createLot({
-          lot_id: lot.lot_id,
-          site: lot.site,
-          extraction_date: lot.extraction_date,
-          status: lot.status,
-          weight_tonnes: lot.weight_tonnes ?? lot.weight,
-          cu_grade_percent: lot.cu_grade_percent ?? lot.composition?.cu,
-          co_grade_percent: lot.co_grade_percent ?? lot.composition?.co,
-          fe_percent: lot.fe_percent ?? lot.composition?.fe,
-          ni_percent: lot.ni_percent ?? lot.composition?.ni,
-          s_percent: lot.s_percent ?? lot.composition?.s,
-          silica_percent: lot.silica_percent ?? lot.composition?.silica,
-          density_t_m3: lot.density_t_m3,
-          moisture_percent: lot.moisture_percent,
-          hardness_mohs: lot.hardness_mohs,
-        });
-        result = await apiService.autoValidateLot(lot.lot_id);
-      }
-      console.log('[AUTO_VALIDATE] Réponse API:', result);
-      
-      if (result.success) {
-        console.log('[AUTO_VALIDATE] Mise à jour du lot avec status:', result.status);
-        updateLot(lot.lot_id, {
-          regulator_validated: true,
-          regulator_validated_at: new Date().toISOString(),
-          regulator_data: result.dgmr_data,
-          validation_comparison: result.comparison,
-          status: result.status,
-          audit_trail: [
-            ...(lot.audit_trail || []),
-            {
-              event: 'AUTO_VALIDATION',
-              status: result.status,
-              at: new Date().toISOString(),
-              params_compared: result.comparison?.length || 0,
-            }
-          ],
-        });
-        notify(result.status === 'AUTHENTIQUE' ? NOTIF_TYPES.LOT_VALIDATED : NOTIF_TYPES.LOT_SUSPECT, {
-          lotId: lot.lot_id,
-          site: lot.site,
-        });
-        addToast(result.status === 'AUTHENTIQUE' ? `ok Lot ${lot.lot_id} validé` : `! Lot ${lot.lot_id} marqué SUSPECT`,
-          result.status === 'AUTHENTIQUE' ? 'success' : 'warning');
-        
-        // Afficher la comparaison détaillée
-        setFoundLot(lot);
-        setMatchedRow(result.dgmr_data || {});
-        setComparison({
-          results: result.comparison,
-          allOk: result.status === 'AUTHENTIQUE',
-          fraudAlerts: [],
-          blocked: false,
-          signature: '',
-          comparedAt: new Date().toISOString(),
-        });
-        setStep(3);
-        console.log('[AUTO_VALIDATE] Validation terminée avec succès');
-      } else {
-        console.error('[AUTO_VALIDATE] Échec:', result.message || result.error);
-        addToast(`Erreur: ${result.message || result.error || 'Validation échouée'}`, 'error');
-      }
-    } catch (err) {
-      console.error('[AUTO_VALIDATE] Exception:', err);
-      addToast(`Erreur validation: ${err.message || err.error || 'Échec'}`, 'error');
-    } finally {
-      console.log('[AUTO_VALIDATE] Fin');
-      setValidatingLotId(null);
-    }
-  }, [validatingLotId, updateLot, addToast, notify]);
 
   return (
     <div className="page-wrapper">
@@ -630,10 +557,10 @@ export default function RegulatorAnalysisPage() {
                       <span>{lot.site}</span><span>Cu:{lot.cu_grade_percent??'—'}%</span><span>Co:{lot.co_grade_percent??'—'}%</span>
                     </div>
                     <div style={{ display:'flex', gap:8 }}>
-                      <button className="btn btn-gold btn-sm" onClick={()=>handleAutoValidate(lot)} disabled={validatingLotId === lot.lot_id} style={{ flex:1 }}>
-                        {validatingLotId === lot.lot_id ? <div className="loader" style={{ width:12, height:12, borderTopColor:'#0c0a06' }}/> : 'Double analyse'}
+                      <button className="btn btn-gold btn-sm" onClick={()=>startLabFileAnalysis(lot)} style={{ flex:1 }}>
+                        <Ic name="upload" size={14}/> Importer fichier labo
                       </button>
-                      <button className="btn btn-ghost btn-sm" onClick={()=>{ setFoundLot(lot); setLotQuery(lot.lot_id); setStep(2); }} disabled={validatingLotId !== null}>
+                      <button className="btn btn-ghost btn-sm" onClick={()=>startLabFileAnalysis(lot)}>
                         <Ic name="upload" size={14}/>
                       </button>
                     </div>
@@ -667,7 +594,7 @@ export default function RegulatorAnalysisPage() {
           <div className="card">
             <h3 style={{ fontFamily:'var(--font-display)', fontSize:'1.2rem', marginBottom:8 }}>{t('analysis.import.title')}</h3>
             <p style={{ fontSize:'0.82rem', color:'var(--text-secondary)', marginBottom:18 }}>
-              Importez le fichier Excel ou CSV de votre labo DGMR.
+              Importez uniquement le fichier labo DGMR <strong style={{ color:'var(--brand)' }}>{REQUIRED_LAB_FILENAME}</strong>.
               Le lot <strong style={{ color:'var(--brand)' }}>{foundLot.lot_id}</strong> sera détecté automatiquement.
             </p>
             <div
@@ -684,10 +611,10 @@ export default function RegulatorAnalysisPage() {
               <div style={{ fontSize:'0.9rem', color:'var(--text-secondary)', fontWeight:600, marginBottom:6 }}>
                 {parsing ? t('analysis.import.reading') : t('analysis.import.drop')}
               </div>
-              <div style={{ fontSize:'0.75rem', color:'var(--text-muted)' }}>{t('analysis.import.formats')}</div>
+              <div style={{ fontSize:'0.75rem', color:'var(--text-muted)' }}>Fichier requis : {REQUIRED_LAB_FILENAME}</div>
               {parsing && <div className="loader" style={{ width:20, height:20, margin:'10px auto 0', borderTopColor:'var(--brand)' }}/>}
             </div>
-            <input ref={fileRef} type="file" accept=".xlsx,.xls,.csv" style={{ display:'none' }}
+            <input ref={fileRef} type="file" accept=".xlsx" style={{ display:'none' }}
               onChange={e=>e.target.files[0]&&handleFile(e.target.files[0])}/>
 
             {fileError && (

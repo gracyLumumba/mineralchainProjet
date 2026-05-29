@@ -8,6 +8,7 @@ import {
   rejectAdminUser,
   revokeAdminUser,
 } from '../services/api/authAdminService';
+import { isNetworkUnavailableError } from '../services/api/client';
 
 export function useDashboardViewModel(session) {
   const [activeTab, setActiveTab] = useState('overview');
@@ -43,6 +44,10 @@ export function useDashboardViewModel(session) {
       setLots(filterLotsForRole(nextLots, session));
       setUsers(nextUsers);
     } catch (loadError) {
+      if (isNetworkUnavailableError(loadError)) {
+        setError('');
+        return;
+      }
       setError(loadError.message || 'Erreur de chargement');
     } finally {
       setIsLoading(false);

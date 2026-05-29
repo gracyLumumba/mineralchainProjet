@@ -1,10 +1,11 @@
-import { Pressable, ScrollView, StyleSheet, Text, TextInput, View, ActivityIndicator } from 'react-native';
+import { Pressable, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { useState } from 'react';
 import ScreenShell from '../components/ScreenShell';
 import AnimatedEntrance from '../components/AnimatedEntrance';
 import { usePreferences } from '../../contexts/PreferencesContext';
-import { autoValidateLot } from '../../services/api/validateService';
+
+const REQUIRED_LAB_FILENAME = 'sample_lab_results_dgmr.xlsx';
 
 const FIELD_LABELS = {
   cu_grade_percent: 'Cuivre — Cu (%)',
@@ -109,7 +110,7 @@ function LotPendingCard({ lot, colors, onSelect, disabled }) {
       </View>
       <View style={styles.pendingAction}>
         <MaterialCommunityIcons name="check-decagram" size={14} color={colors.brand} />
-        <Text style={[styles.pendingActionText, { color: colors.brand }]}>Lancer la double analyse</Text>
+        <Text style={[styles.pendingActionText, { color: colors.brand }]}>Fichier labo requis</Text>
         <MaterialCommunityIcons name="chevron-right" size={14} color={colors.muted} />
       </View>
     </Pressable>
@@ -122,9 +123,7 @@ export default function RegulatorAnalysisScreen({ lots = [], isRefreshing, refre
   const [step, setStep] = useState(1);
   const [query, setQuery] = useState('');
   const [selectedLot, setSelectedLot] = useState(null);
-  const [validating, setValidating] = useState(false);
   const [result, setResult] = useState(null);
-  const [error, setError] = useState('');
 
   const pendingLots = lots.filter((l) => l.analyzedAt && !l.regulatorValidated && l.status !== 'SUSPECT');
 
@@ -135,43 +134,15 @@ export default function RegulatorAnalysisScreen({ lots = [], isRefreshing, refre
   const handleSelectLot = (lot) => {
     setSelectedLot(lot);
     setResult(null);
-    setError('');
     setStep(2);
   };
 
-  const handleAnalyse = async () => {
-    if (!selectedLot) return;
-    setValidating(true);
-    setError('');
-    try {
-      const data = await autoValidateLot(selectedLot.id);
-      if (data?.success) {
-        setResult({
-          allOk: data.status === 'AUTHENTIQUE',
-          status: data.status,
-          comparison: data.comparison || [],
-          conformes: data.comparison?.filter((r) => r.ok).length ?? 0,
-          total: data.comparison?.length ?? 0,
-          message: data.message || '',
-        });
-        refresh();
-        setStep(3);
-      } else {
-        setError(data?.error || 'Validation échouée');
-      }
-    } catch (err) {
-      setError(err.message || 'Erreur réseau');
-    } finally {
-      setValidating(false);
-    }
-  };
 
   const reset = () => {
     setStep(1);
     setQuery('');
     setSelectedLot(null);
     setResult(null);
-    setError('');
   };
 
   return (
@@ -182,7 +153,7 @@ export default function RegulatorAnalysisScreen({ lots = [], isRefreshing, refre
           <Text style={[styles.eyebrow, { color: colors.accent }]}>DGMR · Validation</Text>
           <Text style={[styles.title, { color: colors.text }]}>Double analyse</Text>
           <Text style={[styles.subtitle, { color: colors.muted }]}>
-            Comparaison automatique des données producteur avec les données DGMR.
+            Comparaison des donnees producteur avec le fichier labo DGMR.
           </Text>
         </View>
       </AnimatedEntrance>
@@ -274,32 +245,22 @@ export default function RegulatorAnalysisScreen({ lots = [], isRefreshing, refre
             <View style={[styles.infoBox, { backgroundColor: colors.infoBg, borderColor: colors.infoBorder }]}>
               <MaterialCommunityIcons name="information-outline" size={16} color={colors.infoText} />
               <Text style={[styles.infoText, { color: colors.infoText }]}>
-                La double analyse compare automatiquement les données du producteur avec les données DGMR simulées selon les normes CEEC.
+                La double analyse est autorisee uniquement avec le fichier labo {REQUIRED_LAB_FILENAME}. Aucun resultat DGMR simule n'est accepte.
               </Text>
             </View>
 
-            {error ? (
-              <View style={[styles.errorBox, { backgroundColor: colors.errorBg, borderColor: colors.errorBorder }]}>
-                <MaterialCommunityIcons name="alert-circle" size={16} color={colors.errorText} />
-                <Text style={[styles.errorText, { color: colors.errorText }]}>{error}</Text>
-              </View>
-            ) : null}
 
-            {/* Boutons */}
-            <Pressable
-              onPress={handleAnalyse}
-              disabled={validating}
-              style={[styles.analyseBtn, { backgroundColor: validating ? colors.muted : colors.brand }]}
-            >
-              {validating
-                ? <ActivityIndicator size="small" color="#fff" />
-                : <MaterialCommunityIcons name="check-decagram" size={18} color="#fff" />
-              }
-              <Text style={styles.analyseBtnText}>
-                {validating ? 'Analyse en cours...' : 'Lancer la double analyse'}
+            <View style={[styles.infoBox, { backgroundColor: colors.card, borderColor: colors.border }]} >
+              <MaterialCommunityIcons name="file-excel-outline" size={16} color={colors.brand} />
+              <Text style={[styles.infoText, { color: colors.text }]}>
+                Ouvrez l'interface web regulateur et importez {REQUIRED_LAB_FILENAME} pour lancer la comparaison.
               </Text>
-            </Pressable>
+            </View>
 
+            <Pressable disabled style={[styles.analyseBtn, { backgroundColor: colors.muted }]}>
+              <MaterialCommunityIcons name="file-excel-outline" size={18} color="#fff" />
+              <Text style={styles.analyseBtnText}>Fichier labo obligatoire</Text>
+            </Pressable>
             <Pressable onPress={reset} style={[styles.backBtn, { borderColor: colors.border }]}>
               <MaterialCommunityIcons name="arrow-left" size={16} color={colors.muted} />
               <Text style={[styles.backBtnText, { color: colors.muted }]}>Retour</Text>
