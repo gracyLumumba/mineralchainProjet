@@ -15,8 +15,6 @@ const HIDDEN_REGULATOR_LOT_IDS = new Set([
   'KANSOKO-2603-805',
 ]);
 
-const REQUIRED_LAB_FILENAME = 'sample_lab_results_dgmr.xlsx';
-
 function visibleRegulatorLots(lots = []) {
   return lots.filter((lot) => !HIDDEN_REGULATOR_LOT_IDS.has(lot.lot_id));
 }
@@ -47,6 +45,19 @@ const COL_MAP = {
   weight:'weight_tonnes',poids:'weight_tonnes',
   lot_id:'lot_id',lot:'lot_id',id:'lot_id',
 };
+
+function parseCSV(text) {
+  const lines = text.trim().split(/\r?\n/);
+  if (lines.length < 2) throw new Error('CSV : au moins 2 lignes requises.');
+  const sep  = lines[0].includes(';') ? ';' : lines[0].includes('\t') ? '\t' : ',';
+  const hdrs = lines[0].split(sep).map(h => COL_MAP[h.trim().toLowerCase().replace(/"/g,'')] || h.trim().toLowerCase());
+  return lines.slice(1).filter(l => l.trim()).map(line => {
+    const vals = line.split(sep).map(v => v.trim().replace(/"/g,''));
+    const row  = {};
+    hdrs.forEach((h, i) => { if (vals[i]!==undefined && vals[i]!=='') row[h] = isNaN(+vals[i]) ? vals[i] : +vals[i]; });
+    return row;
+  });
+}
 
 
 // Normalise une clé d'en-tête : supprime accents, Unicode, unités, espaces
@@ -285,11 +296,9 @@ export default function RegulatorAnalysisPage() {
     setFileError(''); setParsedRows([]); setMatchedRow(null); setComparison(null); setLabFile(null);
     setParsing(true);
     try {
-      if (f.name.toLowerCase() !== REQUIRED_LAB_FILENAME) {
-        throw new Error(`Fichier labo invalide. Utilisez uniquement ${REQUIRED_LAB_FILENAME}.`);
-      }
       let rows;
-      rows = await parseExcel(f);
+      if (f.name.match(/\.xlsx?$/i)) rows = await parseExcel(f);
+      else { const txt = await f.text(); rows = parseCSV(txt); }
       if (!rows.length) throw new Error('Aucune donnée dans ce fichier.');
       setLabFile({
         name: f.name,
@@ -594,7 +603,7 @@ export default function RegulatorAnalysisPage() {
           <div className="card">
             <h3 style={{ fontFamily:'var(--font-display)', fontSize:'1.2rem', marginBottom:8 }}>{t('analysis.import.title')}</h3>
             <p style={{ fontSize:'0.82rem', color:'var(--text-secondary)', marginBottom:18 }}>
-              Importez uniquement le fichier labo DGMR <strong style={{ color:'var(--brand)' }}>{REQUIRED_LAB_FILENAME}</strong>.
+              Importez le fichier Excel ou CSV de votre labo DGMR.
               Le lot <strong style={{ color:'var(--brand)' }}>{foundLot.lot_id}</strong> sera détecté automatiquement.
             </p>
             <div
@@ -611,10 +620,10 @@ export default function RegulatorAnalysisPage() {
               <div style={{ fontSize:'0.9rem', color:'var(--text-secondary)', fontWeight:600, marginBottom:6 }}>
                 {parsing ? t('analysis.import.reading') : t('analysis.import.drop')}
               </div>
-              <div style={{ fontSize:'0.75rem', color:'var(--text-muted)' }}>Fichier requis : {REQUIRED_LAB_FILENAME}</div>
+              <div style={{ fontSize:'0.75rem', color:'var(--text-muted)' }}>{t('analysis.import.formats')}</div>
               {parsing && <div className="loader" style={{ width:20, height:20, margin:'10px auto 0', borderTopColor:'var(--brand)' }}/>}
             </div>
-            <input ref={fileRef} type="file" accept=".xlsx" style={{ display:'none' }}
+            <input ref={fileRef} type="file" accept=".xlsx,.xls,.csv" style={{ display:'none' }}
               onChange={e=>e.target.files[0]&&handleFile(e.target.files[0])}/>
 
             {fileError && (

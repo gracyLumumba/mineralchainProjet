@@ -29,9 +29,6 @@ FIELD_SPECS = {
     'weight': {'field': 'weight_tonnes', 'label': 'Poids (t)', 'tolerance': 5.0},
 }
 
-REQUIRED_LAB_FILENAME = "sample_lab_results_dgmr.xlsx"
-
-
 def _has_lab_values(dgmr_data):
     if not isinstance(dgmr_data, dict):
         return False
@@ -51,8 +48,8 @@ def _validate_lab_file_payload(payload, status):
         return "Fichier laboratoire requis pour la double analyse"
 
     filename = str(lab_file.get('name') or '').lower()
-    if filename != REQUIRED_LAB_FILENAME:
-        return f"Fichier labo invalide: utilisez uniquement {REQUIRED_LAB_FILENAME}"
+    if not filename.endswith(('.csv', '.xls', '.xlsx')):
+        return "Format fichier labo invalide: CSV, XLS ou XLSX requis"
 
     if not isinstance(dgmr_data, dict) or not dgmr_data:
         return "Donnees laboratoire importees requises"

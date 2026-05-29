@@ -5,8 +5,6 @@ import ScreenShell from '../components/ScreenShell';
 import AnimatedEntrance from '../components/AnimatedEntrance';
 import { usePreferences } from '../../contexts/PreferencesContext';
 
-const REQUIRED_LAB_FILENAME = 'sample_lab_results_dgmr.xlsx';
-
 const FIELD_LABELS = {
   cu_grade_percent: 'Cuivre — Cu (%)',
   co_grade_percent: 'Cobalt — Co (%)',
@@ -245,7 +243,7 @@ export default function RegulatorAnalysisScreen({ lots = [], isRefreshing, refre
             <View style={[styles.infoBox, { backgroundColor: colors.infoBg, borderColor: colors.infoBorder }]}>
               <MaterialCommunityIcons name="information-outline" size={16} color={colors.infoText} />
               <Text style={[styles.infoText, { color: colors.infoText }]}>
-                La double analyse est autorisee uniquement avec le fichier labo {REQUIRED_LAB_FILENAME}. Aucun resultat DGMR simule n'est accepte.
+                La double analyse est autorisee uniquement avec un fichier labo DGMR importe. Aucun resultat DGMR simule n'est accepte.
               </Text>
             </View>
 
@@ -253,7 +251,7 @@ export default function RegulatorAnalysisScreen({ lots = [], isRefreshing, refre
             <View style={[styles.infoBox, { backgroundColor: colors.card, borderColor: colors.border }]} >
               <MaterialCommunityIcons name="file-excel-outline" size={16} color={colors.brand} />
               <Text style={[styles.infoText, { color: colors.text }]}>
-                Ouvrez l'interface web regulateur et importez {REQUIRED_LAB_FILENAME} pour lancer la comparaison.
+                Ouvrez l'interface web regulateur et importez votre fichier labo pour lancer la comparaison.
               </Text>
             </View>
 
