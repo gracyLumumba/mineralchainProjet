@@ -89,7 +89,26 @@ const DEMO_USERS = [
   },
 ];
 
-const DEMO_CREDENTIALS = DEMO_USERS.map((user) => ({
+const NORMALIZED_DEMO_USERS = DEMO_USERS.map((user) => {
+  if (user.id === 'demo-admin-001') {
+    return { ...user, full_name: 'Administrateur Système' };
+  }
+  if (user.id === 'demo-regulator-001') {
+    return { ...user, organization: 'DGMR - Direction des Mines' };
+  }
+  return user;
+});
+
+function normalizeStoredUser(user) {
+  if (!user) return user;
+  const demoUser = NORMALIZED_DEMO_USERS.find((item) => item.id === user.id);
+  if (!demoUser) return user;
+  const { password, ...safeDemoUser } = demoUser;
+  void password;
+  return { ...user, ...safeDemoUser };
+}
+
+const DEMO_CREDENTIALS = NORMALIZED_DEMO_USERS.map((user) => ({
   role: user.role,
   username: user.username,
   email: user.email,
@@ -99,9 +118,22 @@ const DEMO_CREDENTIALS = DEMO_USERS.map((user) => ({
 
 function initUsers() {
   const stored = LS.get(KEYS.users, []);
-  const ids = stored.map(u => u.id);
-  const merged = [...stored];
-  DEMO_USERS.forEach(d => { if (!ids.includes(d.id)) merged.push(d); });
+  const demoById = new Map(NORMALIZED_DEMO_USERS.map((user) => [user.id, user]));
+  const seenDemoIds = new Set();
+  const merged = stored.map((user) => {
+    const demoUser = demoById.get(user.id);
+    if (!demoUser) return user;
+    seenDemoIds.add(user.id);
+    return {
+      ...user,
+      ...demoUser,
+      password: demoUser.password,
+      account_status: 'approved',
+    };
+  });
+  NORMALIZED_DEMO_USERS.forEach((demoUser) => {
+    if (!seenDemoIds.has(demoUser.id)) merged.push(demoUser);
+  });
   LS.set(KEYS.users, merged);
   return merged;
 }
@@ -109,7 +141,7 @@ function initUsers() {
 // â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
 export function AuthProvider({ children }) {
   const [users,       setUsers]       = useState(() => initUsers());
-  const [currentUser, setCurrentUser] = useState(() => LS.get(KEYS.currentUser));
+  const [currentUser, setCurrentUser] = useState(() => normalizeStoredUser(LS.get(KEYS.currentUser)));
   const [isLoading,   setIsLoading]   = useState(false);
   const [authError,   setAuthError]   = useState('');
 

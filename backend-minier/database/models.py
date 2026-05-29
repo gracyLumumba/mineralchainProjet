@@ -83,7 +83,9 @@ class Lot(db.Model):
             'certificate_id': self.certificate_id,
             'owner_user_id': self.owner_user_id,
             'owner_username': self.owner_username,
-            'owner_name': self.owner_name
+            'owner_name': self.owner_name,
+            'regulator_validated': self.regulator_validated,
+            'regulator_validated_at': self.regulator_validated_at.isoformat() if self.regulator_validated_at else None,
         }
 
 class LotHistory(db.Model):

@@ -136,6 +136,8 @@ def db_lot_to_payload(lot):
         "owner_user_id": lot.owner_user_id,
         "owner_username": lot.owner_username,
         "owner_name": lot.owner_name,
+        "regulator_validated": lot.regulator_validated,
+        "regulator_validated_at": lot.regulator_validated_at.isoformat() if lot.regulator_validated_at else None,
         "storage": "postgres",
     }
 
