@@ -62,6 +62,20 @@ function normalizeBackendLot(lot) {
   };
 }
 
+function tokenFromBackendLot(lot) {
+  if (lot?.token_id == null) return null;
+  return {
+    token_id: lot.token_id,
+    lot_id: lot.lot_id,
+    tx_hash: lot.tx_hash || null,
+    block_number: lot.block_number || null,
+    contract_address: lot.contract_address || null,
+    certificate_id: lot.certificate_id || null,
+    timestamp: lot.analyzed_at || lot.updated_at || lot.created_at || null,
+    owner: lot.owner_name || lot.owner_username || null,
+  };
+}
+
 //  Context 
 const AppContext = createContext(null);
 
@@ -119,6 +133,31 @@ export function AppProvider({ children }) {
 
         LS.set('mc_lots', merged);
         return merged;
+      });
+
+      setTokens((prev) => {
+        const prevById = new Map(prev.map((token) => [String(token.token_id), token]));
+        const backendTokens = backendLots
+          .map(tokenFromBackendLot)
+          .filter(Boolean)
+          .map((backendToken) => ({
+            ...(prevById.get(String(backendToken.token_id)) || {}),
+            ...backendToken,
+            token_id: normalizeTokenValue(
+              backendToken.token_id,
+              backendToken.lot_id || backendToken.tx_hash || backendToken.timestamp,
+            ),
+          }));
+
+        const backendTokenIds = new Set(backendTokens.map((token) => String(token.token_id)));
+        prev.forEach((localToken) => {
+          if (!backendTokenIds.has(String(localToken.token_id))) {
+            backendTokens.push(localToken);
+          }
+        });
+
+        LS.set('mc_tokens', backendTokens);
+        return backendTokens;
       });
 
       setApiStatus('connected');
