@@ -1,4 +1,6 @@
 from datetime import datetime
+import hashlib
+import json
 
 from flask import Blueprint, jsonify, request
 
@@ -6,6 +8,15 @@ from database.models import Lot, LotHistory, db
 from routes.auth import get_current_user
 from routes.lots import database_enabled, get_lot_record
 from utils.experiment_logger import record_auto_validation_run
+from routes.certify import (
+    ACCOUNT,
+    CONTRACT_ADDRESS,
+    contract,
+    extract_token_id_from_receipt,
+    send_contract_transaction,
+    upload_to_pinata,
+    w3,
+)
 
 validate_bp = Blueprint('validate', __name__)
 
@@ -82,6 +93,201 @@ def auto_validate_lot(lot):
         'conformes': len([r for r in results if r['ok']]),
         'seed': seed,
     }
+
+
+def _lot_certificate_payload(lot, comparison=None, dgmr_data=None, validated_by=""):
+    return {
+        "version": "2.0",
+        "format": "IPFS-CERT-DGMR",
+        "certificate_id": f"CERT-{lot.lot_id}-{datetime.utcnow().strftime('%Y%m%d-%H%M%S')}",
+        "lot_id": lot.lot_id,
+        "site": lot.site,
+        "extraction_date": lot.extraction_date.isoformat() if lot.extraction_date else None,
+        "analyzed_at": lot.analyzed_at.isoformat() if lot.analyzed_at else None,
+        "validated_at": datetime.utcnow().isoformat(),
+        "validated_by": validated_by,
+        "ia_analysis": {
+            "mineral_type": lot.mineral_type,
+            "confidence": lot.confidence,
+            "impurity_level": lot.impurity_level,
+            "is_fraud": lot.is_fraud,
+            "status": lot.status,
+        },
+        "composition": {
+            "cu": lot.cu_grade,
+            "co": lot.co_grade,
+            "fe": lot.fe_grade,
+            "ni": lot.ni_grade,
+            "s": lot.s_grade,
+            "silica": lot.silica_grade,
+        },
+        "physical": {
+            "density": lot.density,
+            "moisture": lot.moisture,
+            "hardness": lot.hardness,
+            "weight": lot.weight,
+        },
+        "dgmr_validation": {
+            "data": dgmr_data or {},
+            "comparison": comparison or [],
+        },
+        "blockchain": {
+            "contract_address": CONTRACT_ADDRESS,
+        },
+    }
+
+
+def _mint_validated_lot(lot, certificate_hash, ipfs_hash):
+    if contract is None:
+        raise RuntimeError("Contrat NFT non charge")
+    if not w3.is_connected():
+        raise RuntimeError("Ganache indisponible sur http://127.0.0.1:7545")
+
+    already_certified = contract.functions.isLotCertified(lot.lot_id).call()
+    if already_certified:
+        token_id = int(contract.functions.getTokenByLot(lot.lot_id).call())
+        return {
+            "token_id": token_id,
+            "transaction_hash": lot.tx_hash,
+            "block_number": lot.block_number,
+            "contract_address": CONTRACT_ADDRESS,
+            "gas_used": None,
+            "simulated": False,
+            "already_certified": True,
+        }
+
+    tx_builder = contract.functions.mintMineralToken(
+        ACCOUNT,
+        lot.lot_id,
+        lot.site or "KAMOA",
+        lot.mineral_type or "",
+        lot.impurity_level or "",
+        int(float(lot.confidence or 0) * 100),
+        f"0x{certificate_hash[:16]}",
+        True,
+        certificate_hash,
+        ipfs_hash or "",
+        int(float(lot.cu_grade or 0) * 100),
+        int(float(lot.co_grade or 0) * 100),
+        int(float(lot.fe_grade or 0) * 100),
+        int(float(lot.weight or 0) * 100),
+    )
+    tx_hash = send_contract_transaction(tx_builder)
+    receipt = w3.eth.wait_for_transaction_receipt(tx_hash, timeout=120)
+    token_id = extract_token_id_from_receipt(receipt, lot.lot_id)
+
+    return {
+        "token_id": token_id,
+        "transaction_hash": tx_hash.hex(),
+        "block_number": receipt.blockNumber,
+        "contract_address": CONTRACT_ADDRESS,
+        "gas_used": receipt.gasUsed,
+        "simulated": False,
+        "already_certified": False,
+    }
+
+
+@validate_bp.route('/lots/<lot_id>/regulator-certify', methods=['POST'])
+def regulator_certify(lot_id):
+    user = get_current_user()
+    if not user:
+        return jsonify({"success": False, "error": "Authentification requise"}), 401
+    if user.get('role') != 'regulator':
+        return jsonify({"success": False, "error": "Acces reserve au regulateur"}), 403
+    if not database_enabled():
+        return jsonify({"success": False, "error": "PostgreSQL indisponible ou non configure"}), 503
+
+    payload = request.get_json() or {}
+    status = str(payload.get('status') or '').strip().upper()
+    if status not in {"AUTHENTIQUE", "SUSPECT"}:
+        return jsonify({"success": False, "error": "status doit etre AUTHENTIQUE ou SUSPECT"}), 400
+
+    try:
+        lot = Lot.query.filter_by(lot_id=lot_id).with_for_update().first()
+        if not lot:
+            return jsonify({"success": False, "error": "Lot non trouve"}), 404
+
+        comparison = payload.get('comparison') or []
+        dgmr_data = payload.get('dgmr_data') or {}
+        forced = bool(payload.get('forced'))
+
+        lot.regulator_validated = True
+        lot.regulator_validated_at = datetime.utcnow()
+        lot.status = status
+        lot.updated_at = datetime.utcnow()
+
+        certificate = None
+        certificate_hash = None
+        ipfs_hash = None
+        gateway_url = None
+        ipfs_error = None
+        blockchain_result = None
+        blockchain_error = None
+
+        if status == "AUTHENTIQUE":
+            certificate = _lot_certificate_payload(
+                lot,
+                comparison=comparison,
+                dgmr_data=dgmr_data,
+                validated_by=user.get('username', ''),
+            )
+            certificate_hash = hashlib.sha256(
+                json.dumps(certificate, sort_keys=True, default=str).encode('utf-8')
+            ).hexdigest()
+
+            try:
+                ipfs_hash = upload_to_pinata(certificate, lot_id)
+                gateway_url = f"https://gateway.pinata.cloud/ipfs/{ipfs_hash}"
+            except Exception as error:
+                ipfs_error = str(error)
+
+            try:
+                blockchain_result = _mint_validated_lot(lot, certificate_hash, ipfs_hash)
+                lot.token_id = blockchain_result.get("token_id")
+                lot.tx_hash = blockchain_result.get("transaction_hash") or lot.tx_hash
+                lot.block_number = blockchain_result.get("block_number") or lot.block_number
+                lot.contract_address = blockchain_result.get("contract_address") or CONTRACT_ADDRESS
+                lot.certificate_id = certificate["certificate_id"]
+            except Exception as error:
+                blockchain_error = str(error)
+
+        db.session.add(LotHistory(
+            lot=lot,
+            event='REGULATOR_LAB_VALIDATION',
+            status=lot.status,
+            details={
+                "validated_by": user.get('username'),
+                "forced": forced,
+                "comparison": comparison,
+                "dgmr_data": dgmr_data,
+                "certificate_hash": certificate_hash,
+                "ipfs_hash": ipfs_hash,
+                "token_id": blockchain_result.get("token_id") if blockchain_result else None,
+                "ipfs_error": ipfs_error,
+                "blockchain_error": blockchain_error,
+            },
+        ))
+        db.session.commit()
+
+        return jsonify({
+            "success": True,
+            "lot_id": lot_id,
+            "status": lot.status,
+            "regulator_validated": lot.regulator_validated,
+            "regulator_validated_at": lot.regulator_validated_at.isoformat() if lot.regulator_validated_at else None,
+            "certificate": {
+                "id": certificate["certificate_id"] if certificate else None,
+                "hash": certificate_hash,
+                "ipfs_hash": ipfs_hash,
+                "gateway_url": gateway_url,
+            },
+            "blockchain": blockchain_result,
+            "ipfs_error": ipfs_error,
+            "blockchain_error": blockchain_error,
+        })
+    except Exception as error:
+        db.session.rollback()
+        return jsonify({"success": False, "error": f"{type(error).__name__}: {str(error)}"}), 500
 
 
 @validate_bp.route('/lots/<lot_id>/auto-validate', methods=['POST', 'OPTIONS'])

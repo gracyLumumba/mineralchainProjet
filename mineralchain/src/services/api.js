@@ -43,6 +43,7 @@ export const apiService = {
   getToken:        (id) => API.get(`/blockchain/token/${id}`),
   getTransactions: () => API.get('/blockchain/transactions'),
   validateDGMR:    (data) => API.post('/blockchain/validate-dgmr', data),
+  regulatorCertifyLot: (lotId, data) => API.post(`/lots/${lotId}/regulator-certify`, data, { timeout: 120000 }),
   updateIPFS:      (data) => API.post('/blockchain/update-ipfs', data),
   autoValidateLot: (lotId) => API.post(`/lots/${lotId}/auto-validate`, {}),
 };

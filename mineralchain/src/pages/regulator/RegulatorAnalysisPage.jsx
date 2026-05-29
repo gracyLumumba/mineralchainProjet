@@ -259,7 +259,7 @@ function CompareRow({ item }) {
 }
 
 export default function RegulatorAnalysisPage() {
-  const { lots, updateLot, addToast } = useApp();
+  const { lots, updateLot, addToken, addToast, syncLotsFromBackend } = useApp();
   const { notify } = useNotif();
   const { t } = useI18n();
   const regulatorLots = visibleRegulatorLots(lots);
@@ -364,15 +364,38 @@ export default function RegulatorAnalysisPage() {
     setValidating(true);
     await new Promise(r => setTimeout(r, 1000));
     const status = (comparison.allOk || forceOk) ? 'AUTHENTIQUE' : 'SUSPECT';
+    let certificationResult = null;
+    try {
+      certificationResult = await apiService.regulatorCertifyLot(foundLot.lot_id, {
+        status,
+        dgmr_data: matchedRow || {},
+        comparison: comparison.results || [],
+        forced: forceOk && !comparison.allOk,
+      });
+    } catch (error) {
+      addToast(`Erreur certification régulateur: ${error.error || error.message || 'échec backend'}`, 'error');
+      setValidating(false);
+      return;
+    }
+
+    const blockchain = certificationResult?.blockchain || null;
+    const certificate = certificationResult?.certificate || null;
     updateLot(foundLot.lot_id, {
       regulator_validated:    true,
-      regulator_validated_at: new Date().toISOString(),
+      regulator_validated_at: certificationResult?.regulator_validated_at || new Date().toISOString(),
       regulator_data:         matchedRow,
       validation_comparison:  comparison.results,
       validation_signature:   comparison.signature,
       validation_fraud_alerts:comparison.fraudAlerts || [],
       validation_forced:      forceOk && !comparison.allOk,
       status,
+      token_id:               blockchain?.token_id ?? foundLot.token_id ?? null,
+      tx_hash:                blockchain?.transaction_hash ?? foundLot.tx_hash ?? null,
+      block_number:           blockchain?.block_number ?? foundLot.block_number ?? null,
+      contract_address:       blockchain?.contract_address ?? foundLot.contract_address ?? null,
+      certificate_id:         certificate?.id ?? foundLot.certificate_id ?? null,
+      ipfs_hash:              certificate?.ipfs_hash ?? foundLot.ipfs_hash ?? null,
+      ipfs_url:               certificate?.gateway_url ?? foundLot.ipfs_url ?? null,
       // Journal d'audit
       audit_trail: [
         ...(foundLot.audit_trail || []),
@@ -388,6 +411,18 @@ export default function RegulatorAnalysisPage() {
         }
       ],
     });
+    if (blockchain?.token_id != null) {
+      addToken({
+        token_id: blockchain.token_id,
+        lot_id: foundLot.lot_id,
+        tx_hash: blockchain.transaction_hash,
+        contract_address: blockchain.contract_address,
+        block_number: blockchain.block_number,
+        certificate_id: certificate?.id,
+        timestamp: new Date().toISOString(),
+      });
+    }
+    await syncLotsFromBackend();
     notify(status === 'AUTHENTIQUE' ? NOTIF_TYPES.LOT_VALIDATED : NOTIF_TYPES.LOT_SUSPECT, {
       lotId: foundLot.lot_id,
       site:  foundLot.site,
@@ -395,7 +430,7 @@ export default function RegulatorAnalysisPage() {
     addToast(status==='AUTHENTIQUE' ? `ok Lot ${foundLot.lot_id} validé` : `! Lot ${foundLot.lot_id} marqué SUSPECT`,
       status==='AUTHENTIQUE' ? 'success' : 'warning');
     setStep(4); setValidating(false);
-  }, [foundLot, comparison, matchedRow, updateLot, addToast]);
+  }, [foundLot, comparison, matchedRow, updateLot, addToken, addToast, syncLotsFromBackend]);
 
   const reset = () => {
     setStep(1); setLotQuery(''); setFoundLot(null); setNotFound(false);
