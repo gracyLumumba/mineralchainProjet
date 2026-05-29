@@ -108,6 +108,17 @@ function normalizeStoredUser(user) {
   return { ...user, ...safeDemoUser };
 }
 
+function normalizeBackendUser(user) {
+  if (!user) return user;
+  const demoUser = NORMALIZED_DEMO_USERS.find((item) => item.id === user.id);
+  return {
+    ...(demoUser || {}),
+    ...user,
+    full_name: user.full_name || user.name || demoUser?.full_name || user.username,
+    account_status: user.account_status || 'approved',
+  };
+}
+
 const DEMO_CREDENTIALS = NORMALIZED_DEMO_USERS.map((user) => ({
   role: user.role,
   username: user.username,
@@ -144,11 +155,44 @@ export function AuthProvider({ children }) {
   const [currentUser, setCurrentUser] = useState(() => normalizeStoredUser(LS.get(KEYS.currentUser)));
   const [isLoading,   setIsLoading]   = useState(false);
   const [authError,   setAuthError]   = useState('');
+  const [backendTokenVersion, setBackendTokenVersion] = useState(0);
 
   useEffect(() => {
     if (currentUser) LS.set(KEYS.currentUser, currentUser);
     else             LS.del(KEYS.currentUser);
   }, [currentUser]);
+
+  const syncBackendUsers = useCallback(async () => {
+    if (currentUser?.role !== 'admin') return false;
+    const token = LS.get(KEYS.backendToken);
+    if (!token) return false;
+
+    try {
+      const response = await fetch(`${BACKEND_URL}/api/auth/users`, {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      const payload = await response.json();
+      if (!response.ok || !Array.isArray(payload?.users)) return false;
+
+      const backendUsers = payload.users.map(normalizeBackendUser);
+      const backendIds = new Set(backendUsers.map((user) => user.id));
+      const localOnlyUsers = LS.get(KEYS.users, [])
+        .filter((user) => !backendIds.has(user.id) && !user.id?.startsWith('demo-'));
+      const merged = [...backendUsers, ...localOnlyUsers];
+
+      LS.set(KEYS.users, merged);
+      setUsers(merged);
+
+      return true;
+    } catch (error) {
+      console.warn('[AUTH] Backend users sync unavailable:', error);
+      return false;
+    }
+  }, [currentUser]);
+
+  useEffect(() => {
+    syncBackendUsers();
+  }, [syncBackendUsers, backendTokenVersion]);
 
   useEffect(() => {
     const syncBackendTokenForDemoUser = async () => {
@@ -174,6 +218,7 @@ export function AuthProvider({ children }) {
         const payload = await response.json();
         if (response.ok && payload?.token) {
           LS.set(KEYS.backendToken, payload.token);
+          setBackendTokenVersion((version) => version + 1);
         }
       } catch (error) {
         console.warn('[AUTH] Backend token auto-sync unavailable:', error);
@@ -229,6 +274,7 @@ export function AuthProvider({ children }) {
       const payload = await response.json();
       if (response.ok && payload?.token) {
         LS.set(KEYS.backendToken, payload.token);
+        setBackendTokenVersion((version) => version + 1);
       } else {
         LS.del(KEYS.backendToken);
       }
@@ -297,7 +343,7 @@ export function AuthProvider({ children }) {
   }, []);
 
   //  Approbation / Rejet (admin uniquement) 
-  const approveUser = useCallback((userId, adminId) => {
+  const approveUser = useCallback(async (userId, adminId) => {
     const allUsers = LS.get(KEYS.users, []);
     const updated  = allUsers.map(u => u.id !== userId ? u : {
       ...u,
@@ -308,9 +354,21 @@ export function AuthProvider({ children }) {
     });
     LS.set(KEYS.users, updated);
     setUsers(updated);
-  }, []);
+    try {
+      const token = LS.get(KEYS.backendToken);
+      if (token) {
+        await fetch(`${BACKEND_URL}/api/auth/users/${userId}/approve`, {
+          method: 'POST',
+          headers: { Authorization: `Bearer ${token}` },
+        });
+        await syncBackendUsers();
+      }
+    } catch (error) {
+      console.warn('[AUTH] Backend approve unavailable:', error);
+    }
+  }, [syncBackendUsers]);
 
-  const rejectUser = useCallback((userId, adminId, reason) => {
+  const rejectUser = useCallback(async (userId, adminId, reason) => {
     const allUsers = LS.get(KEYS.users, []);
     const updated  = allUsers.map(u => u.id !== userId ? u : {
       ...u,
@@ -321,9 +379,22 @@ export function AuthProvider({ children }) {
     });
     LS.set(KEYS.users, updated);
     setUsers(updated);
-  }, []);
+    try {
+      const token = LS.get(KEYS.backendToken);
+      if (token) {
+        await fetch(`${BACKEND_URL}/api/auth/users/${userId}/reject`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+          body: JSON.stringify({ reason }),
+        });
+        await syncBackendUsers();
+      }
+    } catch (error) {
+      console.warn('[AUTH] Backend reject unavailable:', error);
+    }
+  }, [syncBackendUsers]);
 
-  const revokeUser = useCallback((userId, adminId) => {
+  const revokeUser = useCallback(async (userId, adminId) => {
     const allUsers = LS.get(KEYS.users, []);
     const updated  = allUsers.map(u => u.id !== userId ? u : {
       ...u,
@@ -333,7 +404,19 @@ export function AuthProvider({ children }) {
     });
     LS.set(KEYS.users, updated);
     setUsers(updated);
-  }, []);
+    try {
+      const token = LS.get(KEYS.backendToken);
+      if (token) {
+        await fetch(`${BACKEND_URL}/api/auth/users/${userId}/revoke`, {
+          method: 'POST',
+          headers: { Authorization: `Bearer ${token}` },
+        });
+        await syncBackendUsers();
+      }
+    } catch (error) {
+      console.warn('[AUTH] Backend revoke unavailable:', error);
+    }
+  }, [syncBackendUsers]);
 
   const deleteUser = useCallback((userId) => {
     const allUsers = LS.get(KEYS.users, []);
