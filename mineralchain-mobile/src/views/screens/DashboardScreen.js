@@ -89,7 +89,7 @@ export default function DashboardScreen({
       {({ onOpenMenu }) => (
       <>
       <AnimatedEntrance delay={0}>
-        <TopBar onOpenMenu={onOpenMenu} />
+        <TopBar onOpenMenu={onOpenMenu} onRefresh={refresh} refreshing={isRefreshing} />
       </AnimatedEntrance>
 
       <AnimatedEntrance delay={70}>

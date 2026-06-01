@@ -4,6 +4,45 @@ import { getBackendUrl } from '../config/backend';
 
 const BACKEND_URL = getBackendUrl();
 const BACKEND_TOKEN_KEY = 'mc_backend_token';
+const CURRENT_USER_KEY = 'mc_current_user';
+
+const DEMO_PASSWORDS = {
+  producteur: 'Demo2025!',
+  regulateur: 'Demo2025!',
+  transporteur: 'Demo2025!',
+  admin: 'Admin2025!',
+};
+
+function readJsonStorage(key, fallback = null) {
+  try {
+    const raw = localStorage.getItem(key);
+    return raw ? JSON.parse(raw) : fallback;
+  } catch (error) {
+    void error;
+    return fallback;
+  }
+}
+
+async function refreshBackendTokenFromDemoSession() {
+  const user = readJsonStorage(CURRENT_USER_KEY);
+  const identifier = user?.username;
+  const password = DEMO_PASSWORDS[identifier];
+  if (!identifier || !password) return null;
+
+  const response = await axios.post(`${BACKEND_URL}/api/auth/login`, {
+    identifier,
+    password,
+  }, {
+    timeout: 30000,
+    headers: { 'Content-Type': 'application/json' },
+  });
+
+  const token = response.data?.token;
+  if (token) {
+    localStorage.setItem(BACKEND_TOKEN_KEY, JSON.stringify(token));
+  }
+  return token || null;
+}
 
 const API = axios.create({
   baseURL: `${BACKEND_URL}/api`,
@@ -13,8 +52,7 @@ const API = axios.create({
 
 API.interceptors.request.use((config) => {
   try {
-    const raw = localStorage.getItem(BACKEND_TOKEN_KEY);
-    const token = raw ? JSON.parse(raw) : null;
+    const token = readJsonStorage(BACKEND_TOKEN_KEY);
     if (token) {
       config.headers = config.headers || {};
       config.headers.Authorization = `Bearer ${token}`;
@@ -27,7 +65,24 @@ API.interceptors.request.use((config) => {
 
 API.interceptors.response.use(
   res => res.data,
-  err => Promise.reject(err.response?.data || { error: err.message })
+  async (err) => {
+    const status = err.response?.status;
+    const originalRequest = err.config || {};
+    if (status === 401 && !originalRequest._retriedAuth) {
+      try {
+        const token = await refreshBackendTokenFromDemoSession();
+        if (token) {
+          originalRequest._retriedAuth = true;
+          originalRequest.headers = originalRequest.headers || {};
+          originalRequest.headers.Authorization = `Bearer ${token}`;
+          return API(originalRequest);
+        }
+      } catch (error) {
+        void error;
+      }
+    }
+    return Promise.reject(err.response?.data || { error: err.message });
+  }
 );
 
 export const apiService = {

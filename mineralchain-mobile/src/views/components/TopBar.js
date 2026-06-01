@@ -1,9 +1,9 @@
-import { Pressable, StyleSheet, Text, View } from 'react-native';
+import { ActivityIndicator, Pressable, StyleSheet, Text, View } from 'react-native';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { usePreferences } from '../../contexts/PreferencesContext';
 
-export default function TopBar({ onOpenMenu }) {
-  const { colors, language, theme, toggleLanguage, toggleTheme } = usePreferences();
+export default function TopBar({ onOpenMenu, onRefresh, refreshing = false }) {
+  const { colors, language, theme, toggleLanguage, toggleTheme, t } = usePreferences();
 
   return (
     <View style={styles.row}>
@@ -17,6 +17,19 @@ export default function TopBar({ onOpenMenu }) {
         <Text style={[styles.title, { color: colors.text }]}>Kamoa-Kansoko</Text>
       </View>
       <View style={styles.actions}>
+        {onRefresh ? (
+          <Pressable
+            accessibilityLabel={t('refresh')}
+            disabled={refreshing}
+            onPress={onRefresh}
+            style={[styles.iconBtn, { backgroundColor: colors.cardAlt, borderColor: colors.border, opacity: refreshing ? 0.7 : 1 }]}
+          >
+            {refreshing
+              ? <ActivityIndicator size="small" color={colors.brand} />
+              : <MaterialCommunityIcons name="reload" size={18} color={colors.brand} />
+            }
+          </Pressable>
+        ) : null}
         <Pressable onPress={toggleLanguage} style={[styles.langBtn, { backgroundColor: colors.cardAlt, borderColor: colors.border }]}>
           <MaterialCommunityIcons name="translate" size={14} color={colors.brand} />
           <Text style={[styles.langText, { color: colors.brand }]}>{language.toUpperCase()}</Text>

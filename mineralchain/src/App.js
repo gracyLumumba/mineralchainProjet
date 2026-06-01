@@ -130,7 +130,7 @@ export default function App() {
         <AuthProvider>
           <AppProvider>
             <NotifProvider>
-            <BrowserRouter>
+            <BrowserRouter future={{ v7_startTransition: true, v7_relativeSplatPath: true }}>
               <AppRouter/>
             </BrowserRouter>
             </NotifProvider>
