@@ -1,209 +1,80 @@
-# MineralChain Backend
+# MineralChain Web
 
-## Presentation
+Interface React de MineralChain pour les producteurs, regulateurs DGMR, transporteurs et administrateurs.
 
-Ce backend fournit l'API Flask du projet MineralChain pour l'analyse intelligente des lots miniers, la certification des resultats, le stockage des certificats sur IPFS et la synchronisation avec un smart contract NFT deploye en local.
+## Roles couverts
 
-Le systeme est concu pour fonctionner avec :
-
-- le frontend React du projet `mineralchain`
-- les modeles de machine learning du dossier `modele_ia_minier`
-- le smart contract du dossier `nft-minier`
-- une blockchain locale Ganache
-
-## Fonctionnalites
-
-- analyse IA d'un lot minier a partir de ses caracteristiques physico-chimiques
-- detection de fraude ou d'anomalies
-- generation d'un certificat numerique
-- envoi du certificat sur IPFS via Pinata, avec mode de simulation si necessaire
-- mint d'un NFT sur Ganache pour les lots consideres authentiques
-- gestion simple des lots avec creation, consultation et certification
-- endpoints de verification pour le suivi blockchain et IPFS
-
-## Structure du backend
-
-```text
-backend-minier/
-|-- app.py
-|-- requirements.txt
-|-- .env.example
-|-- start_backend.bat
-|-- run_backend_utf8.py
-|-- models/
-|   `-- load_models.py
-|-- routes/
-|   |-- analyze.py
-|   |-- lots.py
-|   |-- certify.py
-|   |-- ipfs.py
-|   `-- database.py
-|-- database/
-`-- utils/
-```
-
-## Prerequis
-
-- Python 3.10 ou plus recent
-- `pip`
-- Ganache lance en local sur `http://127.0.0.1:7545`
-- smart contract compile dans `nft-minier/build/contracts/MineralNFT.json`
-- modeles IA presents dans `modele_ia_minier/modeles`
-- compte Pinata si vous voulez utiliser un vrai stockage IPFS
-
-## Installation
-
-Placez-vous dans le dossier du backend :
-
-```bash
-cd mineralchainProjet/backend-minier
-```
-
-Creez un environnement virtuel puis activez-le :
-
-```bash
-python -m venv venv
-venv\Scripts\activate
-```
-
-Installez les dependances :
-
-```bash
-pip install -r requirements.txt
-```
-
-## Configuration
-
-Copiez le fichier `.env.example` en `.env` puis renseignez les variables utiles :
-
-```env
-PINATA_JWT=your_real_jwt_here
-```
-
-Variables optionnelles selon votre environnement :
-
-- `PINATA_JWT` : jeton JWT Pinata pour l'upload IPFS
-- `PINATA_API_KEY` : cle API Pinata
-- `PINATA_API_SECRET` : secret API Pinata
-- `PINATA_GATEWAY` : gateway IPFS a utiliser
-- `OWNER_PRIVATE_KEY` : cle privee du compte utilise pour signer les transactions
-- `PORT` : port de lancement du serveur, par defaut `5000`
+- Producteur : creation du lot, analyse IA, certification NFT, consultation du certificat et de l'historique.
+- Regulateur DGMR : scan QR ou recherche du lot, import du fichier labo DGMR, comparaison des resultats, validation ou blocage.
+- Transporteur : scan QR du certificat, prise en charge du lot, suivi en transit et confirmation de livraison usine.
+- Administrateur : supervision des comptes, lots et statuts.
 
 ## Demarrage
 
-Lancement classique :
+Depuis `mineralchainProjet/mineralchain` :
 
 ```bash
-python app.py
+npm install
+npm start
 ```
 
-Ou avec le script Windows :
-
-```bash
-start_backend.bat
-```
-
-Le backend sera disponible sur :
+L'application web demarre generalement sur :
 
 ```text
-http://localhost:5000
+http://localhost:3000
 ```
 
-## Endpoints principaux
+## Backend attendu
 
-### Verification generale
+Le frontend consomme l'API Flask sur `http://localhost:5000` par defaut. La valeur peut etre surchargee avec :
 
-- `GET /`
-- `GET /api/health`
-
-### Analyse IA
-
-- `POST /api/analyze`
-- `POST /api/analyze-and-certify`
-
-### Gestion des lots
-
-- `GET /api/lots`
-- `POST /api/lots`
-- `GET /api/lots/<lot_id>`
-- `POST /api/lots/<lot_id>/certify`
-
-### Blockchain et certification
-
-- `GET /api/status`
-- `GET /api/contract-info`
-- `GET /api/token/<token_id>`
-- `POST /api/token/<token_id>/sync-certificate`
-- `GET /api/verify?lot=<lot_id>&token=<token_id>`
-
-### IPFS
-
-- `GET /api/ipfs-status`
-- `GET /api/ipfs/status`
-- `POST /api/ipfs/upload`
-- `GET /api/ipfs/get/<ipfs_hash>`
-- `POST /api/ipfs/pin/<ipfs_hash>`
-
-## Exemple de requete d'analyse
-
-```json
-{
-  "lot_id": "LOT-001",
-  "site": "KAMOA",
-  "extraction_date": "2026-03-25",
-  "cu_grade_percent": 5.4,
-  "co_grade_percent": 0.8,
-  "fe_percent": 12.1,
-  "s_percent": 1.9,
-  "ni_percent": 0.2,
-  "silica_percent": 7.4,
-  "density_t_m3": 3.1,
-  "moisture_percent": 8.2,
-  "hardness_mohs": 4.6,
-  "weight_tonnes": 25
-}
+```env
+REACT_APP_BACKEND_URL=http://localhost:5000
 ```
 
-## Dependances principales
+## Scan QR camera
 
-- `flask` pour l'API REST
-- `flask-cors` pour l'integration avec le frontend React
-- `pandas`, `numpy`, `scikit-learn`, `joblib` pour le chargement et l'inference des modeles IA
-- `python-dotenv` pour les variables d'environnement
-- `web3` pour l'interaction avec Ganache et le smart contract
+Le scan QR est actif dans deux interfaces :
 
-## Remarques importantes
+- `Transporteur > Scanner QR Code` : lit le QR du certificat puis ouvre/verifie le lot.
+- `Regulateur > Analyse DGMR` : lit le QR du certificat ou du lot avant l'import du fichier labo.
 
-- Le backend charge actuellement les modeles IA a partir d'un chemin absolu defini dans `app.py`.
-- Le contrat NFT est aussi charge depuis un chemin absolu dans `routes/certify.py`.
-- Si Ganache ou Pinata sont indisponibles, certaines routes utilisent un mode de simulation pour permettre les demonstrations.
-- Les lots sont enregistres dans un fichier JSON local `lots_data.json`.
+Le scanner utilise :
 
-## Integration avec le projet
+- `navigator.mediaDevices.getUserMedia` pour afficher la camera.
+- `BarcodeDetector` si le navigateur le supporte.
+- `jsQR` en fallback, notamment utile avec Edge lorsque `BarcodeDetector` n'est pas expose.
 
-Ce backend travaille avec les modules suivants :
+En local, l'acces camera fonctionne sur `localhost`. Sur un telephone ou une adresse reseau, utilisez HTTPS ou l'application Expo mobile.
 
-- `mineralchain/` : interface utilisateur React
-- `backend-minier/` : API Flask
-- `nft-minier/` : smart contract et deploiement Truffle
-- `modele_ia_minier/` : modeles d'intelligence artificielle
+## Certification et QR code
 
-## Tests manuels utiles
+Le certificat affiche un QR code qui pointe vers :
 
-Vous pouvez utiliser les fichiers suivants pour vos essais :
+- le lien IPFS si le certificat est epingle ;
+- sinon la page publique `/verify?lot=<lot_id>&token=<token_id>`.
 
-- `test.json`
-- `test2.json`
-- `test_certify.json`
+Ce QR peut etre scanne par le transporteur, le regulateur ou un auditeur externe pour retrouver le lot certifie.
 
-Exemple :
+## Scripts utiles
 
 ```bash
-curl -X POST http://localhost:5000/api/analyze ^
-  -H "Content-Type: application/json" ^
-  -d @test.json
+npm start
+npm run build
 ```
 
-## Auteur
+## Dependances notables
 
-Projet academique MineralChain consacre a la tracabilite et a la certification intelligente des minerais strategiques.
+- `react`, `react-router-dom` pour l'interface.
+- `react-qr-code` pour generer les QR des certificats.
+- `jsqr` pour decoder les QR depuis la camera quand l'API native n'est pas disponible.
+- `html2canvas` et `jspdf` pour l'export des certificats.
+- `recharts` pour les graphiques.
+
+## Verification avant livraison
+
+```bash
+npm run build
+```
+
+Le build peut afficher des warnings ESLint historiques du projet. Les erreurs bloquantes doivent etre corrigees avant demonstration.
