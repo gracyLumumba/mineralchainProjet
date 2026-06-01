@@ -1,9 +1,10 @@
-import React, { useState } from 'react';
+import React, { useCallback, useEffect, useRef, useState } from 'react';
 import { useApp } from '../../contexts/AppContext';
 import { useI18n } from '../../contexts/i18nContext';
 import { StatCard, PageHeader, EmptyState, StatusBadge, MineralBadge, Timeline, ConfidenceBar } from '../../components/common/UI';
 import { CertificateCard } from '../../components/common/Certificate';
 import { fmt } from '../../contexts/AppContext';
+import jsQR from 'jsqr';
 
 import { Ic } from '../../components/common/Icons';
 
@@ -221,6 +222,30 @@ export function AssignedLotsPage() {
 }
 
 //  QR SCANNER 
+function extractQrCandidates(raw) {
+  const text = String(raw || '').trim();
+  const candidates = new Set([text]);
+
+  try {
+    const url = new URL(text);
+    const lot = url.searchParams.get('lot') || url.searchParams.get('lot_id');
+    const token = url.searchParams.get('token') || url.searchParams.get('token_id');
+    if (lot) candidates.add(lot);
+    if (token) candidates.add(token);
+    url.pathname.split('/').filter(Boolean).forEach(part => candidates.add(decodeURIComponent(part)));
+  } catch (error) {
+    void error;
+  }
+
+  const lotMatch = text.match(/[A-Z]{2,}-\d{4}-\d{3,}/i);
+  if (lotMatch) candidates.add(lotMatch[0].toUpperCase());
+
+  const tokenMatch = text.match(/(?:token|nft|#)\s*#?(\d+)/i);
+  if (tokenMatch) candidates.add(tokenMatch[1]);
+
+  return [...candidates].filter(Boolean);
+}
+
 export function QRScannerPage() {
   const { lots, tokens, syncLotsFromBackend } = useApp();
   const { t } = useI18n();
@@ -230,15 +255,122 @@ export function QRScannerPage() {
   const [showCert, setShowCert]       = useState(false);
   const [scanning, setScanning]       = useState(false);
   const [notFound, setNotFound]       = useState(false);
-  const [scanAnim, setScanAnim]       = useState(false);
+  const [cameraActive, setCameraActive] = useState(false);
+  const [cameraError, setCameraError]   = useState('');
+  const [detectedText, setDetectedText] = useState('');
+  const videoRef = useRef(null);
+  const canvasRef = useRef(null);
+  const streamRef = useRef(null);
+  const detectorRef = useRef(null);
+  const frameRef = useRef(null);
 
-  const parseAndSearch = (raw) => {
-    let lotId = raw.trim();
-    try { const url = new URL(raw.trim()); lotId = url.searchParams.get('lot') || lotId; } catch (error) { void error; }
-    const lot   = lots.find(l => l.lot_id === lotId || String(l.token_id) === lotId);
+  const parseAndSearch = useCallback((raw) => {
+    const candidates = extractQrCandidates(raw);
+    const lot = lots.find(l =>
+      candidates.some(value =>
+        l.lot_id === value ||
+        String(l.token_id) === value ||
+        (l.ipfs_hash && raw.includes(l.ipfs_hash))
+      )
+    );
     const token = lot ? tokens.find(tk => tk.token_id === lot.token_id) : null;
     return lot && isTransportReady(lot) ? { lot, token } : null;
-  };
+  }, [lots, tokens]);
+
+  const stopCamera = useCallback(() => {
+    if (frameRef.current) cancelAnimationFrame(frameRef.current);
+    frameRef.current = null;
+    if (streamRef.current) {
+      streamRef.current.getTracks().forEach(track => track.stop());
+      streamRef.current = null;
+    }
+    if (videoRef.current) videoRef.current.srcObject = null;
+    setScanning(false);
+    setCameraActive(false);
+  }, []);
+
+  const handleDetected = useCallback((rawValue) => {
+    const value = String(rawValue || '').trim();
+    if (!value) return;
+    setDetectedText(value);
+    setScanning(false);
+    const found = parseAndSearch(value);
+    setResult(found);
+    setNotFound(!found);
+    stopCamera();
+  }, [parseAndSearch, stopCamera]);
+
+  const scanFrame = useCallback(async () => {
+    const video = videoRef.current;
+    if (!video || video.readyState < 2) {
+      frameRef.current = requestAnimationFrame(scanFrame);
+      return;
+    }
+
+    try {
+      if (detectorRef.current) {
+        const codes = await detectorRef.current.detect(video);
+        if (codes?.length) {
+          handleDetected(codes[0].rawValue);
+          return;
+        }
+      } else {
+        const canvas = canvasRef.current;
+        const ctx = canvas?.getContext('2d', { willReadFrequently: true });
+        if (canvas && ctx && video.videoWidth && video.videoHeight) {
+          canvas.width = video.videoWidth;
+          canvas.height = video.videoHeight;
+          ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
+          const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
+          const code = jsQR(imageData.data, imageData.width, imageData.height, { inversionAttempts: 'dontInvert' });
+          if (code?.data) {
+            handleDetected(code.data);
+            return;
+          }
+        }
+      }
+    } catch (error) {
+      void error;
+    }
+    frameRef.current = requestAnimationFrame(scanFrame);
+  }, [handleDetected]);
+
+  const startCamera = useCallback(async () => {
+    setCameraError('');
+    setDetectedText('');
+    setNotFound(false);
+    setResult(null);
+
+    if (!navigator.mediaDevices?.getUserMedia) {
+      setCameraError('Caméra indisponible dans ce navigateur. Utilisez Chrome/Edge en HTTPS ou la saisie manuelle.');
+      return;
+    }
+    try {
+      setScanning(true);
+      const stream = await navigator.mediaDevices.getUserMedia({
+        video: { facingMode: { ideal: 'environment' }, width: { ideal: 1280 }, height: { ideal: 720 } },
+        audio: false,
+      });
+      streamRef.current = stream;
+      detectorRef.current = 'BarcodeDetector' in window
+        ? new window.BarcodeDetector({ formats: ['qr_code'] })
+        : null;
+      if (videoRef.current) {
+        videoRef.current.srcObject = stream;
+        await videoRef.current.play();
+      }
+      setCameraActive(true);
+      frameRef.current = requestAnimationFrame(scanFrame);
+    } catch (error) {
+      setScanning(false);
+      setCameraActive(false);
+      setCameraError(error?.name === 'NotAllowedError'
+        ? 'Accès caméra refusé. Autorisez la caméra puis réessayez.'
+        : 'Impossible d’ouvrir la caméra sur cet appareil.');
+    }
+  }, [scanFrame]);
+
+  useEffect(() => () => stopCamera(), [stopCamera]);
 
   const handleSearch = () => {
     if (!manualInput.trim()) return;
@@ -251,19 +383,6 @@ export function QRScannerPage() {
     }, 600);
   };
 
-  const handleSimulateScan = () => {
-    if (lots.length === 0) { return; }
-    setScanAnim(true);
-    setTimeout(() => {
-      setScanAnim(false);
-      const certified = lots.find(l => isTransportReady(l) && l.token_id != null);
-      if (certified) {
-        const token = tokens.find(tk => tk.token_id === certified.token_id);
-        setResult({ lot: certified, token });
-      } else setNotFound(true);
-    }, 2000);
-  };
-
   return (
     <div className="page-wrapper">
       <PageHeader title={t('scanner.title')} subtitle={t('scanner.subtitle')}/>
@@ -271,22 +390,45 @@ export function QRScannerPage() {
         {/* Scanner zone */}
         <div className="card" style={{ textAlign:'center' }}>
           <h3 style={{ fontFamily:'var(--font-display)', fontSize:'1.2rem', marginBottom:20 }}>{t('scanner.zone')}</h3>
-          <div style={{ width:240, height:240, margin:'0 auto 20px', border:'2px solid var(--border-active)', borderRadius:'var(--r-lg)', position:'relative', overflow:'hidden', background:'var(--bg-raised)', cursor:'pointer' }}
-            onClick={handleSimulateScan}>
+          <div style={{ width:280, maxWidth:'100%', aspectRatio:'1 / 1', margin:'0 auto 20px', border:`2px solid ${cameraActive?'var(--emerald)':'var(--border-active)'}`, borderRadius:'var(--r-lg)', position:'relative', overflow:'hidden', background:'var(--bg-raised)' }}>
+            <video
+              ref={videoRef}
+              muted
+              playsInline
+              style={{ position:'absolute', inset:0, width:'100%', height:'100%', objectFit:'cover', opacity:cameraActive ? 1 : 0 }}
+            />
+            <canvas ref={canvasRef} style={{ display:'none' }}/>
             {[['0,0'],['auto,0'],['0,auto'],['auto,auto']].map(([pos],idx) => {
               const [top,left] = pos.split(',');
               return <div key={idx} style={{ position:'absolute', top:top==='0'?8:'auto', bottom:top==='auto'?8:'auto', left:left==='0'?8:'auto', right:left==='auto'?8:'auto', width:24, height:24, borderTop:top==='0'?'2px solid var(--brand)':'none', borderBottom:top==='auto'?'2px solid var(--brand)':'none', borderLeft:left==='0'?'2px solid var(--brand)':'none', borderRight:left==='auto'?'2px solid var(--brand)':'none' }}/>;
             })}
-            {scanAnim && <div style={{ position:'absolute', left:0, right:0, height:2, background:'linear-gradient(90deg,transparent,var(--brand),transparent)', animation:'scanLine 1s linear infinite', boxShadow:'0 0 10px var(--brand)' }}/>}
-            <div style={{ position:'absolute', inset:0, display:'flex', flexDirection:'column', alignItems:'center', justifyContent:'center', gap:8 }}>
-              <Ic name="qr" size={48} color="var(--text-muted)"/>
-              <div style={{ fontSize:'0.75rem', color:'var(--text-muted)' }}>{scanAnim?t('scanner.scanning'):t('scanner.click')}</div>
+            {scanning && <div style={{ position:'absolute', left:0, right:0, height:2, background:'linear-gradient(90deg,transparent,var(--brand),transparent)', animation:'scanLine 1s linear infinite', boxShadow:'0 0 10px var(--brand)' }}/>}
+            <div style={{ position:'absolute', inset:0, display:cameraActive?'none':'flex', flexDirection:'column', alignItems:'center', justifyContent:'center', gap:8 }}>
+              <Ic name="camera" size={48} color="var(--text-muted)"/>
+              <div style={{ fontSize:'0.75rem', color:'var(--text-muted)' }}>{t('scanner.click')}</div>
             </div>
           </div>
           <p style={{ fontSize:'0.78rem', color:'var(--text-muted)', marginBottom:16 }}>{t('scanner.camera_info')}</p>
-          <button className="btn btn-gold btn-sm" onClick={handleSimulateScan} disabled={scanAnim}>
-            {scanAnim ? <><div className="loader" style={{ width:14, height:14, borderTopColor:'#0c0a06' }}/> {t('scanner.scanning')}</> : t('action.simulate_scan')}
-          </button>
+          {cameraError && (
+            <div style={{ padding:'10px 12px', background:'var(--amber-dim)', border:'1px solid rgba(245,158,11,0.25)', borderRadius:'var(--r-md)', color:'var(--amber)', fontSize:'0.78rem', marginBottom:12 }}>
+              {cameraError}
+            </div>
+          )}
+          {detectedText && (
+            <div style={{ fontFamily:'var(--font-mono)', fontSize:'0.68rem', color:'var(--text-muted)', wordBreak:'break-all', marginBottom:12 }}>
+              QR: {detectedText.slice(0, 90)}{detectedText.length > 90 ? '...' : ''}
+            </div>
+          )}
+          <div style={{ display:'flex', justifyContent:'center', gap:10, flexWrap:'wrap' }}>
+            <button className="btn btn-gold btn-sm" onClick={startCamera} disabled={cameraActive || scanning}>
+              {scanning ? <><div className="loader" style={{ width:14, height:14, borderTopColor:'#0c0a06' }}/> {t('scanner.scanning')}</> : t('action.start_camera')}
+            </button>
+            {cameraActive && (
+              <button className="btn btn-ghost btn-sm" onClick={stopCamera}>
+                {t('action.stop_camera')}
+              </button>
+            )}
+          </div>
         </div>
 
         <div style={{ display:'flex', flexDirection:'column', gap:16 }}>

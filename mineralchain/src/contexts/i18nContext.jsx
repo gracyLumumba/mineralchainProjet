@@ -70,7 +70,9 @@ const TRANSLATIONS = {
     'action.confirm_transfer': 'Confirmer le Transfert',
     'action.start_transport': 'Démarrer',
     'action.confirm_delivery': 'Confirmer Livraison',
-    'action.simulate_scan': 'Simuler Scan QR',
+    'action.simulate_scan': 'Mode démo',
+    'action.start_camera': 'Activer caméra',
+    'action.stop_camera': 'Arrêter caméra',
     'action.certify_lot': '＋ Certifier un lot',
 
     //  Common labels 
@@ -206,7 +208,7 @@ const TRANSLATIONS = {
     'timeline.extraction': 'Extraction du minerai',
     'timeline.analysis': 'Analyse IA',
     'timeline.certification': 'Certification NFT',
-    'timeline.transit': 'En Transit',
+    'timeline.transit': 'Transport',
     'timeline.delivery': 'Livraison Usine',
 
     //  Certificates 
@@ -278,13 +280,13 @@ const TRANSLATIONS = {
     'scanner.title': 'Scanner QR Code',
     'scanner.subtitle': 'Scannez le QR code d\'un certificat pour vérifier et gérer le lot',
     'scanner.zone': 'Zone de Scan',
-    'scanner.click': 'Cliquez pour simuler',
-    'scanner.scanning': 'Scan en cours...',
+    'scanner.click': 'Caméra prête à scanner',
+    'scanner.scanning': 'Recherche QR...',
     'scanner.manual': 'Saisie Manuelle',
     'scanner.placeholder': 'Ex: KAMOA-2501-042 ou 1234',
     'scanner.searching': 'Recherche...',
     'scanner.not_found': 'Lot ou token introuvable',
-    'scanner.camera_info': 'Dans une vraie application, cette zone utiliserait la caméra de votre appareil',
+    'scanner.camera_info': 'Placez le QR code du certificat dans le cadre. La vérification démarre automatiquement.',
 
     //  History 
     'history.title': 'Historique des Transports',
@@ -311,8 +313,8 @@ const TRANSLATIONS = {
     'analysis.step2':            'Importer fichier labo',
     'analysis.step3':            'Voir la comparaison',
     'analysis.step4':            'Valider',
-    'analysis.scan.title':       'Scanner le Lot ID',
-    'analysis.scan.subtitle':    'Entrez le lot à valider ou cliquez dans la liste',
+    'analysis.scan.title':       'Scanner QR du lot',
+    'analysis.scan.subtitle':    'Scannez le QR du certificat ou sélectionnez un lot dans la liste',
     'analysis.scan.placeholder': 'Lot ID ou Token #',
     'analysis.scan.btn':         'Chercher',
     'analysis.scan.searching':   'Recherche…',
@@ -598,7 +600,9 @@ const TRANSLATIONS = {
     'action.confirm_transfer': 'Confirm Transfer',
     'action.start_transport': 'Start',
     'action.confirm_delivery': 'Confirm Delivery',
-    'action.simulate_scan': 'Simulate QR Scan',
+    'action.simulate_scan': 'Demo mode',
+    'action.start_camera': 'Start camera',
+    'action.stop_camera': 'Stop camera',
     'action.certify_lot': '＋ Certify a lot',
 
     //  Common labels 
@@ -734,7 +738,7 @@ const TRANSLATIONS = {
     'timeline.extraction': 'Mineral extraction',
     'timeline.analysis': 'AI Analysis',
     'timeline.certification': 'NFT Certification',
-    'timeline.transit': 'In Transit',
+    'timeline.transit': 'Transport',
     'timeline.delivery': 'Factory Delivery',
 
     //  Certificates 
@@ -806,13 +810,13 @@ const TRANSLATIONS = {
     'scanner.title': 'QR Code Scanner',
     'scanner.subtitle': 'Scan a certificate QR code to verify and manage the lot',
     'scanner.zone': 'Scan Area',
-    'scanner.click': 'Click to simulate',
-    'scanner.scanning': 'Scanning...',
+    'scanner.click': 'Camera ready to scan',
+    'scanner.scanning': 'Looking for QR...',
     'scanner.manual': 'Manual Input',
     'scanner.placeholder': 'e.g.: KAMOA-2501-042 or 1234',
     'scanner.searching': 'Searching...',
     'scanner.not_found': 'Lot or token not found',
-    'scanner.camera_info': 'In a real application, this area would use your device camera',
+    'scanner.camera_info': 'Place the certificate QR code inside the frame. Verification starts automatically.',
 
     //  History 
     'history.title': 'Transport History',
@@ -839,8 +843,8 @@ const TRANSLATIONS = {
     'analysis.step2':            'Import lab file',
     'analysis.step3':            'View comparison',
     'analysis.step4':            'Validate',
-    'analysis.scan.title':       'Scan Lot ID',
-    'analysis.scan.subtitle':    'Enter the lot to validate or click in the list',
+    'analysis.scan.title':       'Scan lot QR',
+    'analysis.scan.subtitle':    'Scan the certificate QR or select a lot from the list',
     'analysis.scan.placeholder': 'Lot ID or Token #',
     'analysis.scan.btn':         'Search',
     'analysis.scan.searching':   'Searching…',

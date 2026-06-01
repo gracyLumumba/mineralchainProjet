@@ -12,5 +12,6 @@ export const ROUTES = {
   PRODUCER: 'Producer',
   PRODUCER_MENU: 'ProducerMenu',
   TRANSPORTER_MENU: 'TransporterMenu',
+  TRANSPORTER_SCANNER: 'TransporterScanner',
   ADMIN_MENU: 'AdminMenu',
 };

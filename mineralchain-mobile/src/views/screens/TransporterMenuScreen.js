@@ -81,6 +81,14 @@ export default function TransporterMenuScreen({ lots = [], isRefreshing, refresh
         <View style={styles.menuSection}>
           <Text style={[styles.sectionTitle, { color: colors.text }]}>Actions</Text>
           <MenuCard
+            icon="qrcode-scan"
+            title="Scanner QR"
+            subtitle="Ouvrir un certificat avec la camera"
+            color={colors.brand}
+            onPress={() => onNavigate(ROUTES.TRANSPORTER_SCANNER)}
+            colors={colors}
+          />
+          <MenuCard
             icon="truck-delivery"
             title="Expéditions actives"
             subtitle={`${enRoute} lot${enRoute > 1 ? 's' : ''} en transit`}

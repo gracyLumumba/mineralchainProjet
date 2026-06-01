@@ -15,6 +15,7 @@ import RegulatorLotsScreen from './screens/RegulatorLotsScreen';
 import ProducerScreen from './screens/ProducerScreen';
 import ProducerMenuScreen from './screens/ProducerMenuScreen';
 import TransporterMenuScreen from './screens/TransporterMenuScreen';
+import TransporterScannerScreen from './screens/TransporterScannerScreen';
 import AdminMenuScreen from './screens/AdminMenuScreen';
 import LoginScreen from './screens/LoginScreen';
 import DashboardScreen from './screens/DashboardScreen';
@@ -242,16 +243,28 @@ function AppNavigator() {
               </>
             ) : null}
             {isTransporter ? (
-              <Stack.Screen name={ROUTES.TRANSPORTER_MENU} options={{ title: 'Menu Transport' }}>
-                {({ navigation }) => (
-                  <TransporterMenuScreen
-                    lots={dashboard.lots}
-                    isRefreshing={dashboard.isRefreshing}
-                    refresh={dashboard.refresh}
-                    onNavigate={(route) => navigation.navigate(route)}
-                  />
-                )}
-              </Stack.Screen>
+              <>
+                <Stack.Screen name={ROUTES.TRANSPORTER_MENU} options={{ title: 'Menu Transport' }}>
+                  {({ navigation }) => (
+                    <TransporterMenuScreen
+                      lots={dashboard.lots}
+                      isRefreshing={dashboard.isRefreshing}
+                      refresh={dashboard.refresh}
+                      onNavigate={(route) => navigation.navigate(route)}
+                    />
+                  )}
+                </Stack.Screen>
+                <Stack.Screen name={ROUTES.TRANSPORTER_SCANNER} options={{ title: 'Scanner QR' }}>
+                  {({ navigation }) => (
+                    <TransporterScannerScreen
+                      lots={dashboard.lots}
+                      isRefreshing={dashboard.isRefreshing}
+                      refresh={dashboard.refresh}
+                      onOpenLot={(lotId) => navigation.navigate(ROUTES.LOT_DETAIL, { lotId, session })}
+                    />
+                  )}
+                </Stack.Screen>
+              </>
             ) : null}
             {isAdmin ? (
               <Stack.Screen name={ROUTES.ADMIN_MENU} options={{ title: 'Menu Admin' }}>

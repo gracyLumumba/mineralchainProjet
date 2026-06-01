@@ -1,10 +1,11 @@
-import React, { useState, useRef, useCallback } from 'react';
+import React, { useState, useRef, useCallback, useEffect } from 'react';
 import { useApp } from '../../contexts/AppContext';
 import { useI18n } from '../../contexts/i18nContext';
 import { useNotif, NOTIF_TYPES } from '../../contexts/NotifContext';
 import { PageHeader, EmptyState, StatusBadge, MineralBadge } from '../../components/common/UI';
 import { fmt } from '../../contexts/AppContext';
 import { apiService } from '../../services/api';
+import jsQR from 'jsqr';
 
 import { Ic } from '../../components/common/Icons';
 
@@ -259,6 +260,30 @@ function CompareRow({ item }) {
   );
 }
 
+function extractQrCandidates(raw) {
+  const text = String(raw || '').trim();
+  const candidates = new Set([text]);
+
+  try {
+    const url = new URL(text);
+    const lot = url.searchParams.get('lot') || url.searchParams.get('lot_id');
+    const token = url.searchParams.get('token') || url.searchParams.get('token_id');
+    if (lot) candidates.add(lot);
+    if (token) candidates.add(token);
+    url.pathname.split('/').filter(Boolean).forEach(part => candidates.add(decodeURIComponent(part)));
+  } catch (error) {
+    void error;
+  }
+
+  const lotMatch = text.match(/[A-Z]{2,}-\d{4}-\d{3,}/i);
+  if (lotMatch) candidates.add(lotMatch[0].toUpperCase());
+
+  const tokenMatch = text.match(/(?:token|nft|#)\s*#?(\d+)/i);
+  if (tokenMatch) candidates.add(tokenMatch[1]);
+
+  return [...candidates].filter(Boolean);
+}
+
 export default function RegulatorAnalysisPage() {
   const { lots, updateLot, addToken, addToast, syncLotsFromBackend } = useApp();
   const { notify } = useNotif();
@@ -278,7 +303,39 @@ export default function RegulatorAnalysisPage() {
   const [dragOver,   setDragOver]   = useState(false);
   const [comparison, setComparison] = useState(null);
   const [validating, setValidating] = useState(false);
+  const [cameraActive, setCameraActive] = useState(false);
+  const [cameraError, setCameraError] = useState('');
+  const [detectedText, setDetectedText] = useState('');
   const fileRef = useRef(null);
+  const videoRef = useRef(null);
+  const canvasRef = useRef(null);
+  const streamRef = useRef(null);
+  const detectorRef = useRef(null);
+  const frameRef = useRef(null);
+
+  const findLotFromQuery = useCallback((q) => {
+    const query = String(q || '').trim();
+    const candidates = extractQrCandidates(query);
+    return regulatorLots.find(l =>
+      candidates.some(value =>
+        l.lot_id.toLowerCase() === String(value).toLowerCase() ||
+        String(l.token_id) === String(value) ||
+        (l.ipfs_hash && query.includes(l.ipfs_hash))
+      )
+    );
+  }, [regulatorLots]);
+
+  const stopCamera = useCallback(() => {
+    if (frameRef.current) cancelAnimationFrame(frameRef.current);
+    frameRef.current = null;
+    if (streamRef.current) {
+      streamRef.current.getTracks().forEach(track => track.stop());
+      streamRef.current = null;
+    }
+    if (videoRef.current) videoRef.current.srcObject = null;
+    setScanAnim(false);
+    setCameraActive(false);
+  }, []);
 
   const searchLot = useCallback((q) => {
     const query = (q || lotQuery).trim();
@@ -286,11 +343,101 @@ export default function RegulatorAnalysisPage() {
     setNotFound(false); setFoundLot(null); setScanAnim(true);
     setTimeout(() => {
       setScanAnim(false);
-      const lot = regulatorLots.find(l => l.lot_id.toLowerCase()===query.toLowerCase() || String(l.token_id)===query);
+      const lot = findLotFromQuery(query);
       if (lot) { setFoundLot(lot); setStep(2); }
       else setNotFound(true);
     }, 700);
-  }, [regulatorLots, lotQuery]);
+  }, [findLotFromQuery, lotQuery]);
+
+  const handleDetected = useCallback((rawValue) => {
+    const value = String(rawValue || '').trim();
+    if (!value) return;
+    setDetectedText(value);
+    setLotQuery(value);
+    setScanAnim(false);
+    stopCamera();
+    const lot = findLotFromQuery(value);
+    if (lot) {
+      setNotFound(false);
+      setFoundLot(lot);
+      setStep(2);
+    } else {
+      setNotFound(true);
+    }
+  }, [findLotFromQuery, stopCamera]);
+
+  const scanFrame = useCallback(async () => {
+    const video = videoRef.current;
+    if (!video || video.readyState < 2) {
+      frameRef.current = requestAnimationFrame(scanFrame);
+      return;
+    }
+
+    try {
+      if (detectorRef.current) {
+        const codes = await detectorRef.current.detect(video);
+        if (codes?.length) {
+          handleDetected(codes[0].rawValue);
+          return;
+        }
+      } else {
+        const canvas = canvasRef.current;
+        const ctx = canvas?.getContext('2d', { willReadFrequently: true });
+        if (canvas && ctx && video.videoWidth && video.videoHeight) {
+          canvas.width = video.videoWidth;
+          canvas.height = video.videoHeight;
+          ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
+          const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
+          const code = jsQR(imageData.data, imageData.width, imageData.height, { inversionAttempts: 'dontInvert' });
+          if (code?.data) {
+            handleDetected(code.data);
+            return;
+          }
+        }
+      }
+    } catch (error) {
+      void error;
+    }
+    frameRef.current = requestAnimationFrame(scanFrame);
+  }, [handleDetected]);
+
+  const startCamera = useCallback(async () => {
+    setCameraError('');
+    setDetectedText('');
+    setNotFound(false);
+    setFoundLot(null);
+
+    if (!navigator.mediaDevices?.getUserMedia) {
+      setCameraError('Caméra indisponible dans ce navigateur. Utilisez Edge/Chrome en HTTPS ou la saisie manuelle.');
+      return;
+    }
+
+    try {
+      setScanAnim(true);
+      const stream = await navigator.mediaDevices.getUserMedia({
+        video: { facingMode: { ideal: 'environment' }, width: { ideal: 1280 }, height: { ideal: 720 } },
+        audio: false,
+      });
+      streamRef.current = stream;
+      detectorRef.current = 'BarcodeDetector' in window
+        ? new window.BarcodeDetector({ formats: ['qr_code'] })
+        : null;
+      if (videoRef.current) {
+        videoRef.current.srcObject = stream;
+        await videoRef.current.play();
+      }
+      setCameraActive(true);
+      frameRef.current = requestAnimationFrame(scanFrame);
+    } catch (error) {
+      setScanAnim(false);
+      setCameraActive(false);
+      setCameraError(error?.name === 'NotAllowedError'
+        ? 'Accès caméra refusé. Autorisez la caméra puis réessayez.'
+        : 'Impossible d’ouvrir la caméra sur cet appareil.');
+    }
+  }, [scanFrame]);
+
+  useEffect(() => () => stopCamera(), [stopCamera]);
 
   const handleFile = useCallback(async (f) => {
     setFileError(''); setParsedRows([]); setMatchedRow(null); setComparison(null); setLabFile(null);
@@ -456,6 +603,7 @@ export default function RegulatorAnalysisPage() {
   }, []);
 
   const reset = () => {
+    stopCamera();
     setStep(1); setLotQuery(''); setFoundLot(null); setNotFound(false);
     setParsedRows([]); setMatchedRow(null); setLabFile(null); setComparison(null); setFileError('');
   };
@@ -500,15 +648,24 @@ export default function RegulatorAnalysisPage() {
         <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr', gap:24 }}>
           <div className="card" style={{ textAlign:'center' }}>
             <h3 style={{ fontFamily:'var(--font-display)', fontSize:'1.2rem', marginBottom:8 }}>{t('analysis.scan.title')}</h3>
-            <p style={{ fontSize:'0.82rem', color:'var(--text-secondary)', marginBottom:20 }}>Entrez le lot à valider ou cliquez directement dans la liste</p>
+            <p style={{ fontSize:'0.82rem', color:'var(--text-secondary)', marginBottom:20 }}>
+              Scannez le QR du certificat ou saisissez le Lot ID pour lancer la double analyse DGMR.
+            </p>
 
             {/* Zone scan */}
-            <div onClick={() => lotQuery && searchLot()} style={{
-              width:200, height:200, margin:'0 auto 20px',
-              border:`2px solid ${scanAnim?'var(--brand)':'var(--border-active)'}`,
+            <div style={{
+              width:240, maxWidth:'100%', aspectRatio:'1 / 1', margin:'0 auto 20px',
+              border:`2px solid ${cameraActive?'var(--emerald)':scanAnim?'var(--brand)':'var(--border-active)'}`,
               borderRadius:16, position:'relative', overflow:'hidden',
-              background:'var(--bg-raised)', cursor:lotQuery?'pointer':'default', transition:'border-color 0.3s',
+              background:'var(--bg-raised)', transition:'border-color 0.3s',
             }}>
+              <video
+                ref={videoRef}
+                muted
+                playsInline
+                style={{ position:'absolute', inset:0, width:'100%', height:'100%', objectFit:'cover', opacity:cameraActive ? 1 : 0 }}
+              />
+              <canvas ref={canvasRef} style={{ display:'none' }}/>
               {/* Coins dorés */}
               {[[8,8,'top','left'],[8,'r','top','right'],['b',8,'bottom','left'],['b','r','bottom','right']].map(([t,l,bt,bl],i)=>(
                 <div key={i} style={{ position:'absolute', width:20, height:20,
@@ -521,12 +678,36 @@ export default function RegulatorAnalysisPage() {
                 }}/>
               ))}
               {scanAnim && <div style={{ position:'absolute', left:0, right:0, height:2, background:'linear-gradient(90deg,transparent,var(--brand),transparent)', animation:'scanLine 1s linear infinite', boxShadow:'0 0 8px var(--brand)' }}/>}
-              <div style={{ position:'absolute', inset:0, display:'flex', flexDirection:'column', alignItems:'center', justifyContent:'center', gap:8 }}>
-                <span style={{ fontSize:42, opacity:scanAnim?0.2:0.45 }}><Ic name="scale" size={14}/></span>
+              <div style={{ position:'absolute', inset:0, display:cameraActive?'none':'flex', flexDirection:'column', alignItems:'center', justifyContent:'center', gap:8 }}>
+                <span style={{ fontSize:42, opacity:scanAnim?0.2:0.45 }}><Ic name="camera" size={38}/></span>
                 <span style={{ fontSize:'0.72rem', color:'var(--text-muted)' }}>
-                  {scanAnim?'Recherche…':lotQuery?'Cliquer pour chercher':'Saisir le lot'}
+                  {scanAnim?'Recherche QR…':'Caméra prête'}
                 </span>
               </div>
+            </div>
+
+            <p style={{ fontSize:'0.76rem', color:'var(--text-muted)', marginBottom:12 }}>
+              Placez le QR code du certificat dans le cadre. Si la caméra n’est pas disponible, utilisez la saisie manuelle.
+            </p>
+            {cameraError && (
+              <div style={{ padding:'10px 14px', background:'var(--amber-dim)', border:'1px solid rgba(245,158,11,0.25)', borderRadius:'var(--r-md)', fontSize:'0.78rem', color:'var(--amber)', marginBottom:12 }}>
+                {cameraError}
+              </div>
+            )}
+            {detectedText && (
+              <div style={{ fontFamily:'var(--font-mono)', fontSize:'0.68rem', color:'var(--text-muted)', wordBreak:'break-all', marginBottom:12 }}>
+                QR: {detectedText.slice(0, 90)}{detectedText.length > 90 ? '...' : ''}
+              </div>
+            )}
+            <div style={{ display:'flex', justifyContent:'center', gap:10, flexWrap:'wrap', marginBottom:14 }}>
+              <button className="btn btn-gold btn-sm" onClick={startCamera} disabled={cameraActive || scanAnim}>
+                {scanAnim ? <><div className="loader" style={{ width:14, height:14, borderTopColor:'#0c0a06' }}/> Recherche QR...</> : 'Activer caméra'}
+              </button>
+              {cameraActive && (
+                <button className="btn btn-ghost btn-sm" onClick={stopCamera}>
+                  Arrêter caméra
+                </button>
+              )}
             </div>
 
             <div style={{ display:'flex', gap:8, marginBottom:12 }}>

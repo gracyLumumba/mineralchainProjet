@@ -30,6 +30,7 @@ function getMenuItems(role, t) {
     return [
       ...common,
       { key: ROUTES.TRANSPORTER_MENU, label: t('menu_transport'), icon: 'truck-outline' },
+      { key: ROUTES.TRANSPORTER_SCANNER, label: 'Scanner QR', icon: 'qrcode-scan' },
     ];
   }
   if (role === 'admin') {

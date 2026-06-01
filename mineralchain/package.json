@@ -13,7 +13,8 @@
     "react-qr-code": "^2.0.12",
     "html2canvas": "^1.4.1",
     "jspdf": "^2.5.1",
-    "qrcode": "^1.5.3"
+    "qrcode": "^1.5.3",
+    "jsqr": "^1.4.0"
   },
   "scripts": {
     "start": "react-scripts start",
