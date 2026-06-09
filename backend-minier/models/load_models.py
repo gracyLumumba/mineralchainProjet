@@ -5,25 +5,26 @@ import numpy as np
 import pandas as pd
 
 class ModelLoader:
-    """Charge tous les modèles IA sauvegardés"""
-    
+    """Charge tous les modèles IA sauvegardés."""
+
     def __init__(self, model_dir=None):
+        project_root = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", ".."))
+        default_paths = [
+            os.path.join(project_root, "modele_ia_minier", "modeles"),
+            os.path.join(project_root, "modele_ia_minier", "modeles".replace("/", os.sep)),
+            os.path.join(os.path.expanduser("~"), "Desktop", "Gracy", "memoire", "modele_ia_minier", "modeles"),
+        ]
+
         if model_dir is None:
-            # Chemins possibles
-            possible_paths = [
-                r"C:\Users\Dr_Denise\Desktop\Gracy\memoire\modele_ia_minier\modeles",
-                os.path.join(os.path.expanduser("~"), "Desktop", "Gracy", "memoire", "modele_ia_minier", "modeles"),
-            ]
-            
-            for path in possible_paths:
+            for path in default_paths:
                 if os.path.exists(path):
                     self.model_dir = path
                     break
             else:
-                self.model_dir = "modeles"
+                self.model_dir = default_paths[0]
         else:
             self.model_dir = model_dir
-            
+
         self.models = {}
         self.scaler = None
         self.feature_columns = None
@@ -61,25 +62,33 @@ class ModelLoader:
         else:
             print("⚠️ scaler.pkl non trouvé")
         
-        # Charger les modèles
+        # Charger les modèles avec fallback sur les noms réellement générés
         model_files = {
-            'mineral': 'model_mineral_type.pkl',
-            'impurity': 'model_impurity_level.pkl',
-            'fraud': 'model_fraud_detection.pkl'
+            'mineral': ['model_mineral_type.pkl', 'random_forest.pkl', 'xgboost.pkl'],
+            'impurity': ['model_impurity_level.pkl', 'random_forest.pkl', 'lightgbm.pkl'],
+            'fraud': ['model_fraud_detection.pkl', 'random_forest.pkl', 'xgboost.pkl'],
         }
-        
-        for name, filename in model_files.items():
-            path = os.path.join(self.model_dir, filename)
-            if os.path.exists(path):
-                self.models[name] = joblib.load(path)
-                # Avoid Windows/joblib worker spawning issues during inference.
-                if hasattr(self.models[name], 'n_jobs'):
-                    try:
-                        self.models[name].n_jobs = 1
-                    except Exception:
-                        pass
-                print(f"✅ Modèle {name} chargé")
-            else:
+
+        for name, filenames in model_files.items():
+            loaded = False
+            for filename in filenames:
+                path = os.path.join(self.model_dir, filename)
+                if not os.path.exists(path):
+                    continue
+                try:
+                    self.models[name] = joblib.load(path)
+                    # Avoid Windows/joblib worker spawning issues during inference.
+                    if hasattr(self.models[name], 'n_jobs'):
+                        try:
+                            self.models[name].n_jobs = 1
+                        except Exception:
+                            pass
+                    print(f"✅ Modèle {name} chargé depuis {filename}")
+                    loaded = True
+                    break
+                except Exception as error:
+                    print(f"⚠️ Impossible de charger {filename}: {error}")
+            if not loaded:
                 print(f"⚠️ Modèle {name} non trouvé")
         
         # Charger les encodeurs

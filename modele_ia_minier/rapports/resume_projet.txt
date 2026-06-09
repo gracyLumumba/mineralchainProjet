@@ -1,0 +1,15 @@
+SYSTEME DE CERTIFICATION DES MINERAIS STRATEGIQUES
+============================================================
+
+Modules implementes :
+- Identification des minerais
+- Classification des impuretes
+- Detection de fraude
+- Certification Blockchain
+
+Modeles testes :
+- Random Forest
+- XGBoost
+- LightGBM
+- SVM
+- MLP
