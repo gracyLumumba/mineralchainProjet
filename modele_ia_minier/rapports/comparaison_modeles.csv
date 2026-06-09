@@ -1,5 +1,5 @@
 Modele,Cible,Accuracy,Precision,Recall,F1-score,ROC-AUC
 Random Forest,Mineral_Type,0.8947,0.8792,0.8823,0.8806,
 Random Forest,Impurity_Level,0.9302,0.9302,0.9302,0.9302,0.9736
-Random Forest,Fraud_Detection,0.8492,0.5287,0.5004,0.4613,0.5002
+Random Forest,Fraud_Detection,0.8485,0.1071,0.0019,0.0037,0.5046
 XGBoost,Mineral_Type,0.8923,0.8786,0.8764,0.8774,
