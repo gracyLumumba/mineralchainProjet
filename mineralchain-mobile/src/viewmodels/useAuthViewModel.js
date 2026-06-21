@@ -9,16 +9,16 @@ const REGISTER_INITIAL = {
   username: '',
   email: '',
   password: '',
-  organization: '',
+  organization: 'MineralChain',
   role: 'producer',
   site: 'Kamoa-Kansoko',
 };
 
 const DEMO_CREDENTIALS = [
-  { key: 'producer',    label: 'Producteur',  identifier: 'producteur',  password: 'Demo2025!',  icon: 'pickaxe',        iconLib: 'MaterialCommunityIcons', description: 'Creation et certification des lots' },
-  { key: 'regulator',  label: 'Regulateur',  identifier: 'regulateur',  password: 'Demo2025!',  icon: 'scale-balance',  iconLib: 'MaterialCommunityIcons', description: 'Controle et verification des donnees' },
-  { key: 'transporter',label: 'Transporteur',identifier: 'transporteur',password: 'Demo2025!',  icon: 'truck-outline',  iconLib: 'MaterialCommunityIcons', description: 'Suivi logistique et expedition' },
-  { key: 'admin',      label: 'Admin',       identifier: 'admin',       password: 'Admin2025!', icon: 'shield-account', iconLib: 'MaterialCommunityIcons', description: 'Supervision et gestion des comptes', isAdmin: true },
+  { key: 'producer', label: 'Producteur', identifier: 'producteur', password: 'Demo2025!', icon: 'pickaxe', iconLib: 'MaterialCommunityIcons', description: 'Creation et certification des lots' },
+  { key: 'regulator', label: 'Regulateur', identifier: 'regulateur', password: 'Demo2025!', icon: 'scale-balance', iconLib: 'MaterialCommunityIcons', description: 'Controle et verification des donnees' },
+  { key: 'transporter', label: 'Transporteur', identifier: 'transporteur', password: 'Demo2025!', icon: 'truck-outline', iconLib: 'MaterialCommunityIcons', description: 'Suivi logistique et expedition' },
+  { key: 'admin', label: 'Admin', identifier: 'admin', password: 'Admin2025!', icon: 'shield-account', iconLib: 'MaterialCommunityIcons', description: 'Supervision et gestion des comptes', isAdmin: true },
 ];
 
 const DEMO_USERS = {
@@ -56,6 +56,35 @@ const DEMO_USERS = {
   },
 };
 
+function getDefaultOrganization(role, site) {
+  const normalizedRole = String(role || '').trim().toLowerCase();
+  const normalizedSite = String(site || '').trim();
+
+  if (normalizedRole === 'regulator') {
+    return 'DGMR';
+  }
+
+  if (normalizedRole === 'transporter') {
+    return 'Kamoa Logistics';
+  }
+
+  if (normalizedSite) {
+    return `${normalizedSite} Mining`;
+  }
+
+  return 'MineralChain';
+}
+
+function isAutoOrganization(value, role, site) {
+  const normalized = String(value || '').trim();
+  if (!normalized) {
+    return true;
+  }
+
+  return normalized === getDefaultOrganization(role, site)
+    || normalized === REGISTER_INITIAL.organization;
+}
+
 function createOfflineDemoSession(identifier, password) {
   const normalized = String(identifier || '').trim().toLowerCase();
   const credential = DEMO_CREDENTIALS.find((item) => item.identifier === normalized);
@@ -80,10 +109,22 @@ export function useAuthViewModel({ onLogin }) {
   const [notice, setNotice] = useState('');
 
   const updateRegisterField = (key, value) => {
-    setRegisterForm((current) => ({
-      ...current,
-      [key]: value,
-    }));
+    setRegisterForm((current) => {
+      const next = {
+        ...current,
+        [key]: value,
+      };
+
+      if (key === 'role' && isAutoOrganization(current.organization, current.role, current.site)) {
+        next.organization = getDefaultOrganization(value, current.site);
+      }
+
+      if (key === 'site' && isAutoOrganization(current.organization, current.role, current.site)) {
+        next.organization = getDefaultOrganization(current.role, value);
+      }
+
+      return next;
+    });
   };
 
   const fillDemoCredentials = (credential) => {
@@ -123,40 +164,53 @@ export function useAuthViewModel({ onLogin }) {
         return;
       }
       setError(submitError.message || 'Connexion impossible');
-      setNotice('Verifiez l URL API ci-dessous puis relancez la connexion.');
+      setNotice("Si vous venez de creer un compte, il attend peut-etre l approbation de l administrateur.");
     } finally {
       setIsSubmitting(false);
     }
   };
 
   const submitRegister = async () => {
-    // Validation locale simple
-    if (!registerForm.username || !registerForm.password || !registerForm.email || !registerForm.full_name) {
+    const normalizedForm = {
+      ...registerForm,
+      full_name: String(registerForm.full_name || '').trim(),
+      username: String(registerForm.username || '').trim(),
+      email: String(registerForm.email || '').trim(),
+      password: String(registerForm.password || ''),
+      role: String(registerForm.role || 'producer').trim().toLowerCase(),
+      site: String(registerForm.site || '').trim() || 'Kamoa-Kansoko',
+      organization: String(registerForm.organization || '').trim(),
+    };
+
+    if (!normalizedForm.username || !normalizedForm.password || !normalizedForm.email || !normalizedForm.full_name) {
       setError('Veuillez remplir tous les champs obligatoires.');
       return;
     }
 
-    if (registerForm.password.length < 6) {
-      setError('Le mot de passe doit contenir au moins 6 caractères.');
+    if (normalizedForm.password.length < 6) {
+      setError('Le mot de passe doit contenir au moins 6 caracteres.');
       return;
+    }
+
+    if (!normalizedForm.organization || isAutoOrganization(normalizedForm.organization, normalizedForm.role, normalizedForm.site)) {
+      normalizedForm.organization = getDefaultOrganization(normalizedForm.role, normalizedForm.site);
     }
 
     try {
       setIsSubmitting(true);
       setError('');
       setNotice('');
-      const result = await register(registerForm);
-      // Rappel : Le compte doit être approuvé par l'admin ensuite
-      setNotice(result.message || 'Compte créé ! Un administrateur doit maintenant l\'approuver.');
+      const result = await register(normalizedForm);
+      setNotice(result.message || 'Compte cree. Il attend maintenant l approbation de l administrateur.');
       setMode('login');
-      setIdentifier(registerForm.username);
+      setIdentifier(normalizedForm.username);
       setPassword('');
       setRegisterForm(REGISTER_INITIAL);
     } catch (submitError) {
       if (isNetworkUnavailableError(submitError)) {
-        const targetUrl = process.env.EXPO_PUBLIC_API_BASE_URL || 'Non définie (localhost?)';
-        setError(`Serveur injoignable`);
-        setNotice(`L'application tente de contacter : ${targetUrl}. Vérifiez que votre téléphone et votre PC sont sur le même réseau Wi-Fi.`);
+        const targetUrl = process.env.EXPO_PUBLIC_API_BASE_URL || 'Non definie';
+        setError('Serveur injoignable');
+        setNotice(`L'application tente de contacter : ${targetUrl}. Verifiez que votre telephone et votre PC sont sur le meme reseau Wi-Fi.`);
         return;
       }
       setError(submitError.message || 'Inscription impossible');

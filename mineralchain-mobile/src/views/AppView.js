@@ -17,6 +17,7 @@ import ProducerMenuScreen from './screens/ProducerMenuScreen';
 import TransporterMenuScreen from './screens/TransporterMenuScreen';
 import TransporterScannerScreen from './screens/TransporterScannerScreen';
 import AdminMenuScreen from './screens/AdminMenuScreen';
+import AdminTransactionsScreen from './screens/AdminTransactionsScreen';
 import LoginScreen from './screens/LoginScreen';
 import DashboardScreen from './screens/DashboardScreen';
 import LotsListScreen from './screens/LotsListScreen';
@@ -272,6 +273,17 @@ function AppNavigator() {
                   <AdminMenuScreen
                     lots={dashboard.lots}
                     users={dashboard.users}
+                    isRefreshing={dashboard.isRefreshing}
+                    refresh={dashboard.refresh}
+                    onNavigate={(route) => navigation.navigate(route)}
+                  />
+                )}
+              </Stack.Screen>
+            ) : null}
+            {isAdmin ? (
+              <Stack.Screen name={ROUTES.TRANSACTIONS} options={{ title: 'Transactions' }}>
+                {({ navigation }) => (
+                  <AdminTransactionsScreen
                     isRefreshing={dashboard.isRefreshing}
                     refresh={dashboard.refresh}
                     onNavigate={(route) => navigation.navigate(route)}

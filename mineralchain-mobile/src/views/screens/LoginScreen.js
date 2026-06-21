@@ -128,6 +128,10 @@ export default function LoginScreen({ onLogin }) {
                 </Text>
               </Pressable>
 
+              <Text style={[styles.helperText, { color: colors.muted }]}>
+                Les nouveaux comptes passent en attente d approbation avant de pouvoir se connecter.
+              </Text>
+
               <Text style={[styles.demoSectionTitle, { color: colors.muted }]}>COMPTES DEMO</Text>
 
               <View style={styles.demoGrid}>
@@ -353,6 +357,12 @@ const styles = StyleSheet.create({
     color: '#ffffff',
     fontSize: 15,
     fontWeight: '900',
+  },
+  helperText: {
+    fontSize: 12,
+    lineHeight: 17,
+    textAlign: 'center',
+    marginTop: 2,
   },
   demoSectionTitle: {
     fontSize: 11,

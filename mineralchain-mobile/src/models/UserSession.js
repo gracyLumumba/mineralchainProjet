@@ -7,6 +7,7 @@ export function createUserSession(payload = {}) {
     email: payload.email || '',
     username: payload.username || '',
     organization: payload.organization || '',
+    account_status: payload.account_status || payload.status || 'approved',
     token: payload.token || '',
   };
 }

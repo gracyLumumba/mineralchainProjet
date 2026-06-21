@@ -14,4 +14,5 @@ export const ROUTES = {
   TRANSPORTER_MENU: 'TransporterMenu',
   TRANSPORTER_SCANNER: 'TransporterScanner',
   ADMIN_MENU: 'AdminMenu',
+  TRANSACTIONS: 'Transactions',
 };

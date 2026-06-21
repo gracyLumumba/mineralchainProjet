@@ -50,7 +50,7 @@ export default function AdminMenuScreen({ lots = [], users = [], isRefreshing, r
   const totalLots = lots.length;
   const certified = lots.filter((l) => l.tokenId != null).length;
   const suspects = lots.filter((l) => l.status === 'SUSPECT').length;
-  const pendingUsers = users.filter((u) => u.status === 'pending').length;
+  const pendingUsers = users.filter((u) => u.account_status === 'pending').length;
 
   return (
     <ScreenShell onRefresh={refresh} refreshing={isRefreshing}>
@@ -84,7 +84,7 @@ export default function AdminMenuScreen({ lots = [], users = [], isRefreshing, r
           <StatCard label="Total lots"    value={totalLots}    icon="layers"          tone="default"  colors={colors} />
           <StatCard label="Certifiés"     value={certified}    icon="certificate"     tone="success"  colors={colors} />
           <StatCard label="Suspects"      value={suspects}     icon="alert-circle"    tone="danger"   colors={colors} />
-          <StatCard label="Utilisateurs"  value={pendingUsers} icon="account-clock"   tone="warning"  colors={colors} />
+          <StatCard label="En attente"    value={pendingUsers} icon="account-clock"   tone="warning"  colors={colors} />
         </View>
       </AnimatedEntrance>
 
@@ -122,6 +122,14 @@ export default function AdminMenuScreen({ lots = [], users = [], isRefreshing, r
             subtitle={`${suspects} lot${suspects > 1 ? 's' : ''} suspect${suspects > 1 ? 's' : ''}`}
             color={colors.errorText}
             onPress={() => onNavigate(ROUTES.LOTS)}
+            colors={colors}
+          />
+          <MenuCard
+            icon="swap-horizontal"
+            title="Transactions"
+            subtitle="Historique blockchain recents"
+            color={colors.brand}
+            onPress={() => onNavigate(ROUTES.TRANSACTIONS)}
             colors={colors}
           />
         </View>
