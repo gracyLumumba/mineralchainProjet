@@ -3,6 +3,7 @@ from web3 import Web3
 import traceback
 
 from utils.blockchain_config import load_contract_config
+from utils.transaction_manager import send_contract_transaction
 
 
 blockchain_bp = Blueprint('blockchain', __name__)
@@ -48,7 +49,7 @@ def mint_token():
         if not account:
             return jsonify({"error": "Aucun compte Ganache disponible"}), 503
 
-        tx_hash = contract.functions.mintMineralToken(
+        tx_builder = contract.functions.mintMineralToken(
             Web3.to_checksum_address(data.get('recipient') or account),
             data.get('lot_id', ''),
             data.get('site', ''),
@@ -63,11 +64,8 @@ def mint_token():
             int(float(data.get('co_grade', 0)) * 100),
             int(float(data.get('fe_grade', 0)) * 100),
             int(float(data.get('weight', 0)) * 100),
-        ).transact({
-            'from': account,
-            'gas': 3000000,
-            'gasPrice': w3.eth.gas_price,
-        })
+        )
+        tx_hash = send_contract_transaction(w3, tx_builder, account)
 
         receipt = w3.eth.wait_for_transaction_receipt(tx_hash, timeout=60)
         token_id = contract.functions.getTokenByLot(data.get('lot_id', '')).call()
@@ -134,15 +132,12 @@ def validate_dgmr():
     try:
         payload = request.get_json() or {}
         account = _account()
-        tx_hash = contract.functions.validateByDGMR(
+        tx_builder = contract.functions.validateByDGMR(
             int(payload.get('token_id')),
             payload.get('status', 'AUTHENTIQUE'),
             Web3.to_checksum_address(payload.get('validator_address') or account),
-        ).transact({
-            'from': account,
-            'gas': 500000,
-            'gasPrice': w3.eth.gas_price,
-        })
+        )
+        tx_hash = send_contract_transaction(w3, tx_builder, account, fallback_gas=500000)
         receipt = w3.eth.wait_for_transaction_receipt(tx_hash, timeout=60)
         return jsonify({
             "success": receipt.status == 1,
@@ -159,15 +154,12 @@ def update_ipfs():
     try:
         payload = request.get_json() or {}
         account = _account()
-        tx_hash = contract.functions.updateIPFSHash(
+        tx_builder = contract.functions.updateIPFSHash(
             int(payload.get('token_id')),
             payload.get('ipfs_hash', ''),
             payload.get('certificate_hash', ''),
-        ).transact({
-            'from': account,
-            'gas': 500000,
-            'gasPrice': w3.eth.gas_price,
-        })
+        )
+        tx_hash = send_contract_transaction(w3, tx_builder, account, fallback_gas=500000)
         receipt = w3.eth.wait_for_transaction_receipt(tx_hash, timeout=60)
         return jsonify({
             "success": receipt.status == 1,

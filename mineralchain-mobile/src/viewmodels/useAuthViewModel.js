@@ -40,7 +40,7 @@ const DEMO_USERS = {
   },
   transporteur: {
     id: 'demo-transporter-001',
-    name: 'Patrick Tshisekedi',
+    name: 'Eliel Ilunga',
     role: 'transporter',
     username: 'transporteur',
     email: 'transporteur@logistique.cd',
@@ -130,17 +130,35 @@ export function useAuthViewModel({ onLogin }) {
   };
 
   const submitRegister = async () => {
+    // Validation locale simple
+    if (!registerForm.username || !registerForm.password || !registerForm.email || !registerForm.full_name) {
+      setError('Veuillez remplir tous les champs obligatoires.');
+      return;
+    }
+
+    if (registerForm.password.length < 6) {
+      setError('Le mot de passe doit contenir au moins 6 caractères.');
+      return;
+    }
+
     try {
       setIsSubmitting(true);
       setError('');
       setNotice('');
       const result = await register(registerForm);
-      setNotice(result.message || 'Compte cree');
+      // Rappel : Le compte doit être approuvé par l'admin ensuite
+      setNotice(result.message || 'Compte créé ! Un administrateur doit maintenant l\'approuver.');
       setMode('login');
       setIdentifier(registerForm.username);
       setPassword('');
       setRegisterForm(REGISTER_INITIAL);
     } catch (submitError) {
+      if (isNetworkUnavailableError(submitError)) {
+        const targetUrl = process.env.EXPO_PUBLIC_API_BASE_URL || 'Non définie (localhost?)';
+        setError(`Serveur injoignable`);
+        setNotice(`L'application tente de contacter : ${targetUrl}. Vérifiez que votre téléphone et votre PC sont sur le même réseau Wi-Fi.`);
+        return;
+      }
       setError(submitError.message || 'Inscription impossible');
     } finally {
       setIsSubmitting(false);

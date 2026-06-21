@@ -3,7 +3,7 @@ import os
 import traceback
 from datetime import datetime
 
-import requests
+from utils.ipfs_client import fetch_json_from_gateway, request_with_backoff, upload_json_to_pinata
 
 
 ipfs_bp = Blueprint('ipfs', __name__)
@@ -11,15 +11,6 @@ ipfs_bp = Blueprint('ipfs', __name__)
 PINATA_JWT = os.getenv('PINATA_JWT')
 PINATA_GATEWAY = os.getenv('PINATA_GATEWAY', 'https://gateway.pinata.cloud')
 PINATA_PIN_JSON_URL = 'https://api.pinata.cloud/pinning/pinJSONToIPFS'
-
-
-def _pinata_headers():
-    if not PINATA_JWT:
-        raise RuntimeError('PINATA_JWT manquant')
-    return {
-        'Authorization': f'Bearer {PINATA_JWT}',
-        'Content-Type': 'application/json'
-    }
 
 
 @ipfs_bp.route('/ipfs/upload', methods=['POST'])
@@ -35,45 +26,25 @@ def upload_to_ipfs():
 
         print(f"\n[IPFS] Upload vers Pinata pour le lot: {lot_id}")
 
-        pinata_metadata = {
-            'name': name,
-            'keyvalues': {
-                'lot_id': lot_id,
-                'timestamp': str(datetime.now().timestamp()),
-                'type': 'mineral_certificate',
-            },
-        }
-        payload = {
-            'pinataContent': certificate_data,
-            'pinataMetadata': pinata_metadata,
-            'pinataOptions': {
-                'cidVersion': 1,
-            },
-        }
-
-        response = requests.post(
-            PINATA_PIN_JSON_URL,
-            json=payload,
-            headers=_pinata_headers(),
+        result = upload_json_to_pinata(
+            certificate_data,
+            lot_id=lot_id,
+            jwt=PINATA_JWT,
+            pin_json_url=PINATA_PIN_JSON_URL,
+            gateway_url=PINATA_GATEWAY,
+            name=name,
             timeout=10,
+            max_attempts=4,
+            backoff_factor=1.0,
         )
-
-        if response.status_code != 200:
-            print(f"[IPFS] Erreur Pinata: {response.status_code}")
-            return jsonify({
-                'error': 'Upload Pinata impossible',
-                'details': response.text[:200],
-            }), 502
-
-        result = response.json()
-        ipfs_hash = result['IpfsHash']
+        ipfs_hash = result['ipfs_hash']
         print(f"[IPFS] Upload reussi: {ipfs_hash}")
 
         return jsonify({
             'success': True,
             'ipfs_hash': ipfs_hash,
-            'ipfs_uri': f'ipfs://{ipfs_hash}',
-            'gateway_url': f'{PINATA_GATEWAY}/ipfs/{ipfs_hash}',
+            'ipfs_uri': result['ipfs_uri'],
+            'gateway_url': result['gateway_url'],
             'timestamp': datetime.now().isoformat(),
             'simulated': False,
         }), 200
@@ -92,18 +63,10 @@ def get_from_ipfs(ipfs_hash):
     try:
         clean_hash = ipfs_hash.replace('ipfs://', '')
         print(f"\n[IPFS] Recuperation: {clean_hash}")
-
-        response = requests.get(f'{PINATA_GATEWAY}/ipfs/{clean_hash}', timeout=10)
-        if response.status_code != 200:
-            return jsonify({'error': 'Fichier non trouve sur IPFS'}), 404
-
-        payload = response.json()
+        payload = fetch_json_from_gateway(PINATA_GATEWAY, clean_hash, timeout=10)
         return jsonify({
             'success': True,
-            'data': payload,
-            'content': payload,
-            'ipfs_hash': clean_hash,
-            'source': 'gateway',
+            **payload,
         }), 200
 
     except Exception as e:
@@ -119,8 +82,13 @@ def pin_to_ipfs(ipfs_hash):
     try:
         clean_hash = ipfs_hash.replace('ipfs://', '')
         print(f"\n[IPFS] Verification pin: {clean_hash}")
-
-        response = requests.get(f'{PINATA_GATEWAY}/ipfs/{clean_hash}', timeout=10)
+        response = request_with_backoff(
+            "GET",
+            f'{PINATA_GATEWAY}/ipfs/{clean_hash}',
+            timeout=10,
+            max_attempts=3,
+            backoff_factor=0.8,
+        )
         if response.status_code != 200:
             return jsonify({
                 'error': 'Hash non accessible via la gateway',

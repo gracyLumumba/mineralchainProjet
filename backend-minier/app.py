@@ -3,6 +3,7 @@
 import os
 import sys
 from pathlib import Path
+import socket
 
 # Force UTF-8 before importing modules that print Unicode at import time.
 if hasattr(sys.stdout, 'reconfigure'):
@@ -22,6 +23,16 @@ from routes.validate import validate_bp
 from routes.cache import cache_bp
 from models.load_models import model_loader
 from database.models import db
+
+def get_local_ip():
+    try:
+        s = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+        s.connect(("8.8.8.8", 80))
+        ip = s.getsockname()[0]
+        s.close()
+        return ip
+    except:
+        return "127.0.0.1"
 
 # Imports optionnels (blockchain)
 try:
@@ -72,7 +83,12 @@ if database_url.startswith('postgres://'):
 if database_url.startswith('postgresql://') and '+psycopg' not in database_url and '+psycopg2' not in database_url:
     database_url = f"postgresql+psycopg://{database_url[len('postgresql://'):]}"
 
-app.config['SQLALCHEMY_DATABASE_URI'] = database_url
+if not database_url:
+    # Fallback sur SQLite pour éviter le crash si DATABASE_URL est absent du .env
+    app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///mineralchain_dev.db'
+else:
+    app.config['SQLALCHEMY_DATABASE_URI'] = database_url
+
 app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
 app.config['DATABASE_ENABLED'] = False
 app.config['DATABASE_CONFIGURED'] = bool(database_url)
@@ -92,12 +108,14 @@ print(f"[IA] Model path: {MODEL_PATH}")
 model_loader.model_dir = str(MODEL_PATH)
 model_loader.load_all()
 
-if not database_url:
-    print("[DB] DATABASE_URL manquant. Configurez PostgreSQL dans le fichier .env.")
-else:
-    try:
-        with app.app_context():
-            db.create_all()
+try:
+    with app.app_context():
+        # Créer les tables systématiquement (PostgreSQL ou SQLite)
+        db.create_all()
+        
+        if not database_url:
+            print("[DB] DATABASE_URL manquant. Utilisation de SQLite (mineralchain_dev.db).")
+        else:
             inspector = inspect(db.engine)
             existing_tables = set(inspector.get_table_names())
             if 'lots' in existing_tables:
@@ -114,17 +132,18 @@ else:
                         db.session.execute(db.text(statement))
                 db.session.commit()
 
-            # Enable database-backed helpers before importing legacy JSON lots.
-            app.config['DATABASE_ENABLED'] = True
-            migrated = migrate_json_store_to_database()
+        # Activer la base de données et migrer les données JSON si nécessaire
+        app.config['DATABASE_ENABLED'] = True
+        migrated = migrate_json_store_to_database()
 
-        print(f"[DB] PostgreSQL actif: {app.config['DATABASE_URL_MASKED']}")
+        print(f"[DB] Base de donnees active: {app.config['DATABASE_URL_MASKED'] if database_url else 'SQLite'}")
         if migrated:
             print(f"[DB] Migration JSON -> PostgreSQL terminee: {migrated} lot(s)")
-    except Exception as error:
-        app.config['DATABASE_ENABLED'] = False
-        print(f"[DB] Connexion PostgreSQL impossible: {error}")
+except Exception as error:
+    app.config['DATABASE_ENABLED'] = False
+    print(f"[DB] Connexion PostgreSQL impossible: {error}")
 
+print("[API] Enregistrement des routes...")
 
 app.register_blueprint(analyze_bp, url_prefix='/api')
 app.register_blueprint(lots_bp, url_prefix='/api')
@@ -203,13 +222,16 @@ def home():
 
 if __name__ == '__main__':
     port = int(os.environ.get('PORT', 5000))
-    print(f"\n[OK] Serveur demarre sur http://localhost:{port}")
-    print("[INFO] Pour tester: http://localhost:5000/api/health")
+    local_ip = get_local_ip()
+    print(f"\n" + "="*60)
+    print(f"[OK] SERVEUR ACTIF SUR http://{local_ip}:{port}")
+    print(f"[IMPORTANT] Sur mobile, utilisez : http://{local_ip}:{port}/api")
+    print(f"    -> Testez dans le navigateur mobile : http://{local_ip}:{port}/api/health")
+    print("="*60)
     print("[MODULES] Disponibles:")
     print(f"   - Certify: {'OK' if CERTIFY_AVAILABLE else 'INDISPONIBLE'}")
     print(f"   - Blockchain: {'OK' if BLOCKCHAIN_AVAILABLE else 'INDISPONIBLE'}")
-    print(f"   - IPFS: {'OK' if IPFS_AVAILABLE else 'INDISPONIBLE'}")
-    print("=" * 60)
+    print(f"   - IPFS: {'OK' if IPFS_AVAILABLE else 'INDISPONIBLE'}\n")
     try:
         app.run(host='0.0.0.0', port=port, debug=False, use_reloader=False, threaded=True)
     except OSError as e:

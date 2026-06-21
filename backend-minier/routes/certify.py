@@ -7,10 +7,7 @@ from datetime import datetime
 import sys
 import os
 import traceback
-import requests
 from dotenv import load_dotenv
-from requests.adapters import HTTPAdapter
-from urllib3.util.retry import Retry
 
 # Charger les variables d'environnement
 load_dotenv()
@@ -21,6 +18,8 @@ from routes.lots import upsert_database_lot, database_enabled
 from routes.auth import get_current_user
 from utils.analysis_rules import evaluate_consistency_rules
 from utils.blockchain_config import load_contract_config, GANACHE_URL, DEFAULT_CONTRACT_ADDRESS
+from utils.ipfs_client import upload_json_to_pinata
+from utils.transaction_manager import send_contract_transaction as send_contract_transaction_with_nonce
 
 certify_bp = Blueprint('certify', __name__)
 AUTO_CERT_THRESHOLD = 0.00  # Demo mode: any non-fraud lot can be certified
@@ -101,30 +100,14 @@ def send_contract_transaction(tx_builder):
     if not ACCOUNT:
         raise RuntimeError("Aucun compte blockchain disponible")
 
-    if PRIVATE_KEY:
-        nonce = w3.eth.get_transaction_count(ACCOUNT)
-        transaction = tx_builder.build_transaction({
-            'from': ACCOUNT,
-            'gas': 3000000,
-            'gasPrice': w3.eth.gas_price,
-            'nonce': nonce,
-            'chainId': 1337
-        })
-        print(f"   • Nonce: {nonce}")
-        print("\n   [TX] Signature de la transaction...")
-        signed_txn = w3.eth.account.sign_transaction(transaction, PRIVATE_KEY)
-        print("   [OK] Transaction signee")
-        print("\n   [TX] Envoi de la transaction...")
-        tx_hash = w3.eth.send_raw_transaction(signed_txn.raw_transaction)
-    else:
-        print("   • Mode Ganache local: envoi sans clé privée explicite")
-        print("\n   [TX] Envoi de la transaction...")
-        tx_hash = tx_builder.transact({
-            'from': ACCOUNT,
-            'gas': 3000000,
-            'gasPrice': w3.eth.gas_price
-        })
-
+    print("   • Transaction queue active")
+    tx_hash = send_contract_transaction_with_nonce(
+        w3,
+        tx_builder,
+        ACCOUNT,
+        PRIVATE_KEY,
+        chain_id=getattr(w3.eth, "chain_id", 1337),
+    )
     return tx_hash
 
 
@@ -204,22 +187,6 @@ print(f"   • API URL: {PINATA_PIN_JSON_URL}")
 print(f"   • Timeout: {PINATA_TIMEOUT}s")
 
 
-def build_pinata_session():
-    session = requests.Session()
-    retry = Retry(
-        total=2,
-        connect=2,
-        read=2,
-        backoff_factor=1,
-        status_forcelist=[429, 500, 502, 503, 504],
-        allowed_methods={"POST"},
-        raise_on_status=False,
-    )
-    adapter = HTTPAdapter(max_retries=retry)
-    session.mount("https://", adapter)
-    session.mount("http://", adapter)
-    return session
-
 def upload_to_pinata(certificate_data, lot_id):
     """
     Upload un certificat vers Pinata IPFS avec les vraies clés
@@ -231,60 +198,23 @@ def upload_to_pinata(certificate_data, lot_id):
         if not PINATA_JWT:
             raise RuntimeError("PINATA_JWT manquant - upload IPFS impossible")
         
-        # Préparer les métadonnées
-        pinata_metadata = {
-            'name': f'certificate-{lot_id}-{datetime.now().strftime("%Y%m%d-%H%M%S")}',
-            'keyvalues': {
-                'lot_id': lot_id,
-                'timestamp': str(datetime.now().timestamp()),
-                'type': 'mineral_certificate'
-            }
-        }
-        
-        # Appel à l'API Pinata avec JWT
-        headers = {
-            'Authorization': f'Bearer {PINATA_JWT}',
-            'Content-Type': 'application/json'
-        }
-        
-        payload = {
-            'pinataContent': certificate_data,
-            'pinataMetadata': pinata_metadata,
-            'pinataOptions': {
-                'cidVersion': 1,
-                'wrapWithDirectory': False
-            }
-        }
-        
         print(f"   [IPFS] Envoi a Pinata...")
-        session = build_pinata_session()
-        response = session.post(
-            PINATA_PIN_JSON_URL,
-            json=payload,
-            headers=headers,
-            timeout=PINATA_TIMEOUT
+        result = upload_json_to_pinata(
+            certificate_data,
+            lot_id=lot_id,
+            jwt=PINATA_JWT,
+            pin_json_url=PINATA_PIN_JSON_URL,
+            gateway_url=PINATA_GATEWAY,
+            name=f'certificate-{lot_id}-{datetime.now().strftime("%Y%m%d-%H%M%S")}',
+            timeout=PINATA_TIMEOUT,
+            max_attempts=4,
+            backoff_factor=1.0,
         )
-        
-        if response.status_code == 200:
-            result = response.json()
-            ipfs_hash = result['IpfsHash']
-            print(f"   [OK] Upload reussi")
-            print(f"   • CID: {ipfs_hash}")
-            print(f"   • Lien: {PINATA_GATEWAY}/ipfs/{ipfs_hash}")
-            return ipfs_hash
+        print(f"   [OK] Upload reussi")
+        print(f"   • CID: {result['ipfs_hash']}")
+        print(f"   • Lien: {result['gateway_url']}")
+        return result["ipfs_hash"]
 
-        raise RuntimeError(
-            f"Erreur Pinata {response.status_code}: {response.text[:200]}"
-        )
-
-    except requests.exceptions.Timeout as e:
-        raise RuntimeError(
-            f"Upload IPFS impossible: Pinata n'a pas repondu avant {PINATA_TIMEOUT}s"
-        ) from e
-    except requests.exceptions.ConnectionError as e:
-        raise RuntimeError(
-            "Upload IPFS impossible: connexion reseau vers Pinata echouee"
-        ) from e
     except Exception as e:
         raise RuntimeError(f"Erreur upload IPFS: {str(e)}") from e
 

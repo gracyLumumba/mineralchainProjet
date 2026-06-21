@@ -76,7 +76,7 @@ const DEMO_USERS = [
     username: 'transporteur',
     email: 'transport@mininglogistics.cd',
     password: hashPassword('Demo2025!'),
-    full_name: 'Pierre Lukusa',
+    full_name: 'Eliel Ilunga',
     role: 'transporter',
     organization: 'Katanga Mineral Transit',
     wallet: '0x5c1149F4C63f72aB67065E9A2EbFf5CA6D73d63',
@@ -472,4 +472,3 @@ export function useAuth() {
   if (!ctx) throw new Error('useAuth must be used within AuthProvider');
   return ctx;
 }
-
