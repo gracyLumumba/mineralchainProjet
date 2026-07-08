@@ -5,6 +5,8 @@ import joblib
 import numpy as np
 import pandas as pd
 
+FRAUD_THRESHOLD_DEFAULT = 0.30
+
 
 class ModelLoader:
     """Load all saved AI models for the backend."""
@@ -208,7 +210,7 @@ class ModelLoader:
                     fraud_probability = 0.0
                     fraud_confidence = 0.75
 
-                fraud_threshold = float(self.fraud_threshold_config.get("threshold", 0.5))
+                fraud_threshold = float(self.fraud_threshold_config.get("threshold", FRAUD_THRESHOLD_DEFAULT))
                 is_fraud = bool(fraud_probability >= fraud_threshold)
                 if not hasattr(self.models["fraud"], "predict_proba"):
                     is_fraud = bool(fraud_pred == 1 or fraud_pred == -1)
