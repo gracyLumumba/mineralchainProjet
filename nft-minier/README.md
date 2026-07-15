@@ -1,15 +1,15 @@
 # MineralNFT Smart Contract
 
-Contrat ERC-721 utilisé par MineralChain pour certifier les lots miniers sur un réseau Ganache local.
+Contrat ERC-721 utilise par MineralChain pour certifier les lots miniers sur un reseau Ganache local.
 
-## Déploiement de démonstration
+## Deploiement de demonstration
 
-- Réseau : `Ganache` sur `localhost:7545`
+- Reseau : `Ganache` sur `localhost:7545`
 - Adresse du contrat : `0x831A68CD2070d988f5baB3003cE7fa65A9B1ca78`
 - Standard : `ERC-721` + `ERC721URIStorage`
 - Symbole : `MINRL`
 
-Le propriétaire est le compte Ganache qui a déployé le contrat.
+Le proprietaire est le compte Ganache qui a deploye le contrat.
 
 ## Fonction principale
 
@@ -32,7 +32,7 @@ function mintMineralToken(
 ) external onlyOwner returns (uint256 tokenId)
 ```
 
-## Démarrage rapide
+## Demarrage rapide
 
 ```bash
 cd nft-minier
@@ -42,21 +42,21 @@ npx truffle migrate --reset --network development
 npx truffle test --network development
 ```
 
-## Vérification Python
+## Verification Python
 
 ```bash
 pip install web3==6.15.1
 python test_transaction.py
 ```
 
-## Intégration backend
+## Integration backend
 
-Le backend Flask lit l’adresse du contrat depuis :
+Le backend Flask lit l adresse du contrat depuis :
 
 - `CONTRACT_ADDRESS`
-- l’artifact Truffle déployé dans `build/contracts/MineralNFT.json`
+- l artifact Truffle genere localement dans `build/contracts/MineralNFT.json`
 
-Variables d’environnement utiles :
+Variables d environnement utiles :
 
 ```env
 GANACHE_URL=http://localhost:7545
@@ -84,5 +84,5 @@ nft-minier/
 
 ## Notes
 
-- Si vous redéployez le contrat, mettez à jour les adresses par défaut du frontend et du backend, ou renseignez les variables d’environnement.
-- Le fichier `build/contracts/MineralNFT.json` versionné dans le dépôt sert au chargement de l’ABI par le backend.
+- Si vous redeployez le contrat, mettez a jour les adresses par defaut du frontend et du backend, ou renseignez les variables d environnement.
+- Le dossier `build/` est genere localement par Truffle et n a pas vocation a etre versionne.
