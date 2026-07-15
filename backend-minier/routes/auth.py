@@ -12,7 +12,12 @@ auth_bp = Blueprint('auth', __name__)
 
 BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 USERS_FILE = os.path.join(BASE_DIR, 'users_data.json')
-AUTH_SECRET = os.getenv('AUTH_SECRET', 'mineralchain-mobile-secret').encode('utf-8')
+AUTH_SECRET = (os.getenv('AUTH_SECRET') or '').strip().encode('utf-8')
+
+if not AUTH_SECRET:
+    raise RuntimeError(
+        "AUTH_SECRET manquant. Definis cette variable d'environnement avant de lancer le backend."
+    )
 
 
 def hash_password(password):
