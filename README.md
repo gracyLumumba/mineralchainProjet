@@ -143,3 +143,8 @@ Generated dependencies, caches, logs, builds, local databases, and notebook chec
 Project history notes:
 
 - [HISTORIQUE_COMMITS.md](/C:/Users/Dr_Denise/Documents/GitHub/mineralchainProjet/HISTORIQUE_COMMITS.md)
+
+Database schema notes:
+
+- [backend-minier/database/SCHEMA.md](/C:/Users/Dr_Denise/Documents/GitHub/mineralchainProjet/backend-minier/database/SCHEMA.md)
+- [backend-minier/database/schema.sql](/C:/Users/Dr_Denise/Documents/GitHub/mineralchainProjet/backend-minier/database/schema.sql)

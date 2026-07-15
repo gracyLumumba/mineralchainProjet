@@ -31,6 +31,10 @@ backend-minier/
 |-- run_backend_utf8.py
 |-- models/
 |   `-- load_models.py
+|-- database/
+|   |-- models.py
+|   |-- schema.sql
+|   `-- SCHEMA.md
 |-- routes/
 |   |-- analyze.py
 |   |-- lots.py
@@ -182,6 +186,7 @@ http://localhost:5000
 - au démarrage, les anciens lots présents dans `lots_data.json` sont importés dans la base si nécessaire.
 - `routes/certify.py` utilise aussi un chemin absolu pour charger l'ABI du smart contract.
 - les routes de certification et IPFS échouent explicitement si Ganache, le contrat ou Pinata ne sont pas disponibles.
+- la structure PostgreSQL documentée se trouve dans `backend-minier/database/schema.sql`.
 
 ## Fichiers de test
 
