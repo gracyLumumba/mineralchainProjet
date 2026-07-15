@@ -58,6 +58,17 @@ __pycache__/
 backend-minier/lots_data.json
 backend-minier/users_data.json
 modele_ia_minier/dataset_minier_complet_50000.csv
+backend-minier/instance/*.db
+backend-minier/instance/*.sqlite
+backend-minier/instance/*.sqlite3
+backend-minier/experiments/
+backend-minier/locustfile.py
+*.db
+*.sqlite
+*.sqlite3
+.ipynb_checkpoints/
+modele_ia_minier/rapports/seuil_fraude_note.md
+modele_ia_minier/visualisations/5_confusion_fraude_seuil_030.png
 
 # Generated app artifacts
 mineralchain/build/
@@ -157,3 +168,4 @@ dist
 .yarn/install-state.gz
 .pnp.*
 
+modele_ia_minier.zip

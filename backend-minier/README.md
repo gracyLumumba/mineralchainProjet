@@ -1,10 +1,10 @@
 # MineralChain Backend
 
-## Presentation
+## Présentation
 
-Ce dossier contient le backend Flask du projet MineralChain. Il expose les endpoints API necessaires pour analyser les lots miniers, produire un certificat numerique, enregistrer les donnees sur IPFS et interagir avec le smart contract NFT en local.
+Ce dossier contient le backend Flask du projet MineralChain. Il expose les endpoints API nécessaires pour analyser les lots miniers, produire un certificat numérique, enregistrer les données sur IPFS et interagir avec le smart contract NFT en local.
 
-Le backend est concu pour fonctionner avec les autres modules du projet :
+Le backend est conçu pour fonctionner avec les autres modules du projet :
 
 - `mineralchain` pour l'interface React
 - `nft-minier` pour le smart contract
@@ -18,7 +18,7 @@ Le backend est concu pour fonctionner avec les autres modules du projet :
 - upload du certificat sur IPFS via Pinata
 - connexion reelle a Ganache pour le mint NFT
 - mint d'un NFT pour les lots authentiques
-- gestion des lots via API REST stockee dans PostgreSQL
+- gestion des lots via API REST, avec PostgreSQL en production et SQLite possible en local
 
 ## Structure
 
@@ -41,7 +41,7 @@ backend-minier/
 `-- utils/
 ```
 
-## Prerequis
+## Prérequis
 
 - Python 3.10 ou plus recent
 - environnement virtuel Python
@@ -78,12 +78,18 @@ PINATA_JWT=your_real_jwt_here
 Variables utiles selon votre configuration :
 
 - `DATABASE_URL`
+- `GANACHE_URL`
+- `CONTRACT_ADDRESS`
 - `PINATA_JWT`
 - `PINATA_API_KEY`
 - `PINATA_API_SECRET`
 - `PINATA_GATEWAY`
 - `OWNER_PRIVATE_KEY`
 - `PORT`
+
+Si vous ne renseignez pas `DATABASE_URL`, le backend utilise SQLite via `mineralchain_dev.db` pour éviter de bloquer le démarrage en local. Pour un déploiement propre, fournissez une URL PostgreSQL.
+
+Si vous redeployez le contrat, mettez à jour `CONTRACT_ADDRESS` ou laissez le backend lire la nouvelle adresse depuis `build/contracts/MineralNFT.json`.
 
 ## Lancement
 
@@ -97,7 +103,7 @@ Ou sous Windows :
 start_backend.bat
 ```
 
-Le serveur demarre par defaut sur :
+Le serveur démarre par défaut sur :
 
 ```text
 http://localhost:5000
@@ -172,10 +178,10 @@ http://localhost:5000
 
 ## Remarques techniques
 
-- `app.py` attend une variable `DATABASE_URL` valide vers PostgreSQL.
-- au demarrage, les anciens lots presents dans `lots_data.json` sont importes vers PostgreSQL s'ils ne sont pas deja en base.
+- `app.py` accepte PostgreSQL mais bascule sur SQLite si `DATABASE_URL` est absente.
+- au démarrage, les anciens lots présents dans `lots_data.json` sont importés dans la base si nécessaire.
 - `routes/certify.py` utilise aussi un chemin absolu pour charger l'ABI du smart contract.
-- les routes de certification et IPFS echouent explicitement si Ganache, le contrat ou Pinata ne sont pas disponibles.
+- les routes de certification et IPFS échouent explicitement si Ganache, le contrat ou Pinata ne sont pas disponibles.
 
 ## Fichiers de test
 

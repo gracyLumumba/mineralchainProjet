@@ -8,7 +8,7 @@ export function isNetworkUnavailableError(error) {
   return Boolean(
     error?.isNetworkUnavailable ||
     message.includes('delai depasse') ||
-    message.includes('délai dépassé') ||
+    message.includes('timeout') ||
     message.includes('connexion impossible')
   );
 }
@@ -32,19 +32,20 @@ export async function request(path, options = {}) {
   const controller = new AbortController();
   const timeoutId = setTimeout(() => controller.abort(), REQUEST_TIMEOUT_MS);
   const apiBaseUrl = await getApiBaseUrl();
+  const { headers: optionHeaders, ...restOptions } = options;
 
   let response;
 
   try {
     response = await fetch(`${apiBaseUrl}${path}`, {
+      ...restOptions,
       headers: {
         Accept: 'application/json',
         'Content-Type': 'application/json',
         ...(session?.token ? { Authorization: `Bearer ${session.token}` } : {}),
-        ...(options.headers || {}),
+        ...(optionHeaders || {}),
       },
       signal: controller.signal,
-      ...options,
     });
   } catch (error) {
     const isTimeout = error?.name === 'AbortError';
@@ -64,7 +65,10 @@ export async function request(path, options = {}) {
   if (!response.ok) {
     const message =
       data?.error || data?.message || `HTTP ${response.status}`;
-    throw new Error(message);
+    const requestError = new Error(message);
+    requestError.status = response.status;
+    requestError.data = data;
+    throw requestError;
   }
 
   return data;

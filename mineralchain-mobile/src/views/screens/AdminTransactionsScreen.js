@@ -56,7 +56,10 @@ export default function AdminTransactionsScreen({ isRefreshing, refresh }) {
     try {
       setError('');
       const next = await fetchBlockchainTransactions();
-      setTransactions(next);
+      setTransactions(next.transactions);
+      if (!next.connected) {
+        setError(next.error || 'Connexion blockchain indisponible.');
+      }
     } catch (loadError) {
       if (isNetworkUnavailableError(loadError)) {
         setError('Serveur injoignable pour les transactions blockchain.');

@@ -1,40 +1,49 @@
 # MineralChain
 
-MineralChain est une plateforme de tracabilite et de certification de lots miniers. Elle combine une interface web React, une application mobile Expo, un backend Flask avec analyse IA, un stockage IPFS et un smart contract ERC-721 deploye localement avec Ganache/Truffle.
+MineralChain is a mineral lot traceability and certification platform built as a multi-app project.
 
-Le flux principal couvre l'extraction du lot, l'analyse IA, la validation independante DGMR, la certification NFT, le scan QR du certificat, le transport et la livraison usine.
+It combines:
 
-## Structure
+- a React web frontend;
+- an Expo / React Native mobile app;
+- a Flask backend with AI analysis;
+- IPFS / Pinata storage;
+- a local ERC-721 smart contract deployed with Ganache / Truffle.
 
-- `mineralchain/` : frontend web React.
-- `backend-minier/` : API Flask, analyse IA, certification, IPFS, connexion blockchain.
-- `nft-minier/` : smart contract `MineralNFT`, migrations et tests Truffle.
-- `modele_ia_minier/` : notebooks, modeles IA et visualisations.
-- `mineralchain-mobile/` : application mobile Expo/React Native.
+The main flow covers lot creation, AI analysis, DGMR validation, NFT certification, QR verification, transport tracking, and delivery to the plant.
 
-## Fonctionnalites
+## Project Structure
 
-- creation et analyse IA des lots miniers
-- validation DGMR par double analyse labo
-- generation de certificat et mint NFT ERC-721
-- stockage IPFS des certificats
-- scan QR avec camera pour les transporteurs et regulateurs
-- fallback de scan QR via `jsQR` sur les navigateurs sans `BarcodeDetector`
-- application mobile Expo avec scanner QR transporteur via `expo-camera`
-- suivi transport : pret a expedier, en transit, livre
-- verification publique d'un certificat par QR code
+- `mineralchain/` - web frontend.
+- `mineralchain-mobile/` - mobile frontend.
+- `backend-minier/` - API, AI logic, certification, IPFS, and blockchain integration.
+- `nft-minier/` - `MineralNFT` contract, migrations, and Truffle tests.
+- `modele_ia_minier/` - notebooks, trained models, reports, and visualizations.
 
-## Prerequis
+## Core Features
 
-- Node.js et npm
+- lot creation and AI-based classification
+- DGMR validation with lab comparison
+- NFT minting for certified lots
+- IPFS certificate storage
+- QR scanning on web and mobile
+- `jsQR` fallback when `BarcodeDetector` is not available
+- transport status tracking: ready, in transit, delivered
+- public certificate verification by QR code or token reference
+
+## Requirements
+
+- Node.js and npm
 - Python 3.10+
-- Ganache lance sur `127.0.0.1:7545`
-- PostgreSQL si l'on veut activer la base de donnees backend
-- navigateur avec acces camera pour le scan QR web. En local, `localhost` fonctionne ; sur telephone ou reseau, utilisez HTTPS ou l'app mobile Expo.
+- Ganache running on `127.0.0.1:7545`
+- PostgreSQL if you want production-style SQL persistence
+- a browser with camera access for the web QR flow
 
-## Installation rapide
+For local development, `localhost` is enough. For a phone or network device, use HTTPS or the Expo mobile app.
 
-Frontend :
+## Quick Start
+
+Web frontend:
 
 ```bash
 cd mineralchain
@@ -42,7 +51,7 @@ npm install
 npm start
 ```
 
-Application mobile :
+Mobile app:
 
 ```bash
 cd mineralchain-mobile
@@ -50,7 +59,7 @@ npm install
 npm start
 ```
 
-Backend :
+Backend:
 
 ```bash
 cd backend-minier
@@ -60,7 +69,7 @@ pip install -r requirements.txt
 python app.py
 ```
 
-Smart contract :
+Smart contract:
 
 ```bash
 cd nft-minier
@@ -72,30 +81,45 @@ npx truffle test --network development
 
 ## Configuration
 
-Les fichiers `.env` ne doivent pas etre commits. Utiliser les fichiers `.env.example` comme base :
+Do not commit `.env` files. Use the provided examples instead:
 
 - `backend-minier/.env.example`
 - `mineralchain/.env.example`
+- `mineralchain-mobile/.env.example`
 
-Variables importantes cote backend :
+Important backend variables:
 
 - `DATABASE_URL`
+- `GANACHE_URL`
+- `CONTRACT_ADDRESS`
 - `PINATA_JWT`
 - `OWNER_PRIVATE_KEY`
 - `PORT`
 
-## Scan QR camera
+Web frontend variables:
 
-Le scan QR est disponible dans deux workflows web :
+- `REACT_APP_BACKEND_URL`
+- `REACT_APP_CONTRACT_ADDRESS`
+- `REACT_APP_OWNER_ADDRESS`
 
-- Transporteur : `Scanner QR Code` pour verifier le certificat et ouvrir le lot.
-- Regulateur : `Scanner QR du lot` pour selectionner le lot avant l'import du fichier labo DGMR.
+Mobile variables:
 
-Le frontend web utilise d'abord l'API native `BarcodeDetector` si le navigateur la fournit. Si elle n'est pas disponible, il decode les images camera avec `jsQR`, ce qui permet de garder le scan fonctionnel sur Edge/Chrome selon les versions.
+- `EXPO_PUBLIC_API_BASE_URL`
+- `EXPO_PUBLIC_CONTRACT_ADDRESS`
+- `EXPO_PUBLIC_GANACHE_URL`
 
-Cote mobile, le role transporteur dispose d'un ecran `Scanner QR` base sur `expo-camera`. Le QR du certificat ouvre directement la fiche du lot synchronisee.
+## QR Workflows
 
-## Verification rapide
+The web app exposes two QR-based flows:
+
+- `Transporteur > Scanner QR Code` to open and verify a certificate.
+- `Regulateur > Scanner QR du lot` to select a lot before importing the DGMR lab file.
+
+The web frontend uses `BarcodeDetector` first when the browser supports it. Otherwise it falls back to `jsQR` so QR scanning stays functional on common browsers.
+
+On mobile, the transport role has a `Scanner QR` screen based on `expo-camera`. The certificate QR opens the synchronized lot detail directly.
+
+## Verification
 
 ```bash
 cd mineralchain
@@ -112,6 +136,6 @@ cd nft-minier
 npx truffle test --network development
 ```
 
-## Notes GitHub
+## Git Notes
 
-Les dossiers de dependances (`node_modules`, environnements Python, caches, logs et builds generes) sont ignores par Git. Les dependances doivent etre reinstallees avec `npm install` ou `pip install -r requirements.txt`.
+Generated dependencies, caches, logs, builds, local databases, and notebook checkpoints are ignored by Git. After cloning, reinstall dependencies with `npm install` and `pip install -r requirements.txt` before running any module.

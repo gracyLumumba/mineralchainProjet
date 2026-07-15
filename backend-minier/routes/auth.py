@@ -94,7 +94,30 @@ def get_all_users():
     return [*DEMO_USERS, *load_registered_users()]
 
 
+def normalize_identifier(value):
+    return str(value or "").strip().lower()
+
+
+def find_user_by_identifier(identifier, approved_only=False):
+    normalized_identifier = normalize_identifier(identifier)
+    if not normalized_identifier:
+        return None
+
+    return next(
+        (
+            user for user in get_all_users()
+            if (
+                normalize_identifier(user.get("email")) == normalized_identifier
+                or normalize_identifier(user.get("username")) == normalized_identifier
+            )
+            and (not approved_only or user.get("account_status") == "approved")
+        ),
+        None,
+    )
+
+
 def serialize_user(user):
+    account_status = user.get("account_status", "approved")
     return {
         "id": user["id"],
         "username": user["username"],
@@ -103,7 +126,8 @@ def serialize_user(user):
         "role": user["role"],
         "organization": user["organization"],
         "site": user["site"],
-        "account_status": user.get("account_status", "approved"),
+        "account_status": account_status,
+        "status": account_status,
     }
 
 
@@ -159,24 +183,27 @@ def ensure_admin_user():
 @auth_bp.route('/auth/login', methods=['POST'])
 def login():
     data = request.get_json() or {}
-    identifier = str(data.get('identifier', '')).strip().lower()
+    identifier = normalize_identifier(data.get('identifier'))
     password = str(data.get('password', ''))
 
     if not identifier or not password:
         return jsonify({"error": "identifier et password requis"}), 400
 
-    user = next(
-        (
-            item for item in get_all_users()
-            if item["account_status"] == "approved"
-            and (item["email"] == identifier or item["username"] == identifier)
-            and item["password"] == hash_password(password)
-        ),
-        None,
-    )
-
-    if not user:
+    user = find_user_by_identifier(identifier)
+    if not user or user["password"] != hash_password(password):
         return jsonify({"error": "Identifiants invalides"}), 401
+
+    account_status = user.get("account_status", "approved")
+    if account_status != "approved":
+        message = (
+            "Compte en attente d'approbation."
+            if account_status == "pending"
+            else "Compte refuse par l'administrateur."
+        )
+        return jsonify({
+            "error": message,
+            "account_status": account_status,
+        }), 403
 
     return jsonify({
         "success": True,
@@ -195,6 +222,16 @@ def register():
     role = str(data.get('role', 'producer')).strip().lower()
     organization = str(data.get('organization', '')).strip()
     site = str(data.get('site', 'Kamoa-Kansoko')).strip() or 'Kamoa-Kansoko'
+
+    if not organization:
+        if role == 'regulator':
+            organization = 'DGMR'
+        elif role == 'transporter':
+            organization = 'Kamoa Logistics'
+        elif site:
+            organization = f'{site} Mining'
+        else:
+            organization = 'MineralChain'
 
     if not full_name or len(username) < 3 or '@' not in email or len(password) < 6 or not organization:
         return jsonify({"error": "Données d'inscription invalides"}), 400

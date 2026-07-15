@@ -12,7 +12,7 @@ contract_config = load_contract_config()
 w3 = Web3(Web3.HTTPProvider(contract_config['ganache_url']))
 CONTRACT_ADDRESS = contract_config['address']
 CONTRACT_ABI = contract_config['abi']
-contract = w3.eth.contract(address=CONTRACT_ADDRESS, abi=CONTRACT_ABI)
+contract = w3.eth.contract(address=CONTRACT_ADDRESS, abi=CONTRACT_ABI) if CONTRACT_ABI else None
 
 
 def _account():
@@ -20,11 +20,21 @@ def _account():
 
 
 def _contract_ready():
+    if contract is None:
+        return False
     try:
         contract.functions.name().call()
         return True
     except Exception:
         return False
+
+
+def _require_blockchain_ready():
+    if not w3.is_connected():
+        return jsonify({"error": "Ganache indisponible"}), 503
+    if contract is None:
+        return jsonify({"error": "Contrat non charge"}), 503
+    return None
 
 
 @blockchain_bp.route('/status', methods=['GET'])
@@ -44,6 +54,9 @@ def blockchain_status():
 @blockchain_bp.route('/mint', methods=['POST'])
 def mint_token():
     try:
+        readiness_error = _require_blockchain_ready()
+        if readiness_error:
+            return readiness_error
         data = request.get_json() or {}
         account = _account()
         if not account:
@@ -88,6 +101,9 @@ def mint_token():
 @blockchain_bp.route('/token/<int:token_id>', methods=['GET'])
 def get_token(token_id):
     try:
+        readiness_error = _require_blockchain_ready()
+        if readiness_error:
+            return readiness_error
         data = contract.functions.getMineralData(token_id).call()
         owner = contract.functions.ownerOf(token_id).call()
         token_uri = contract.functions.tokenURI(token_id).call()
@@ -119,6 +135,9 @@ def get_token(token_id):
 @blockchain_bp.route('/lot/<lot_id>', methods=['GET'])
 def get_token_by_lot(lot_id):
     try:
+        readiness_error = _require_blockchain_ready()
+        if readiness_error:
+            return readiness_error
         token_id = contract.functions.getTokenByLot(lot_id).call()
         if not token_id:
             return jsonify({"error": "Lot non trouve"}), 404
@@ -130,6 +149,9 @@ def get_token_by_lot(lot_id):
 @blockchain_bp.route('/validate-dgmr', methods=['POST'])
 def validate_dgmr():
     try:
+        readiness_error = _require_blockchain_ready()
+        if readiness_error:
+            return readiness_error
         payload = request.get_json() or {}
         account = _account()
         tx_builder = contract.functions.validateByDGMR(
@@ -152,6 +174,9 @@ def validate_dgmr():
 @blockchain_bp.route('/update-ipfs', methods=['POST'])
 def update_ipfs():
     try:
+        readiness_error = _require_blockchain_ready()
+        if readiness_error:
+            return readiness_error
         payload = request.get_json() or {}
         account = _account()
         tx_builder = contract.functions.updateIPFSHash(
@@ -174,6 +199,9 @@ def update_ipfs():
 @blockchain_bp.route('/transactions', methods=['GET'])
 def get_transactions():
     try:
+        readiness_error = _require_blockchain_ready()
+        if readiness_error:
+            return readiness_error
         latest = w3.eth.block_number
         start = max(0, latest - 20)
         txs = []

@@ -163,6 +163,16 @@ export function useAuthViewModel({ onLogin }) {
         onLogin(offlineSession);
         return;
       }
+      if (submitError?.status === 403 && submitError?.data?.account_status === 'pending') {
+        setError('Compte en attente d approbation.');
+        setNotice("Votre demande a bien été créée. Un administrateur doit encore valider l'accès.");
+        return;
+      }
+      if (submitError?.status === 403 && submitError?.data?.account_status === 'rejected') {
+        setError('Compte refuse.');
+        setNotice('Demandez à l administrateur de revoir votre inscription.');
+        return;
+      }
       setError(submitError.message || 'Connexion impossible');
       setNotice("Si vous venez de creer un compte, il attend peut-etre l approbation de l administrateur.");
     } finally {
