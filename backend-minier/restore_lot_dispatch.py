@@ -8,7 +8,11 @@ from dotenv import load_dotenv
 
 load_dotenv()
 
-DATABASE_URL = os.getenv("DATABASE_URL", "postgresql://postgres:0609@localhost:5432/mineralchain")
+DATABASE_URL = os.getenv("DATABASE_URL", "").strip()
+if not DATABASE_URL:
+    raise SystemExit(
+        "DATABASE_URL manquant. Renseigne la variable d'environnement avant d'executer ce script."
+    )
 if DATABASE_URL.startswith("postgresql+psycopg://"):
     DATABASE_URL = "postgresql://" + DATABASE_URL[len("postgresql+psycopg://"):]
 

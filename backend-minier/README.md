@@ -80,8 +80,8 @@ Important :
 Copiez `.env.example` en `.env` puis renseignez vos variables :
 
 ```env
-DATABASE_URL=postgresql://postgres:motdepasse@localhost:5432/mineralchain
-PINATA_JWT=your_real_jwt_here
+DATABASE_URL=postgresql://postgres:<mot_de_passe>@localhost:5432/mineralchain
+PINATA_JWT=<votre_jwt_pinata>
 ```
 
 Variables utiles selon votre configuration :
