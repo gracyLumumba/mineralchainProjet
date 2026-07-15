@@ -12,6 +12,14 @@ Application mobile Expo pour consulter les lots, suivre leur statut blockchain, 
 - ouverture directe de la fiche du lot après lecture du QR
 - fallback par saisie manuelle du Lot ID ou du Token
 
+## Mode démo
+
+L'application mobile embarque aussi des comptes de démonstration pour les essais hors production.
+
+- ils sont prévus pour la démo locale uniquement
+- ils facilitent la navigation dans les écrans sans dépendre d'un compte réel
+- ils ne doivent pas être considérés comme un mécanisme d'authentification de production
+
 ## Démarrage
 
 Depuis `mineralchainProjet/mineralchain-mobile` :

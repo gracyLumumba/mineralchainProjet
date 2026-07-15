@@ -9,6 +9,14 @@ Interface React de MineralChain pour les producteurs, régulateurs DGMR, transpo
 - Transporteur : scan QR du certificat, prise en charge du lot, suivi en transit et confirmation de livraison usine.
 - Administrateur : supervision des comptes, lots et statuts.
 
+## Mode démo
+
+Le front web inclut des comptes de démonstration pour simplifier les tests locaux.
+
+- ils servent uniquement au mode démo et aux tests hors production
+- ils ne remplacent pas une authentification sécurisée de déploiement
+- les exemples de mots de passe affichés dans le code et dans la page démo doivent rester limités à l’environnement local
+
 ## Démarrage
 
 Depuis `mineralchainProjet/mineralchain` :
