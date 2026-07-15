@@ -139,3 +139,7 @@ npx truffle test --network development
 ## Git Notes
 
 Generated dependencies, caches, logs, builds, local databases, and notebook checkpoints are ignored by Git. After cloning, reinstall dependencies with `npm install` and `pip install -r requirements.txt` before running any module.
+
+Project history notes:
+
+- [HISTORIQUE_COMMITS.md](/C:/Users/Dr_Denise/Documents/GitHub/mineralchainProjet/HISTORIQUE_COMMITS.md)
