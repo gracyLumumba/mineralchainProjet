@@ -148,3 +148,5 @@ Database schema notes:
 
 - [backend-minier/database/SCHEMA.md](/C:/Users/Dr_Denise/Documents/GitHub/mineralchainProjet/backend-minier/database/SCHEMA.md)
 - [backend-minier/database/schema.sql](/C:/Users/Dr_Denise/Documents/GitHub/mineralchainProjet/backend-minier/database/schema.sql)
+- [backend-minier/database/MIGRATIONS.md](/C:/Users/Dr_Denise/Documents/GitHub/mineralchainProjet/backend-minier/database/MIGRATIONS.md)
+- [backend-minier/database/SEEDS.md](/C:/Users/Dr_Denise/Documents/GitHub/mineralchainProjet/backend-minier/database/SEEDS.md)

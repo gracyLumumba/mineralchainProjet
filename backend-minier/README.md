@@ -29,19 +29,24 @@ backend-minier/
 |-- .env.example
 |-- start_backend.bat
 |-- run_backend_utf8.py
+|-- seed_demo_lots.py
+|-- seed_experiment_history.py
+|-- migrate.py
+|-- migrate_regulator.py
 |-- models/
 |   `-- load_models.py
 |-- database/
 |   |-- models.py
 |   |-- schema.sql
-|   `-- SCHEMA.md
+|   |-- MIGRATIONS.md
+|   |-- SCHEMA.md
+|   `-- SEEDS.md
 |-- routes/
 |   |-- analyze.py
 |   |-- lots.py
 |   |-- certify.py
 |   |-- ipfs.py
 |   `-- database.py
-|-- database/
 `-- utils/
 ```
 
@@ -187,6 +192,8 @@ http://localhost:5000
 - `routes/certify.py` utilise aussi un chemin absolu pour charger l'ABI du smart contract.
 - les routes de certification et IPFS échouent explicitement si Ganache, le contrat ou Pinata ne sont pas disponibles.
 - la structure PostgreSQL documentée se trouve dans `backend-minier/database/schema.sql`.
+- les seeds de démonstration sont documentés dans `backend-minier/database/SEEDS.md`.
+- les migrations disponibles sont documentées dans `backend-minier/database/MIGRATIONS.md`.
 
 ## Fichiers de test
 
