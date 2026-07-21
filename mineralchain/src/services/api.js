@@ -195,6 +195,20 @@ export function simulateAnalysis(formData) {
         geological_origin: formData.geological_origin || 'non renseignee',
         texture: formData.texture || 'non renseignee',
       },
+      ai_scope: {
+        title: 'Clarification du role de l\'IA',
+        quantitative_inputs: ['cu_grade_percent', 'co_grade_percent', 'fe_percent', 'ni_percent', 's_percent', 'silica_percent', 'density_t_m3', 'moisture_percent', 'hardness_mohs', 'weight_tonnes'],
+        fingerprint_fields: {
+          geological_origin: formData.geological_origin || 'non renseignee',
+          texture: formData.texture || 'non renseignee',
+        },
+        model_scope: [
+          'Le modele IA utilise des mesures quantitatives stables pour classer le lot.',
+          'L\'origine geologique et la texture enrichissent l\'empreinte mineralogique, mais ne sont pas encore des entrees principales du classifieur.',
+          'SHAP sert ensuite a montrer quelles variables ont influence la prediction.',
+        ],
+        why_not_full_fingerprint: 'Les champs qualitatifs restent utiles pour la traçabilité, mais ils doivent etre reentraines et revalides avant de devenir des variables predictives principales.',
+      },
     },
   };
 }

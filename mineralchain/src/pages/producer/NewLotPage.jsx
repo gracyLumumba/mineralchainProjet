@@ -38,9 +38,10 @@ const normalizeIaResult = (res) => {
       is_fraud:      res.ia_analysis?.fraud?.is_fraud ?? false,
       status:        res?.status ?? 'À VÉRIFIER',
       fingerprint:   res?.mineral_fingerprint ?? res?.ia_result?.fingerprint ?? null,
+      ai_scope:      res?.ai_scope ?? res?.ia_result?.ai_scope ?? null,
     };
   }
-  return { mineral_type: 'unknown', confidence: 0, impurity_level: 'unknown', is_fraud: false, status: 'À VÉRIFIER', fingerprint: null };
+  return { mineral_type: 'unknown', confidence: 0, impurity_level: 'unknown', is_fraud: false, status: 'À VÉRIFIER', fingerprint: null, ai_scope: null };
 };
 
 const normalizeTokenId = (tokenId, lotId) => {
@@ -101,6 +102,7 @@ export default function NewLotPage() {
       }
 
       const iaResult = normalizeIaResult(res);
+      const aiScope = res?.ai_scope ?? iaResult.ai_scope ?? null;
       const normalizedTokenId = normalizeTokenId(res.blockchain?.token_id, data.lot_id);
       // token_id peut être 0 (premier token Ganache) — on utilise != null
       const hasBlockchain = res.blockchain != null && normalizedTokenId != null;
@@ -144,6 +146,8 @@ export default function NewLotPage() {
         density_t_m3: payload.density_t_m3, moisture_percent: payload.moisture_percent,
         hardness_mohs: payload.hardness_mohs, weight_tonnes: payload.weight_tonnes,
         geological_origin: payload.geological_origin, texture: payload.texture,
+        ai_scope: aiScope,
+        ai_explanations: res.ai_explanations || null,
         token_id: hasBlockchain ? normalizedTokenId : null,
         tx_hash: res.blockchain?.transaction_hash || null,
         transport_status: null,
@@ -193,7 +197,7 @@ export default function NewLotPage() {
         updateLot(lot.lot_id, { ipfs_hash: backendIpfsHash, ipfs_url: backendIpfsUrl });
       }
 
-      setResult({ lot, blockchain: hasBlockchain ? res.blockchain : null, token: tokenObj });
+      setResult({ lot, blockchain: hasBlockchain ? res.blockchain : null, token: tokenObj, aiScope, shap: res.ai_explanations || null });
 
       if (submitMode === 'certify') {
         if (hasBlockchain) {
@@ -344,6 +348,34 @@ export default function NewLotPage() {
                 </div>
               </div>
             )}
+
+            {result.aiScope && (
+              <div className="card" style={{ border: '1px solid var(--border-soft)', background: 'linear-gradient(135deg, rgba(201,168,76,0.08), transparent 70%)' }}>
+                <div className="label" style={{ marginBottom: 12, display: 'block' }}>{t('newlot.ai_scope.title')}</div>
+                <p style={{ margin: 0, fontSize: '0.85rem', color: 'var(--text-secondary)', lineHeight: 1.6 }}>
+                  {t('newlot.ai_scope.note')}
+                </p>
+                <div style={{ marginTop: 12, display: 'grid', gap: 10, fontSize: '0.82rem', color: 'var(--text-secondary)' }}>
+                  <div><strong>{t('newlot.ai_scope.used')} :</strong> {result.aiScope.quantitative_inputs?.join(', ') || 'n/a'}</div>
+                  <div><strong>{t('newlot.ai_scope.fingerprint')} :</strong> {result.aiScope.fingerprint_fields?.geological_origin} · {result.aiScope.fingerprint_fields?.texture}</div>
+                  <div><strong>{t('newlot.ai_scope.retrain')} :</strong> {result.aiScope.why_not_full_fingerprint}</div>
+                </div>
+              </div>
+            )}
+
+            {result.shap?.mineral?.top_features?.length ? (
+              <div className="card">
+                <div className="label" style={{ marginBottom: 12, display: 'block' }}>{t('newlot.ai_scope.shap')}</div>
+                <div style={{ display: 'grid', gap: 8, fontSize: '0.82rem', color: 'var(--text-secondary)' }}>
+                  {result.shap.mineral.top_features.map((item) => (
+                    <div key={item.feature} style={{ display: 'flex', justifyContent: 'space-between', gap: 12 }}>
+                      <span>{item.feature}</span>
+                      <span style={{ fontFamily: 'var(--font-mono)' }}>{Number(item.abs_value || 0).toFixed(4)}</span>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            ) : null}
 
             {result.blockchain && (
               <div className="card" style={{ border: '1px solid var(--border-active)', background: 'linear-gradient(135deg, var(--brand-dim) 0%, transparent 80%)' }}>

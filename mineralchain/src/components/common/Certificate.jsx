@@ -248,6 +248,20 @@ export function CertificateCard({ lot, token, onClose }) {
               <InfoRow label={t('label.status')} value={<StatusBadge status={lot.status}/>}/>
             </div>
 
+            {lot.ai_scope && (
+              <div style={{ gridColumn: '1 / -1', background: 'linear-gradient(135deg, rgba(201,168,76,0.08), transparent 75%)', border: '1px solid var(--border-soft)', borderRadius: 'var(--r-md)', padding: '16px 18px' }}>
+                <div className="label" style={{ marginBottom: 10, display: 'block' }}>{t('newlot.ai_scope.title')}</div>
+                <div style={{ fontSize: '0.84rem', color: 'var(--text-secondary)', lineHeight: 1.6, marginBottom: 12 }}>
+                  {t('newlot.ai_scope.note')}
+                </div>
+                <div style={{ display: 'grid', gap: 8, fontSize: '0.8rem', color: 'var(--text-secondary)' }}>
+                  <div><strong>{t('newlot.ai_scope.used')} :</strong> {lot.ai_scope.quantitative_inputs?.join(', ') || 'n/a'}</div>
+                  <div><strong>{t('newlot.ai_scope.fingerprint')} :</strong> {lot.ai_scope.fingerprint_fields?.geological_origin} · {lot.ai_scope.fingerprint_fields?.texture}</div>
+                  <div><strong>{t('newlot.ai_scope.retrain')} :</strong> {lot.ai_scope.why_not_full_fingerprint}</div>
+                </div>
+              </div>
+            )}
+
             {/* Identification */}
             <div>
               <div className="label" style={{ marginBottom: 12, display: 'block' }}>{t('label.identification')}</div>

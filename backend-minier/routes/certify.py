@@ -16,6 +16,7 @@ sys.path.append(os.path.dirname(os.path.dirname(__file__)))
 from models.load_models import model_loader
 from routes.lots import upsert_database_lot, database_enabled
 from routes.auth import get_current_user
+from utils.ai_scope import build_ai_scope_summary
 from utils.analysis_rules import evaluate_consistency_rules
 from utils.blockchain_config import load_contract_config, GANACHE_URL, DEFAULT_CONTRACT_ADDRESS
 from utils.ipfs_client import upload_json_to_pinata
@@ -264,6 +265,7 @@ def analyze_and_certify():
         
         ia_results = model_loader.predict(features)
         shap_results = model_loader.explain(features, ia_results, top_n=5)
+        ai_scope = build_ai_scope_summary(model_loader.feature_columns, data)
         
         mineral_type = ia_results.get('mineral', {}).get('type', 'unknown')
         mineral_conf = ia_results.get('mineral', {}).get('confidence', 0)
@@ -340,6 +342,7 @@ def analyze_and_certify():
                 "status": status
             },
             "ai_explanations": shap_results,
+            "ai_scope": ai_scope,
             "composition": {
                 "cu": data.get('cu_grade_percent', 0),
                 "co": data.get('co_grade_percent', 0),
@@ -358,6 +361,7 @@ def analyze_and_certify():
                 "geological_origin": data.get('geological_origin') or "non renseignee",
                 "texture": data.get('texture') or "non renseignee",
             },
+            "ai_scope": ai_scope,
             "blockchain": {
                 "contract_address": CONTRACT_ADDRESS
             }
@@ -495,6 +499,7 @@ def analyze_and_certify():
                 "fingerprint": certificate["mineral_fingerprint"],
             },
             "ai_explanations": shap_results,
+            "ai_scope": ai_scope,
             "certificate": {
                 "hash": cert_hash,
                 "ipfs_hash": ipfs_hash,
@@ -502,6 +507,7 @@ def analyze_and_certify():
                 "gateway_url": gateway_url if ipfs_hash else None
             },
             "mineral_fingerprint": certificate["mineral_fingerprint"],
+            "ai_scope": ai_scope,
             "blockchain": blockchain_result,
             "blockchain_error": blockchain_error,
             "ipfs_error": ipfs_error

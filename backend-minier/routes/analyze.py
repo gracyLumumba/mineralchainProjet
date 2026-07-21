@@ -9,6 +9,7 @@ from sqlalchemy import text
 sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 from models.load_models import model_loader
 from database.models import db
+from utils.ai_scope import build_ai_scope_summary
 from utils.analysis_rules import evaluate_consistency_rules
 from utils.soap_utils import parse_soap_payload, soap_response
 
@@ -37,6 +38,7 @@ def analyze_lot():
 
         ia_results = model_loader.predict(features)
         shap_results = model_loader.explain(features, ia_results, top_n=5)
+        ai_scope = build_ai_scope_summary(model_loader.feature_columns, data)
         rule_check = evaluate_consistency_rules(data)
         model_fraud = ia_results.get('fraud', {}).get('is_fraud', False)
         is_fraud = bool(model_fraud or rule_check['is_suspect'])
@@ -80,6 +82,7 @@ def analyze_lot():
             "timestamp": datetime.now().isoformat(),
             "ia_analysis": ia_results,
             "ai_explanations": shap_results,
+            "ai_scope": ai_scope,
             "mineral_fingerprint": fingerprint,
             "ia_result": {
                 "mineral_type": ia_results.get('mineral', {}).get('type', 'unknown'),
@@ -89,6 +92,7 @@ def analyze_lot():
                 "fraud_reasons": rule_check['reasons'],
                 "status": status,
                 "fingerprint": fingerprint,
+                "ai_scope": ai_scope,
             },
             "status": status,
             "status_code": status_code,
