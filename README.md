@@ -1,35 +1,37 @@
 # MineralChain
 
-MineralChain is a mineral lot traceability and certification platform built as a multi-app project.
+MineralChain is a mineral traceability, certification, and explainable-AI platform designed to support the operational control of mineral lots across the extraction, validation, and certification pipeline.
 
-It combines:
+The system combines:
 
-- a React web frontend;
-- an Expo / React Native mobile app;
-- a Flask backend with AI analysis;
-- SOAP-based API exchanges for the sensitive business flows;
-- IPFS / Pinata storage;
-- a local ERC-721 smart contract deployed with Ganache / Truffle.
+- a React web application;
+- an Expo / React Native mobile application;
+- a Flask backend for business processing and AI inference;
+- SOAP-based exchanges for sensitive authenticated operations;
+- IPFS / Pinata storage for certificate persistence;
+- a local ERC-721 smart contract deployed through Ganache and Truffle.
 
-The main flow covers lot creation, AI analysis, DGMR validation, NFT certification, QR verification, transport tracking, and delivery to the plant.
+The platform covers lot registration, AI-assisted classification, DGMR validation, NFT certification, QR-based verification, transport supervision, and delivery tracking.
 
-## How The System Works
+## Operational Overview
 
-1. A producer creates a lot and sends the mining data to the backend.
-2. The AI model analyses the quantitative chemical inputs and produces a mineral classification.
-3. SHAP explains which variables influenced the prediction.
-4. The system builds a mineral fingerprint that also includes geological origin and texture.
-5. The lot can then be validated, certified, pinned to IPFS, and minted as an NFT.
-6. Transport and delivery status are tracked from the web or mobile app.
+1. A producer registers a mineral lot and transmits the associated operational data to the backend.
+2. The AI engine evaluates the quantitative assay inputs and produces a mineral classification.
+3. SHAP generates an interpretation of the model decision by identifying the most influential variables.
+4. A mineral fingerprint is assembled, including chemical, geological, and textural context.
+5. The lot may then be validated, certified, stored on IPFS, and minted as an NFT.
+6. Transport and delivery status remain accessible through the web and mobile interfaces.
 
-The system now clarifies that:
+## AI Interpretation Model
 
-- chemical assay values are used by the model as numerical inputs;
-- geological origin and texture are stored in the mineral fingerprint for traceability;
-- SHAP is used to explain the model decision;
-- descriptive fingerprint fields are not yet the main predictive inputs of the classifier.
+The AI component is intentionally constrained to structured numerical inputs in order to preserve stability, reproducibility, and auditability.
 
-This makes the AI workflow easier to understand for producers, regulators, and transport actors.
+- Chemical assay values such as `Cu`, `Co`, `Fe`, `Ni`, `S`, and `silica` are used as direct predictive inputs.
+- Geological origin and texture are retained in the mineral fingerprint to strengthen traceability and certification.
+- SHAP is used to explain why a lot was classified as authentic, suspect, or requiring manual review.
+- Descriptive fingerprint fields are not yet the main predictive variables of the classifier and therefore remain contextual rather than primary features.
+
+This design improves transparency for producers, regulators, and transport operators while keeping the model explainable.
 
 ## Project Structure
 
@@ -41,16 +43,16 @@ This makes the AI workflow easier to understand for producers, regulators, and t
 
 ## Core Features
 
-- lot creation and AI-based classification
-- SHAP explanations for the AI decision
-- mineral fingerprint enriched with chemical, geological, and textural context
-- DGMR validation with lab comparison
+- Mineral lot registration and AI-assisted classification
+- SHAP-based model explainability
+- Mineral fingerprint enriched with chemical, geological, and textural context
+- DGMR validation with laboratory comparison
 - NFT minting for certified lots
-- IPFS certificate storage
+- Certificate persistence on IPFS
 - QR scanning on web and mobile
 - `jsQR` fallback when `BarcodeDetector` is not available
-- transport status tracking: ready, in transit, delivered
-- public certificate verification by QR code or token reference
+- Transport status tracking: ready, in transit, delivered
+- Public certificate verification by QR code or token reference
 - SOAP transport for the main authenticated operations
 
 ## Requirements
@@ -138,6 +140,8 @@ Chemical assay values such as `Cu`, `Co`, `Fe`, `Ni`, `S`, and `silica` are used
 
 SHAP is used to expose the strongest contributing variables in each analysis result. This helps users understand why a lot was classified as authentic, suspect, or requires manual verification.
 
+The current modeling choice is deliberate: it separates predictive inference from descriptive fingerprinting. The first supports classification, while the second supports chain-of-custody traceability and certificate documentation.
+
 ## SOAP Transport
 
 The backend and clients use SOAP envelopes for the main secure business requests. This applies especially to:
@@ -149,7 +153,7 @@ The backend and clients use SOAP envelopes for the main secure business requests
 - IPFS operations;
 - admin approval / rejection actions.
 
-This keeps the request format consistent across web and mobile clients for sensitive operations.
+This keeps the request format consistent across web and mobile clients for sensitive operations and provides a clearer contract for authenticated business exchanges.
 
 ## QR Workflows
 
