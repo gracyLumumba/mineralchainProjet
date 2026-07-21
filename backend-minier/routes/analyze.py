@@ -1,5 +1,5 @@
 # routes/analyze.py
-from flask import Blueprint, request, jsonify, current_app
+from flask import Blueprint, request, jsonify as flask_jsonify, current_app
 import hashlib
 from datetime import datetime
 import sys
@@ -14,6 +14,12 @@ from utils.soap_utils import parse_soap_payload, soap_response
 
 analyze_bp = Blueprint('analyze', __name__)
 AUTO_CERT_THRESHOLD = 0.00  # Demo mode: any non-fraud lot is considered authentic
+
+
+def jsonify(payload, *args, **kwargs):
+    status = kwargs.pop('status', 200)
+    action = kwargs.pop('soap_action', 'AnalyzeResponse')
+    return soap_response(payload, action=action, status=status)
 
 
 @analyze_bp.route('/analyze', methods=['POST'])

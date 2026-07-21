@@ -1,4 +1,4 @@
-from flask import Blueprint, request, jsonify
+from flask import Blueprint, request, jsonify as flask_jsonify
 import os
 import traceback
 from datetime import datetime
@@ -8,6 +8,12 @@ from utils.soap_utils import parse_soap_payload, soap_response
 
 
 ipfs_bp = Blueprint('ipfs', __name__)
+
+
+def jsonify(payload, *args, **kwargs):
+    status = kwargs.pop('status', 200)
+    action = kwargs.pop('soap_action', 'IpfsResponse')
+    return soap_response(payload, action=action, status=status)
 
 PINATA_JWT = os.getenv('PINATA_JWT')
 PINATA_GATEWAY = os.getenv('PINATA_GATEWAY', 'https://gateway.pinata.cloud')

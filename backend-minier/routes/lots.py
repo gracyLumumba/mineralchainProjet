@@ -2,13 +2,19 @@ from datetime import datetime
 import json
 import os
 
-from flask import Blueprint, current_app, jsonify, request
+from flask import Blueprint, current_app, jsonify as flask_jsonify, request
 
 from database.models import Lot, LotHistory, db
 from routes.auth import get_current_user
 from utils.soap_utils import parse_soap_payload, soap_response
 
 lots_bp = Blueprint('lots', __name__)
+
+
+def jsonify(payload, *args, **kwargs):
+    status = kwargs.pop('status', 200)
+    action = kwargs.pop('soap_action', 'LotsResponse')
+    return soap_response(payload, action=action, status=status)
 
 BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 LOTS_JSON_FILE = os.path.join(BASE_DIR, 'lots_data.json')

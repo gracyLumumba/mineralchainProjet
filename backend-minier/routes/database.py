@@ -1,13 +1,20 @@
 # routes/database.py
-from flask import Blueprint, request, jsonify
+from flask import Blueprint, request, jsonify as flask_jsonify
 from database.models import db, Lot, LotHistory, Alert
 from datetime import datetime
 import sys
 import os
+from utils.soap_utils import soap_response
 
 sys.path.append(os.path.dirname(os.path.dirname(__file__)))
 
 database_bp = Blueprint('database', __name__)
+
+
+def jsonify(payload, *args, **kwargs):
+    status = kwargs.pop('status', 200)
+    action = kwargs.pop('soap_action', 'DatabaseResponse')
+    return soap_response(payload, action=action, status=status)
 
 @database_bp.route('/lots', methods=['GET'])
 def get_all_lots():

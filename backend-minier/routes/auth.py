@@ -6,11 +6,17 @@ import os
 import uuid
 from datetime import datetime
 
-from flask import Blueprint, jsonify, request
+from flask import Blueprint, jsonify as flask_jsonify, request
 
 from utils.soap_utils import parse_soap_payload, soap_response
 
 auth_bp = Blueprint('auth', __name__)
+
+
+def jsonify(payload, *args, **kwargs):
+    status = kwargs.pop('status', 200)
+    action = kwargs.pop('soap_action', 'AuthResponse')
+    return soap_response(payload, action=action, status=status)
 
 BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 USERS_FILE = os.path.join(BASE_DIR, 'users_data.json')

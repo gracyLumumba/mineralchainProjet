@@ -1,5 +1,5 @@
 # routes/certify.py
-from flask import Blueprint, request, jsonify
+from flask import Blueprint, request, jsonify as flask_jsonify
 from web3 import Web3
 import json
 import hashlib
@@ -24,6 +24,12 @@ from utils.soap_utils import parse_soap_payload, soap_response
 
 certify_bp = Blueprint('certify', __name__)
 AUTO_CERT_THRESHOLD = 0.00  # Demo mode: any non-fraud lot can be certified
+
+
+def jsonify(payload, *args, **kwargs):
+    status = kwargs.pop('status', 200)
+    action = kwargs.pop('soap_action', 'CertifyResponse')
+    return soap_response(payload, action=action, status=status)
 
 # ============================================================
 # CONNEXION À LA BLOCKCHAIN (Ganache)

@@ -1,4 +1,4 @@
-from flask import Blueprint, request, jsonify
+from flask import Blueprint, request, jsonify as flask_jsonify
 from web3 import Web3
 import traceback
 
@@ -9,6 +9,12 @@ from utils.transaction_manager import send_contract_transaction
 
 
 blockchain_bp = Blueprint('blockchain', __name__)
+
+
+def jsonify(payload, *args, **kwargs):
+    status = kwargs.pop('status', 200)
+    action = kwargs.pop('soap_action', 'BlockchainResponse')
+    return soap_response(payload, action=action, status=status)
 
 contract_config = load_contract_config()
 w3 = Web3(Web3.HTTPProvider(contract_config['ganache_url']))

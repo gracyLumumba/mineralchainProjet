@@ -23,11 +23,9 @@ validate_bp = Blueprint('validate', __name__)
 
 
 def jsonify(payload, *args, **kwargs):
-    if request.method in {'POST', 'PUT', 'PATCH', 'DELETE'}:
-        status = kwargs.pop('status', 200)
-        action = kwargs.pop('soap_action', 'ValidateResponse')
-        return soap_response(payload, action=action, status=status)
-    return flask_jsonify(payload, *args, **kwargs)
+    status = kwargs.pop('status', 200)
+    action = kwargs.pop('soap_action', 'ValidateResponse')
+    return soap_response(payload, action=action, status=status)
 
 FIELD_SPECS = {
     'cu_grade': {'field': 'cu_grade_percent', 'label': 'Cuivre - Cu (%)', 'tolerance': 0.5},
