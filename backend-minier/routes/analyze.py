@@ -10,7 +10,7 @@ sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 from models.load_models import model_loader
 from database.models import db
 from utils.analysis_rules import evaluate_consistency_rules
-from utils.request_security import verify_signed_request
+from utils.soap_utils import parse_soap_payload, soap_response
 
 analyze_bp = Blueprint('analyze', __name__)
 AUTO_CERT_THRESHOLD = 0.00  # Demo mode: any non-fraud lot is considered authentic
@@ -20,14 +20,10 @@ AUTO_CERT_THRESHOLD = 0.00  # Demo mode: any non-fraud lot is considered authent
 def analyze_lot():
     """Analyse un lot de minerai avec l'IA."""
     try:
-        integrity_error = verify_signed_request()
-        if integrity_error:
-            return integrity_error
-
-        data = request.get_json(silent=True)
+        data = parse_soap_payload("AnalyzeRequest")
 
         if not data:
-            return jsonify({"error": "Donnees manquantes"}), 400
+            return soap_response({"error": "Donnees manquantes"}, action="AnalyzeResponse", status=400)
 
         features = {}
         for col in model_loader.feature_columns:
@@ -95,10 +91,10 @@ def analyze_lot():
             "validation": rule_check,
         }
 
-        return jsonify(result), 200
+        return soap_response(result, action="AnalyzeResponse")
 
     except Exception as e:
-        return jsonify({"error": str(e)}), 500
+        return soap_response({"error": str(e)}, action="AnalyzeResponse", status=500)
 
 
 @analyze_bp.route('/health', methods=['GET'])

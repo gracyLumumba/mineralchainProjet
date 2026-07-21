@@ -2,13 +2,13 @@ from datetime import datetime
 import hashlib
 import json
 
-from flask import Blueprint, jsonify, request
+from flask import Blueprint, jsonify as flask_jsonify, request
 
 from database.models import Lot, LotHistory, db
 from routes.auth import get_current_user
 from routes.lots import database_enabled, get_lot_record
 from utils.experiment_logger import record_auto_validation_run
-from utils.request_security import verify_signed_request
+from utils.soap_utils import parse_soap_payload, soap_response
 from routes.certify import (
     ACCOUNT,
     CONTRACT_ADDRESS,
@@ -20,6 +20,14 @@ from routes.certify import (
 )
 
 validate_bp = Blueprint('validate', __name__)
+
+
+def jsonify(payload, *args, **kwargs):
+    if request.method in {'POST', 'PUT', 'PATCH', 'DELETE'}:
+        status = kwargs.pop('status', 200)
+        action = kwargs.pop('soap_action', 'ValidateResponse')
+        return soap_response(payload, action=action, status=status)
+    return flask_jsonify(payload, *args, **kwargs)
 
 FIELD_SPECS = {
     'cu_grade': {'field': 'cu_grade_percent', 'label': 'Cuivre - Cu (%)', 'tolerance': 0.5},
@@ -230,11 +238,7 @@ def regulator_certify(lot_id):
         return jsonify({"success": False, "error": "Acces reserve au regulateur"}), 403
     if not database_enabled():
         return jsonify({"success": False, "error": "PostgreSQL indisponible ou non configure"}), 503
-    integrity_error = verify_signed_request()
-    if integrity_error:
-        return integrity_error
-
-    payload = request.get_json(silent=True) or {}
+    payload = parse_soap_payload("RegulatorCertifyRequest")
     status = str(payload.get('status') or '').strip().upper()
     if status not in {"AUTHENTIQUE", "SUSPECT"}:
         return jsonify({"success": False, "error": "status doit etre AUTHENTIQUE ou SUSPECT"}), 400
@@ -363,9 +367,7 @@ def auto_validate(lot_id):
             return jsonify({"success": False, "error": "Authentification requise"}), 401
 
         print(f"[AUTO_VALIDATE] User: {user.get('username')} ({user.get('role')})")
-        integrity_error = verify_signed_request()
-        if integrity_error:
-            return integrity_error
+        parse_soap_payload("AutoValidateRequest")
 
         if user.get('role') != 'regulator':
             print("[AUTO_VALIDATE] ERREUR: Pas regulateur")

@@ -8,6 +8,7 @@ export async function fetchAdminUsers() {
 export async function approveAdminUser(userId) {
   const payload = await request(`/auth/users/${userId}/approve`, {
     method: 'POST',
+    soapAction: 'ApproveUserRequest',
   });
   return payload.user;
 }
@@ -15,7 +16,8 @@ export async function approveAdminUser(userId) {
 export async function rejectAdminUser(userId, reason = '') {
   const payload = await request(`/auth/users/${userId}/reject`, {
     method: 'POST',
-    body: JSON.stringify({ reason }),
+    soapAction: 'RejectUserRequest',
+    body: { reason },
   });
   return payload.user;
 }
@@ -23,6 +25,7 @@ export async function rejectAdminUser(userId, reason = '') {
 export async function revokeAdminUser(userId) {
   const payload = await request(`/auth/users/${userId}/revoke`, {
     method: 'POST',
+    soapAction: 'RevokeUserRequest',
   });
   return payload.user;
 }

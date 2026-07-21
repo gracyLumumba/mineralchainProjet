@@ -3,36 +3,49 @@ import { getSessionSync } from '../storage/sessionStorage';
 
 const REQUEST_TIMEOUT_MS = 12000;
 
-function stableJsonStringify(value) {
-  if (value === null || value === undefined) return 'null';
-  if (Array.isArray(value)) return `[${value.map((item) => stableJsonStringify(item)).join(',')}]`;
-  if (typeof value === 'object') {
-    const keys = Object.keys(value).sort();
-    return `{${keys
-      .filter((key) => value[key] !== undefined)
-      .map((key) => `${JSON.stringify(key)}:${stableJsonStringify(value[key])}`)
-      .join(',')}}`;
+function escapeXml(value) {
+  return String(value)
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&apos;');
+}
+
+function decodeXml(value) {
+  return String(value)
+    .replace(/&apos;/g, "'")
+    .replace(/&quot;/g, '"')
+    .replace(/&gt;/g, '>')
+    .replace(/&lt;/g, '<')
+    .replace(/&amp;/g, '&');
+}
+
+function buildSoapEnvelope(action, payload) {
+  const body = JSON.stringify(payload ?? {});
+  return `<?xml version="1.0" encoding="utf-8"?><soap:Envelope xmlns:soap="http://schemas.xmlsoap.org/soap/envelope/"><soap:Body><${action}>${escapeXml(body)}</${action}></soap:Body></soap:Envelope>`;
+}
+
+function parseSoapResponse(text) {
+  const trimmed = String(text || '').trim();
+  if (!trimmed) return {};
+  if (!trimmed.startsWith('<')) {
+    try {
+      return JSON.parse(trimmed);
+    } catch {
+      return { raw: trimmed };
+    }
   }
-  return JSON.stringify(value);
-}
 
-async function sha256Hex(input) {
-  const bytes = new TextEncoder().encode(String(input));
-  const digest = await crypto.subtle.digest('SHA-256', bytes);
-  return Array.from(new Uint8Array(digest)).map((byte) => byte.toString(16).padStart(2, '0')).join('');
-}
+  const match = trimmed.match(/<soap:Body[^>]*>\s*<[^>]+>([\s\S]*?)<\/[^>]+>\s*<\/soap:Body>/i);
+  const payloadText = decodeXml(match?.[1] || '');
+  if (!payloadText) return {};
 
-async function hmacHex(secret, message) {
-  const encoder = new TextEncoder();
-  const key = await crypto.subtle.importKey(
-    'raw',
-    encoder.encode(String(secret)),
-    { name: 'HMAC', hash: 'SHA-256' },
-    false,
-    ['sign']
-  );
-  const signature = await crypto.subtle.sign('HMAC', key, encoder.encode(String(message)));
-  return Array.from(new Uint8Array(signature)).map((byte) => byte.toString(16).padStart(2, '0')).join('');
+  try {
+    return JSON.parse(payloadText);
+  } catch {
+    return { raw: payloadText };
+  }
 }
 
 export function isNetworkUnavailableError(error) {
@@ -45,30 +58,13 @@ export function isNetworkUnavailableError(error) {
   );
 }
 
-async function parseResponse(response) {
-  const text = await response.text();
-
-  if (!text) {
-    return {};
-  }
-
-  try {
-    return JSON.parse(text);
-  } catch {
-    return { raw: text };
-  }
-}
-
 export async function request(path, options = {}) {
   const session = getSessionSync();
   const controller = new AbortController();
   const timeoutId = setTimeout(() => controller.abort(), REQUEST_TIMEOUT_MS);
   const apiBaseUrl = await getApiBaseUrl();
-  const { headers: optionHeaders, ...restOptions } = options;
+  const { headers: optionHeaders, soapAction, ...restOptions } = options;
   const method = String(restOptions.method || 'GET').toUpperCase();
-  const bodyText = typeof restOptions.body === 'string'
-    ? restOptions.body
-    : stableJsonStringify(restOptions.body ?? {});
   const headers = {
     Accept: 'application/json',
     'Content-Type': 'application/json',
@@ -76,15 +72,11 @@ export async function request(path, options = {}) {
     ...(optionHeaders || {}),
   };
 
-  if (session?.token && !['GET', 'HEAD', 'OPTIONS'].includes(method)) {
-    const timestamp = String(Date.now());
-    const nonce = globalThis.crypto?.randomUUID ? globalThis.crypto.randomUUID() : `${Date.now()}-${Math.random().toString(36).slice(2)}`;
-    const bodyHash = await sha256Hex(bodyText);
-    const signature = await hmacHex(session.token, [method, `/api${path}`, timestamp, nonce, bodyHash].join('\n'));
-    headers['X-MC-Timestamp'] = timestamp;
-    headers['X-MC-Nonce'] = nonce;
-    headers['X-MC-Body-Hash'] = bodyHash;
-    headers['X-MC-Signature'] = signature;
+  let body = restOptions.body;
+  if (soapAction) {
+    body = buildSoapEnvelope(soapAction, restOptions.body ?? {});
+    headers['Content-Type'] = 'text/xml; charset=utf-8';
+    headers.SOAPAction = soapAction;
   }
 
   let response;
@@ -93,7 +85,7 @@ export async function request(path, options = {}) {
     response = await fetch(`${apiBaseUrl}${path}`, {
       ...restOptions,
       headers,
-      body: ['GET', 'HEAD', 'OPTIONS'].includes(method) ? restOptions.body : bodyText,
+      body: ['GET', 'HEAD', 'OPTIONS'].includes(method) ? restOptions.body : body,
       signal: controller.signal,
     });
   } catch (error) {
@@ -109,11 +101,11 @@ export async function request(path, options = {}) {
     clearTimeout(timeoutId);
   }
 
-  const data = await parseResponse(response);
+  const text = await response.text();
+  const data = parseSoapResponse(text);
 
   if (!response.ok) {
-    const message =
-      data?.error || data?.message || `HTTP ${response.status}`;
+    const message = data?.error || data?.message || `HTTP ${response.status}`;
     const requestError = new Error(message);
     requestError.status = response.status;
     requestError.data = data;

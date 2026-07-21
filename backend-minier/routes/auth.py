@@ -8,7 +8,7 @@ from datetime import datetime
 
 from flask import Blueprint, jsonify, request
 
-from utils.request_security import verify_signed_request
+from utils.soap_utils import parse_soap_payload, soap_response
 
 auth_bp = Blueprint('auth', __name__)
 
@@ -189,16 +189,16 @@ def ensure_admin_user():
 
 @auth_bp.route('/auth/login', methods=['POST'])
 def login():
-    data = request.get_json(silent=True) or {}
+    data = parse_soap_payload("LoginRequest")
     identifier = normalize_identifier(data.get('identifier'))
     password = str(data.get('password', ''))
 
     if not identifier or not password:
-        return jsonify({"error": "identifier et password requis"}), 400
+        return soap_response({"error": "identifier et password requis"}, action="LoginResponse", status=400)
 
     user = find_user_by_identifier(identifier)
     if not user or user["password"] != hash_password(password):
-        return jsonify({"error": "Identifiants invalides"}), 401
+        return soap_response({"error": "Identifiants invalides"}, action="LoginResponse", status=401)
 
     account_status = user.get("account_status", "approved")
     if account_status != "approved":
@@ -207,21 +207,21 @@ def login():
             if account_status == "pending"
             else "Compte refuse par l'administrateur."
         )
-        return jsonify({
+        return soap_response({
             "error": message,
             "account_status": account_status,
-        }), 403
+        }, action="LoginResponse", status=403)
 
-    return jsonify({
+    return soap_response({
         "success": True,
         "token": create_token(user),
         "user": serialize_user(user),
-    })
+    }, action="LoginResponse")
 
 
 @auth_bp.route('/auth/register', methods=['POST'])
 def register():
-    data = request.get_json(silent=True) or {}
+    data = parse_soap_payload("RegisterRequest")
     full_name = str(data.get('full_name', '')).strip()
     username = str(data.get('username', '')).strip().lower()
     email = str(data.get('email', '')).strip().lower()
@@ -241,16 +241,16 @@ def register():
             organization = 'MineralChain'
 
     if not full_name or len(username) < 3 or '@' not in email or len(password) < 6 or not organization:
-        return jsonify({"error": "Données d'inscription invalides"}), 400
+        return soap_response({"error": "Données d'inscription invalides"}, action="RegisterResponse", status=400)
 
     if role not in {'producer', 'regulator', 'transporter'}:
-        return jsonify({"error": "Rôle invalide"}), 400
+        return soap_response({"error": "Rôle invalide"}, action="RegisterResponse", status=400)
 
     existing_users = get_all_users()
     if any(user["email"] == email for user in existing_users):
-        return jsonify({"error": "Cet email est déjà utilisé"}), 409
+        return soap_response({"error": "Cet email est déjà utilisé"}, action="RegisterResponse", status=409)
     if any(user["username"] == username for user in existing_users):
-        return jsonify({"error": "Ce nom d'utilisateur est déjà utilisé"}), 409
+        return soap_response({"error": "Ce nom d'utilisateur est déjà utilisé"}, action="RegisterResponse", status=409)
 
     new_user = {
         "id": f"user-{uuid.uuid4().hex[:10]}",
@@ -269,11 +269,11 @@ def register():
     registered_users.append(new_user)
     save_registered_users(registered_users)
 
-    return jsonify({
+    return soap_response({
         "success": True,
         "message": "Compte créé. En attente d'approbation.",
         "user": serialize_user(new_user),
-    }), 201
+    }, action="RegisterResponse", status=201)
 
 
 @auth_bp.route('/auth/users', methods=['GET'])
@@ -316,9 +316,7 @@ def approve_user(user_id):
     current_user, error_response = ensure_admin_user()
     if error_response:
         return error_response
-    integrity_error = verify_signed_request()
-    if integrity_error:
-        return integrity_error
+    parse_soap_payload("ApproveUserRequest")
 
     user = update_registered_user(
         user_id,
@@ -330,9 +328,9 @@ def approve_user(user_id):
         }),
     )
     if not user:
-        return jsonify({"error": "Utilisateur introuvable ou non modifiable"}), 404
+        return soap_response({"error": "Utilisateur introuvable ou non modifiable"}, action="ApproveUserResponse", status=404)
 
-    return jsonify({"success": True, "user": serialize_user(user)})
+    return soap_response({"success": True, "user": serialize_user(user)}, action="ApproveUserResponse")
 
 
 @auth_bp.route('/auth/users/<user_id>/reject', methods=['POST'])
@@ -340,11 +338,7 @@ def reject_user(user_id):
     current_user, error_response = ensure_admin_user()
     if error_response:
         return error_response
-    integrity_error = verify_signed_request()
-    if integrity_error:
-        return integrity_error
-
-    payload = request.get_json(silent=True) or {}
+    payload = parse_soap_payload("RejectUserRequest")
     reason = str(payload.get("reason", "")).strip() or "Demande refusee"
     user = update_registered_user(
         user_id,
@@ -356,9 +350,9 @@ def reject_user(user_id):
         }),
     )
     if not user:
-        return jsonify({"error": "Utilisateur introuvable ou non modifiable"}), 404
+        return soap_response({"error": "Utilisateur introuvable ou non modifiable"}, action="RejectUserResponse", status=404)
 
-    return jsonify({"success": True, "user": serialize_user(user)})
+    return soap_response({"success": True, "user": serialize_user(user)}, action="RejectUserResponse")
 
 
 @auth_bp.route('/auth/users/<user_id>/revoke', methods=['POST'])
@@ -366,9 +360,7 @@ def revoke_user(user_id):
     current_user, error_response = ensure_admin_user()
     if error_response:
         return error_response
-    integrity_error = verify_signed_request()
-    if integrity_error:
-        return integrity_error
+    parse_soap_payload("RevokeUserRequest")
 
     user = update_registered_user(
         user_id,
@@ -379,6 +371,6 @@ def revoke_user(user_id):
         }),
     )
     if not user:
-        return jsonify({"error": "Utilisateur introuvable ou non modifiable"}), 404
+        return soap_response({"error": "Utilisateur introuvable ou non modifiable"}, action="RevokeUserResponse", status=404)
 
-    return jsonify({"success": True, "user": serialize_user(user)})
+    return soap_response({"success": True, "user": serialize_user(user)}, action="RevokeUserResponse")

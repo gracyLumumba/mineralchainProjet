@@ -13,68 +13,61 @@ const LS = {
 
 const KEYS = { users: 'mc_users', currentUser: 'mc_current_user', backendToken: 'mc_backend_token' };
 
-function stableJsonStringify(value) {
-  if (value === null || value === undefined) return 'null';
-  if (Array.isArray(value)) return `[${value.map((item) => stableJsonStringify(item)).join(',')}]`;
-  if (typeof value === 'object') {
-    const keys = Object.keys(value).sort();
-    return `{${keys
-      .filter((key) => value[key] !== undefined)
-      .map((key) => `${JSON.stringify(key)}:${stableJsonStringify(value[key])}`)
-      .join(',')}}`;
+function escapeXml(value) {
+  return String(value)
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&apos;');
+}
+
+function buildSoapEnvelope(action, payload) {
+  const body = JSON.stringify(payload ?? {});
+  return `<?xml version="1.0" encoding="utf-8"?><soap:Envelope xmlns:soap="http://schemas.xmlsoap.org/soap/envelope/"><soap:Body><${action}>${escapeXml(body)}</${action}></soap:Body></soap:Envelope>`;
+}
+
+function parseSoapResponse(text) {
+  const trimmed = String(text || '').trim();
+  if (!trimmed) return {};
+  if (!trimmed.startsWith('<')) {
+    try {
+      return JSON.parse(trimmed);
+    } catch {
+      return { raw: trimmed };
+    }
   }
-  return JSON.stringify(value);
+
+  const parser = new DOMParser();
+  const doc = parser.parseFromString(trimmed, 'text/xml');
+  const parserError = doc.getElementsByTagName('parsererror')[0];
+  if (parserError) {
+    return { raw: trimmed };
+  }
+  const body = doc.getElementsByTagNameNS('http://schemas.xmlsoap.org/soap/envelope/', 'Body')[0]
+    || doc.getElementsByTagName('soap:Body')[0];
+  const payloadNode = body?.firstElementChild;
+  const payloadText = payloadNode?.textContent?.trim() || '';
+  if (!payloadText) return {};
+  try {
+    return JSON.parse(payloadText);
+  } catch {
+    return { raw: payloadText };
+  }
 }
 
-async function sha256Hex(input) {
-  const bytes = new TextEncoder().encode(String(input));
-  const digest = await crypto.subtle.digest('SHA-256', bytes);
-  return Array.from(new Uint8Array(digest)).map((byte) => byte.toString(16).padStart(2, '0')).join('');
-}
-
-async function hmacHex(secret, message) {
-  const encoder = new TextEncoder();
-  const key = await crypto.subtle.importKey(
-    'raw',
-    encoder.encode(String(secret)),
-    { name: 'HMAC', hash: 'SHA-256' },
-    false,
-    ['sign']
-  );
-  const signature = await crypto.subtle.sign('HMAC', key, encoder.encode(String(message)));
-  return Array.from(new Uint8Array(signature)).map((byte) => byte.toString(16).padStart(2, '0')).join('');
-}
-
-async function plainJsonRequest(path, payload) {
-  const response = await fetch(`${BACKEND_URL}/api${path}`, {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify(payload),
-  });
-  const data = await response.json().catch(() => ({}));
-  return { ok: response.ok, status: response.status, data };
-}
-
-async function signedJsonRequest(path, payload, token) {
-  const body = stableJsonStringify(payload || {});
-  const timestamp = String(Date.now());
-  const nonce = crypto.randomUUID ? crypto.randomUUID() : `${Date.now()}-${Math.random().toString(36).slice(2)}`;
-  const bodyHash = await sha256Hex(body);
-  const signature = await hmacHex(token, ['POST', `/api${path}`, timestamp, nonce, bodyHash].join('\n'));
-
+async function soapRequest(path, payload, token = null, soapAction = 'SoapRequest') {
   const response = await fetch(`${BACKEND_URL}/api${path}`, {
     method: 'POST',
     headers: {
-      'Content-Type': 'application/json',
-      Authorization: `Bearer ${token}`,
-      'X-MC-Timestamp': timestamp,
-      'X-MC-Nonce': nonce,
-      'X-MC-Body-Hash': bodyHash,
-      'X-MC-Signature': signature,
+      'Content-Type': 'text/xml; charset=utf-8',
+      SOAPAction: soapAction,
+      ...(token ? { Authorization: `Bearer ${token}` } : {}),
     },
-    body,
+    body: buildSoapEnvelope(soapAction, payload),
   });
-  const data = await response.json().catch(() => ({}));
+  const text = await response.text();
+  const data = parseSoapResponse(text);
   return { ok: response.ok, status: response.status, data };
 }
 
@@ -275,10 +268,10 @@ export function AuthProvider({ children }) {
       if (!demoPassword) return;
 
       try {
-        const response = await plainJsonRequest('/auth/login', {
+        const response = await soapRequest('/auth/login', {
           identifier: currentUser.username,
           password: demoPassword,
-        });
+        }, null, 'LoginRequest');
         if (response.ok && response.data?.token) {
           LS.set(KEYS.backendToken, response.data.token);
           setBackendTokenVersion((version) => version + 1);
@@ -329,7 +322,7 @@ export function AuthProvider({ children }) {
 
     // Synchronise une session backend pour les routes protegÃ©es (certification, lots, etc.).
     try {
-      const response = await plainJsonRequest('/auth/login', { identifier, password });
+      const response = await soapRequest('/auth/login', { identifier, password }, null, 'LoginRequest');
       if (response.ok && response.data?.token) {
         LS.set(KEYS.backendToken, response.data.token);
         setBackendTokenVersion((version) => version + 1);
@@ -397,7 +390,7 @@ export function AuthProvider({ children }) {
     setUsers(updated);
 
     try {
-      const response = await plainJsonRequest('/auth/register', {
+      const response = await soapRequest('/auth/register', {
         full_name: newUser.full_name,
         username: newUser.username,
         email: newUser.email,
@@ -407,7 +400,7 @@ export function AuthProvider({ children }) {
         site: newUser.site || '',
         phone: formData.phone?.trim() || '',
         note: formData.note?.trim() || '',
-      });
+      }, null, 'RegisterRequest');
       if (!response.ok) {
         console.warn('[AUTH] Backend register unavailable:', response.data?.error || response.status);
       }
@@ -434,7 +427,7 @@ export function AuthProvider({ children }) {
     try {
       const token = LS.get(KEYS.backendToken);
       if (token) {
-        await signedJsonRequest(`/auth/users/${userId}/approve`, { user_id: userId }, token);
+        await soapRequest(`/auth/users/${userId}/approve`, { user_id: userId }, token, 'ApproveUserRequest');
         await syncBackendUsers();
       }
     } catch (error) {
@@ -456,7 +449,7 @@ export function AuthProvider({ children }) {
     try {
       const token = LS.get(KEYS.backendToken);
       if (token) {
-        await signedJsonRequest(`/auth/users/${userId}/reject`, { user_id: userId, reason }, token);
+        await soapRequest(`/auth/users/${userId}/reject`, { user_id: userId, reason }, token, 'RejectUserRequest');
         await syncBackendUsers();
       }
     } catch (error) {
@@ -477,7 +470,7 @@ export function AuthProvider({ children }) {
     try {
       const token = LS.get(KEYS.backendToken);
       if (token) {
-        await signedJsonRequest(`/auth/users/${userId}/revoke`, { user_id: userId }, token);
+        await soapRequest(`/auth/users/${userId}/revoke`, { user_id: userId }, token, 'RevokeUserRequest');
         await syncBackendUsers();
       }
     } catch (error) {

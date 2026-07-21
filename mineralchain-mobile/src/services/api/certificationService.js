@@ -4,7 +4,8 @@ import { request } from './client';
 export async function certifyLot(payload) {
   const data = await request('/analyze-and-certify', {
     method: 'POST',
-    body: JSON.stringify(payload),
+    soapAction: 'AnalyzeAndCertifyRequest',
+    body: payload,
   });
 
   return createCertificationResult(data);

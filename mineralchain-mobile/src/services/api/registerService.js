@@ -4,7 +4,8 @@ import { request } from './client';
 export async function register(payload) {
   const data = await request('/auth/register', {
     method: 'POST',
-    body: JSON.stringify(payload),
+    soapAction: 'RegisterRequest',
+    body: payload,
   });
 
   return {

@@ -4,7 +4,7 @@ import traceback
 
 from routes.auth import get_current_user
 from utils.blockchain_config import load_contract_config
-from utils.request_security import verify_signed_request
+from utils.soap_utils import parse_soap_payload, soap_response
 from utils.transaction_manager import send_contract_transaction
 
 
@@ -34,23 +34,32 @@ def _contract_ready():
 def _require_role(*allowed_roles, allow_admin=True):
     user = get_current_user()
     if not user:
+        if request.method in {'POST', 'PUT', 'PATCH', 'DELETE'}:
+            return None, (soap_response({"error": "Authentification requise"}, action="BlockchainResponse", status=401))
         return None, (jsonify({"error": "Authentification requise"}), 401)
 
     role = str(user.get("role") or "").strip().lower()
     allowed = {str(item).strip().lower() for item in allowed_roles if str(item).strip()}
     if role not in allowed and not (allow_admin and role == "admin"):
-        return None, (jsonify({
+        payload = {
             "error": "Acces refuse",
             "required_roles": sorted(allowed) if allowed else [],
-        }), 403)
+        }
+        if request.method in {'POST', 'PUT', 'PATCH', 'DELETE'}:
+            return None, (soap_response(payload, action="BlockchainResponse", status=403))
+        return None, (jsonify(payload), 403)
 
     return user, None
 
 
 def _require_blockchain_ready():
     if not w3.is_connected():
+        if request.method in {'POST', 'PUT', 'PATCH', 'DELETE'}:
+            return soap_response({"error": "Ganache indisponible"}, action="BlockchainResponse", status=503)
         return jsonify({"error": "Ganache indisponible"}), 503
     if contract is None:
+        if request.method in {'POST', 'PUT', 'PATCH', 'DELETE'}:
+            return soap_response({"error": "Contrat non charge"}, action="BlockchainResponse", status=503)
         return jsonify({"error": "Contrat non charge"}), 503
     return None
 
@@ -78,13 +87,10 @@ def mint_token():
         user, auth_error = _require_role("producer")
         if auth_error:
             return auth_error
-        integrity_error = verify_signed_request()
-        if integrity_error:
-            return integrity_error
-        data = request.get_json() or {}
+        data = parse_soap_payload("MintRequest")
         account = _account()
         if not account:
-            return jsonify({"error": "Aucun compte Ganache disponible"}), 503
+            return soap_response({"error": "Aucun compte Ganache disponible"}, action="MintResponse", status=503)
 
         recipient = data.get('recipient') or account
         tx_builder = contract.functions.mintMineralToken(
@@ -108,7 +114,7 @@ def mint_token():
         receipt = w3.eth.wait_for_transaction_receipt(tx_hash, timeout=60)
         token_id = contract.functions.getTokenByLot(data.get('lot_id', '')).call()
 
-        return jsonify({
+        return soap_response({
             "success": True,
             "token_id": token_id,
             "transaction_hash": tx_hash.hex(),
@@ -118,10 +124,10 @@ def mint_token():
             "timestamp": w3.eth.get_block(receipt.blockNumber).timestamp,
             "simulated": False,
             "actor": user.get("username"),
-        })
+        }, action="MintResponse")
     except Exception as e:
         traceback.print_exc()
-        return jsonify({"error": str(e)}), 500
+        return soap_response({"error": str(e)}, action="MintResponse", status=500)
 
 
 @blockchain_bp.route('/token/<int:token_id>', methods=['GET'])
@@ -181,10 +187,7 @@ def validate_dgmr():
         user, auth_error = _require_role("regulator")
         if auth_error:
             return auth_error
-        integrity_error = verify_signed_request()
-        if integrity_error:
-            return integrity_error
-        payload = request.get_json() or {}
+        payload = parse_soap_payload("ValidateDGMRRequest")
         account = _account()
         tx_builder = contract.functions.validateByDGMR(
             int(payload.get('token_id')),
@@ -193,15 +196,15 @@ def validate_dgmr():
         )
         tx_hash = send_contract_transaction(w3, tx_builder, account, fallback_gas=500000)
         receipt = w3.eth.wait_for_transaction_receipt(tx_hash, timeout=60)
-        return jsonify({
+        return soap_response({
             "success": receipt.status == 1,
             "transaction_hash": tx_hash.hex(),
             "block_number": receipt.blockNumber,
             "actor": user.get("username"),
-        })
+        }, action="ValidateDGMRResponse")
     except Exception as e:
         traceback.print_exc()
-        return jsonify({"error": str(e)}), 500
+        return soap_response({"error": str(e)}, action="ValidateDGMRResponse", status=500)
 
 
 @blockchain_bp.route('/update-ipfs', methods=['POST'])
@@ -213,10 +216,7 @@ def update_ipfs():
         user, auth_error = _require_role("producer")
         if auth_error:
             return auth_error
-        integrity_error = verify_signed_request()
-        if integrity_error:
-            return integrity_error
-        payload = request.get_json() or {}
+        payload = parse_soap_payload("UpdateIPFSRequest")
         account = _account()
         tx_builder = contract.functions.updateIPFSHash(
             int(payload.get('token_id')),
@@ -225,15 +225,15 @@ def update_ipfs():
         )
         tx_hash = send_contract_transaction(w3, tx_builder, account, fallback_gas=500000)
         receipt = w3.eth.wait_for_transaction_receipt(tx_hash, timeout=60)
-        return jsonify({
+        return soap_response({
             "success": receipt.status == 1,
             "transaction_hash": tx_hash.hex(),
             "block_number": receipt.blockNumber,
             "actor": user.get("username"),
-        })
+        }, action="UpdateIPFSResponse")
     except Exception as e:
         traceback.print_exc()
-        return jsonify({"error": str(e)}), 500
+        return soap_response({"error": str(e)}, action="UpdateIPFSResponse", status=500)
 
 
 @blockchain_bp.route('/transactions', methods=['GET'])

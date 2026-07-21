@@ -4,7 +4,7 @@ import traceback
 from datetime import datetime
 
 from utils.ipfs_client import fetch_json_from_gateway, request_with_backoff, upload_json_to_pinata
-from utils.request_security import verify_signed_request
+from utils.soap_utils import parse_soap_payload, soap_response
 
 
 ipfs_bp = Blueprint('ipfs', __name__)
@@ -20,10 +20,7 @@ def upload_to_ipfs():
     Upload un certificat JSON vers IPFS via Pinata uniquement.
     """
     try:
-        integrity_error = verify_signed_request()
-        if integrity_error:
-            return integrity_error
-        data = request.get_json() or {}
+        data = parse_soap_payload("UploadIPFSRequest")
         certificate_data = data.get('data') if 'data' in data else data
         lot_id = data.get('lot_id') or certificate_data.get('lot_id', 'unknown')
         name = data.get('name', f'certificate-{lot_id}')
@@ -44,19 +41,19 @@ def upload_to_ipfs():
         ipfs_hash = result['ipfs_hash']
         print(f"[IPFS] Upload reussi: {ipfs_hash}")
 
-        return jsonify({
-            'success': True,
-            'ipfs_hash': ipfs_hash,
-            'ipfs_uri': result['ipfs_uri'],
-            'gateway_url': result['gateway_url'],
-            'timestamp': datetime.now().isoformat(),
-            'simulated': False,
-        }), 200
+        return soap_response({
+           'success': True,
+           'ipfs_hash': ipfs_hash,
+           'ipfs_uri': result['ipfs_uri'],
+           'gateway_url': result['gateway_url'],
+           'timestamp': datetime.now().isoformat(),
+           'simulated': False,
+        }, action="UploadIPFSResponse")
 
     except Exception as e:
         print(f"[IPFS] Erreur upload: {str(e)}")
         traceback.print_exc()
-        return jsonify({'error': str(e)}), 500
+        return soap_response({'error': str(e)}, action="UploadIPFSResponse", status=500)
 
 
 @ipfs_bp.route('/ipfs/get/<ipfs_hash>', methods=['GET'])
@@ -84,9 +81,6 @@ def pin_to_ipfs(ipfs_hash):
     Verifie qu'un hash IPFS est accessible via la gateway configuree.
     """
     try:
-        integrity_error = verify_signed_request()
-        if integrity_error:
-            return integrity_error
         clean_hash = ipfs_hash.replace('ipfs://', '')
         print(f"\n[IPFS] Verification pin: {clean_hash}")
         response = request_with_backoff(
@@ -97,20 +91,20 @@ def pin_to_ipfs(ipfs_hash):
             backoff_factor=0.8,
         )
         if response.status_code != 200:
-            return jsonify({
+            return soap_response({
                 'error': 'Hash non accessible via la gateway',
                 'status_code': response.status_code,
-            }), 404
+            }, action="PinIPFSResponse", status=404)
 
-        return jsonify({
+        return soap_response({
             'success': True,
             'ipfs_hash': clean_hash,
             'message': 'Hash accessible via la gateway',
             'simulated': False,
-        }), 200
+        }, action="PinIPFSResponse")
 
     except Exception as e:
-        return jsonify({'error': str(e)}), 500
+        return soap_response({'error': str(e)}, action="PinIPFSResponse", status=500)
 
 
 @ipfs_bp.route('/ipfs/status', methods=['GET'])

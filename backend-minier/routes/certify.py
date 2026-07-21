@@ -20,7 +20,7 @@ from utils.analysis_rules import evaluate_consistency_rules
 from utils.blockchain_config import load_contract_config, GANACHE_URL, DEFAULT_CONTRACT_ADDRESS
 from utils.ipfs_client import upload_json_to_pinata
 from utils.transaction_manager import send_contract_transaction as send_contract_transaction_with_nonce
-from utils.request_security import verify_signed_request
+from utils.soap_utils import parse_soap_payload, soap_response
 
 certify_bp = Blueprint('certify', __name__)
 AUTO_CERT_THRESHOLD = 0.00  # Demo mode: any non-fraud lot can be certified
@@ -233,17 +233,14 @@ def analyze_and_certify():
     try:
         user = get_current_user()
         if not user:
-            return jsonify({"error": "Authentification requise"}), 401
-        integrity_error = verify_signed_request()
-        if integrity_error:
-            return integrity_error
+            return soap_response({"error": "Authentification requise"}, action="AnalyzeAndCertifyResponse", status=401)
 
-        data = request.get_json(silent=True) or {}
+        data = parse_soap_payload("AnalyzeAndCertifyRequest")
         
         required_fields = ['lot_id']
         missing = [f for f in required_fields if not data.get(f)]
         if missing:
-            return jsonify({"error": f"Champs manquants: {', '.join(missing)}"}), 400
+            return soap_response({"error": f"Champs manquants: {', '.join(missing)}"}, action="AnalyzeAndCertifyResponse", status=400)
         
         lot_id = data.get('lot_id', 'inconnu')
         print(f"\n{'='*60}")
@@ -555,12 +552,12 @@ def analyze_and_certify():
         print(f"[IPFS] CID: {(ipfs_hash[:20] + '...') if ipfs_hash else 'Non disponible'}")
         print(f"[LINK] Voir certificat: {gateway_url or 'Non disponible'}")
         
-        return jsonify(result), 200
+        return soap_response(result, action="AnalyzeAndCertifyResponse")
         
     except Exception as e:
         print(f"\n[ERROR] ERREUR GENERALE: {str(e)}")
         traceback.print_exc()
-        return jsonify({"error": str(e)}), 500
+        return soap_response({"error": str(e)}, action="AnalyzeAndCertifyResponse", status=500)
 
 # ============================================================
 # ROUTES SUPPLÉMENTAIRES
@@ -638,23 +635,20 @@ def get_token(token_id):
 def sync_token_certificate(token_id):
     """Synchronise le certificat IPFS dans le smart contract."""
     if not contract:
-        return jsonify({"error": "Contrat non charge"}), 503
+        return soap_response({"error": "Contrat non charge"}, action="SyncCertificateResponse", status=503)
     if not ACCOUNT or not PRIVATE_KEY:
-        return jsonify({"error": "Compte blockchain non configure"}), 503
-    integrity_error = verify_signed_request()
-    if integrity_error:
-        return integrity_error
+        return soap_response({"error": "Compte blockchain non configure"}, action="SyncCertificateResponse", status=503)
 
     try:
         tid = int(token_id)
-        payload = request.get_json(silent=True) or {}
+        payload = parse_soap_payload("SyncCertificateRequest")
         ipfs_hash = (payload.get('ipfs_hash') or '').replace('ipfs://', '').strip()
         certificate_hash = (payload.get('certificate_hash') or '').strip()
 
         if not ipfs_hash:
-            return jsonify({"error": "ipfs_hash requis"}), 400
+            return soap_response({"error": "ipfs_hash requis"}, action="SyncCertificateResponse", status=400)
         if not certificate_hash:
-            return jsonify({"error": "certificate_hash requis"}), 400
+            return soap_response({"error": "certificate_hash requis"}, action="SyncCertificateResponse", status=400)
 
         tx_builder = contract.functions.updateCertificate(
             tid,
@@ -665,19 +659,19 @@ def sync_token_certificate(token_id):
         receipt = w3.eth.wait_for_transaction_receipt(tx_hash, timeout=120)
 
         if receipt.status != 1:
-            return jsonify({"error": "La transaction de synchronisation a echoue"}), 500
+            return soap_response({"error": "La transaction de synchronisation a echoue"}, action="SyncCertificateResponse", status=500)
 
-        return jsonify({
+        return soap_response({
             "success": True,
             "token_id": tid,
             "transaction_hash": tx_hash.hex(),
             "block_number": receipt.blockNumber,
             "ipfs_hash": ipfs_hash,
             "certificate_hash": certificate_hash
-        })
+        }, action="SyncCertificateResponse")
     except Exception as e:
         traceback.print_exc()
-        return jsonify({"error": f"Synchronisation blockchain impossible: {str(e)}"}), 500
+        return soap_response({"error": f"Synchronisation blockchain impossible: {str(e)}"}, action="SyncCertificateResponse", status=500)
 
 @certify_bp.route('/verify', methods=['GET'])
 def verify_lot():

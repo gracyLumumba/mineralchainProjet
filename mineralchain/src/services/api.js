@@ -23,36 +23,52 @@ function readJsonStorage(key, fallback = null) {
   }
 }
 
-function stableJsonStringify(value) {
-  if (value === null || value === undefined) return 'null';
-  if (Array.isArray(value)) return `[${value.map((item) => stableJsonStringify(item)).join(',')}]`;
-  if (typeof value === 'object') {
-    const keys = Object.keys(value).sort();
-    return `{${keys
-      .filter((key) => value[key] !== undefined)
-      .map((key) => `${JSON.stringify(key)}:${stableJsonStringify(value[key])}`)
-      .join(',')}}`;
+function escapeXml(value) {
+  return String(value)
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&apos;');
+}
+
+function buildSoapEnvelope(action, payload) {
+  const body = JSON.stringify(payload ?? {});
+  return `<?xml version="1.0" encoding="utf-8"?>${'<soap:Envelope xmlns:soap="http://schemas.xmlsoap.org/soap/envelope/"><soap:Body>'}<${action}>${escapeXml(body)}</${action}></soap:Body></soap:Envelope>`;
+}
+
+function parseSoapResponse(data) {
+  if (typeof data !== 'string') {
+    return data;
   }
-  return JSON.stringify(value);
-}
 
-async function sha256Hex(input) {
-  const bytes = new TextEncoder().encode(String(input));
-  const digest = await crypto.subtle.digest('SHA-256', bytes);
-  return Array.from(new Uint8Array(digest)).map((byte) => byte.toString(16).padStart(2, '0')).join('');
-}
+  const trimmed = data.trim();
+  if (!trimmed.startsWith('<')) {
+    try {
+      return JSON.parse(trimmed);
+    } catch {
+      return { raw: trimmed };
+    }
+  }
 
-async function hmacHex(secret, message) {
-  const encoder = new TextEncoder();
-  const key = await crypto.subtle.importKey(
-    'raw',
-    encoder.encode(String(secret)),
-    { name: 'HMAC', hash: 'SHA-256' },
-    false,
-    ['sign']
-  );
-  const signature = await crypto.subtle.sign('HMAC', key, encoder.encode(String(message)));
-  return Array.from(new Uint8Array(signature)).map((byte) => byte.toString(16).padStart(2, '0')).join('');
+  const parser = new DOMParser();
+  const doc = parser.parseFromString(trimmed, 'text/xml');
+  const parserError = doc.getElementsByTagName('parsererror')[0];
+  if (parserError) {
+    return { raw: trimmed };
+  }
+
+  const body = doc.getElementsByTagNameNS('http://schemas.xmlsoap.org/soap/envelope/', 'Body')[0]
+    || doc.getElementsByTagName('soap:Body')[0];
+  const payloadNode = body?.firstElementChild;
+  const payloadText = payloadNode?.textContent?.trim() || '';
+  if (!payloadText) return {};
+
+  try {
+    return JSON.parse(payloadText);
+  } catch {
+    return { raw: payloadText };
+  }
 }
 
 async function refreshBackendTokenFromDemoSession() {
@@ -61,15 +77,17 @@ async function refreshBackendTokenFromDemoSession() {
   const password = DEMO_PASSWORDS[identifier];
   if (!identifier || !password) return null;
 
-  const response = await axios.post(`${BACKEND_URL}/api/auth/login`, {
-    identifier,
-    password,
-  }, {
-    timeout: 30000,
-    headers: { 'Content-Type': 'application/json' },
+  const response = await fetch(`${BACKEND_URL}/api/auth/login`, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'text/xml; charset=utf-8',
+      SOAPAction: 'LoginRequest',
+    },
+    body: buildSoapEnvelope('LoginRequest', { identifier, password }),
   });
-
-  const token = response.data?.token;
+  const text = await response.text();
+  const tokenPayload = parseSoapResponse(text);
+  const token = tokenPayload?.token;
   if (token) {
     localStorage.setItem(BACKEND_TOKEN_KEY, JSON.stringify(token));
   }
@@ -85,25 +103,18 @@ const API = axios.create({
 API.interceptors.request.use(async (config) => {
   try {
     const token = readJsonStorage(BACKEND_TOKEN_KEY);
+    config.headers = config.headers || {};
     if (token) {
-      config.headers = config.headers || {};
       config.headers.Authorization = `Bearer ${token}`;
-      const method = String(config.method || 'get').toUpperCase();
-      if (!['GET', 'HEAD', 'OPTIONS'].includes(method)) {
-        const bodyText = typeof config.data === 'string'
-          ? config.data
-          : stableJsonStringify(config.data ?? {});
-        const timestamp = String(Date.now());
-        const nonce = (globalThis.crypto?.randomUUID ? globalThis.crypto.randomUUID() : `${Date.now()}-${Math.random().toString(36).slice(2)}`);
-        const bodyHash = await sha256Hex(bodyText);
-        const path = config.url ? `/api${config.url}` : '/api';
-        config.data = bodyText;
-        config.headers['Content-Type'] = 'application/json';
-        config.headers['X-MC-Timestamp'] = timestamp;
-        config.headers['X-MC-Nonce'] = nonce;
-        config.headers['X-MC-Body-Hash'] = bodyHash;
-        config.headers['X-MC-Signature'] = await hmacHex(token, [method, path, timestamp, nonce, bodyHash].join('\n'));
+    }
+    if (config.soapAction) {
+      if (config._soapBody === undefined) {
+        config._soapBody = config.data ?? {};
       }
+      config.data = buildSoapEnvelope(config.soapAction, config._soapBody);
+      config.headers['Content-Type'] = 'text/xml; charset=utf-8';
+      config.headers.SOAPAction = config.soapAction;
+      config.responseType = 'text';
     }
   } catch (error) {
     void error;
@@ -112,7 +123,7 @@ API.interceptors.request.use(async (config) => {
 });
 
 API.interceptors.response.use(
-  res => res.data,
+  res => parseSoapResponse(res.data),
   async (err) => {
     const status = err.response?.status;
     const originalRequest = err.config || {};
@@ -129,7 +140,8 @@ API.interceptors.response.use(
         void error;
       }
     }
-    return Promise.reject(err.response?.data || { error: err.message });
+    const payload = parseSoapResponse(err.response?.data) || { error: err.message };
+    return Promise.reject(payload);
   }
 );
 
@@ -137,18 +149,18 @@ export const apiService = {
   health:          () => API.get('/health'),
   status:          () => API.get('/status'),
   contractInfo:    () => API.get('/blockchain/status'),
-  analyze:         (data) => API.post('/analyze', data),
-  certify:         (data) => API.post('/analyze-and-certify', data, { timeout: 120000 }),
-  createLot:       (data) => API.post('/lots', data),
+  analyze:         (data) => API.post('/analyze', data, { soapAction: 'AnalyzeRequest' }),
+  certify:         (data) => API.post('/analyze-and-certify', data, { soapAction: 'AnalyzeAndCertifyRequest', timeout: 120000 }),
+  createLot:       (data) => API.post('/lots', data, { soapAction: 'CreateLotRequest' }),
   getLots:         (params) => API.get('/lots', { params }),
   getLot:          (id) => API.get(`/lots/${id}`),
-  updateLot:       (id, d) => API.put(`/lots/${id}`, d),
+  updateLot:       (id, d) => API.put(`/lots/${id}`, d, { soapAction: 'UpdateLotRequest' }),
   getToken:        (id) => API.get(`/blockchain/token/${id}`),
   getTransactions: () => API.get('/blockchain/transactions'),
-  validateDGMR:    (data) => API.post('/blockchain/validate-dgmr', data),
-  regulatorCertifyLot: (lotId, data) => API.post(`/lots/${lotId}/regulator-certify`, data, { timeout: 120000 }),
-  updateIPFS:      (data) => API.post('/blockchain/update-ipfs', data),
-  autoValidateLot: (lotId) => API.post(`/lots/${lotId}/auto-validate`, {}),
+  validateDGMR:    (data) => API.post('/blockchain/validate-dgmr', data, { soapAction: 'ValidateDGMRRequest' }),
+  regulatorCertifyLot: (lotId, data) => API.post(`/lots/${lotId}/regulator-certify`, data, { soapAction: 'RegulatorCertifyRequest', timeout: 120000 }),
+  updateIPFS:      (data) => API.post('/blockchain/update-ipfs', data, { soapAction: 'UpdateIPFSRequest' }),
+  autoValidateLot: (lotId) => API.post(`/lots/${lotId}/auto-validate`, {}, { soapAction: 'AutoValidateRequest' }),
 };
 
 // ── Simulation IA locale UNIQUEMENT (mode démo sans backend) ─────────────────

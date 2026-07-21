@@ -6,7 +6,7 @@ from flask import Blueprint, current_app, jsonify, request
 
 from database.models import Lot, LotHistory, db
 from routes.auth import get_current_user
-from utils.request_security import verify_signed_request
+from utils.soap_utils import parse_soap_payload, soap_response
 
 lots_bp = Blueprint('lots', __name__)
 
@@ -36,6 +36,8 @@ def database_enabled():
 
 
 def database_required_response():
+    if request.method in {'POST', 'PUT', 'PATCH', 'DELETE'}:
+        return soap_response({"error": "PostgreSQL indisponible ou non configure"}, action="LotsResponse", status=503)
     return jsonify({"error": "PostgreSQL indisponible ou non configure"}), 503
 
 
@@ -300,22 +302,19 @@ def get_lot(lot_id):
 
 @lots_bp.route('/lots', methods=['POST'])
 def create_lot():
-    integrity_error = verify_signed_request()
-    if integrity_error:
-        return integrity_error
-    data = request.get_json() or {}
+    data = parse_soap_payload("CreateLotRequest")
     user = get_current_user()
 
     if not user:
-        return jsonify({"error": "Authentification requise"}), 401
+        return soap_response({"error": "Authentification requise"}, action="CreateLotResponse", status=401)
     if not database_enabled():
         return database_required_response()
     if 'lot_id' not in data:
-        return jsonify({"error": "lot_id requis"}), 400
+        return soap_response({"error": "lot_id requis"}, action="CreateLotResponse", status=400)
 
     lot_id = data['lot_id']
     if Lot.query.filter_by(lot_id=lot_id).first():
-        return jsonify({"error": "Lot existe deja"}), 409
+        return soap_response({"error": "Lot existe deja"}, action="CreateLotResponse", status=409)
 
     created_lot = upsert_database_lot(
         {
@@ -328,29 +327,27 @@ def create_lot():
         history_extra={"source": "postgres"},
     )
 
-    return jsonify(db_lot_to_payload(created_lot)), 201
+    return soap_response(db_lot_to_payload(created_lot), action="CreateLotResponse", status=201)
 
 
 @lots_bp.route('/lots/<lot_id>/certify', methods=['POST'])
 def certify_lot(lot_id):
     user = get_current_user()
     if not user:
-        return jsonify({"error": "Authentification requise"}), 401
+        return soap_response({"error": "Authentification requise"}, action="CertifyLotResponse", status=401)
     if not database_enabled():
         return database_required_response()
-    integrity_error = verify_signed_request()
-    if integrity_error:
-        return integrity_error
+    parse_soap_payload("CertifyLotRequest")
 
     lot = Lot.query.filter_by(lot_id=lot_id).first()
     if not lot:
-        return jsonify({"error": "Lot non trouve"}), 404
+        return soap_response({"error": "Lot non trouve"}, action="CertifyLotResponse", status=404)
 
     payload = db_lot_to_payload(lot)
     if user.get('role') == 'producer' and not can_access_lot(user, payload):
-        return jsonify({"error": "Acces refuse"}), 403
+        return soap_response({"error": "Acces refuse"}, action="CertifyLotResponse", status=403)
 
-    data = request.get_json() or {}
+    data = parse_soap_payload("CertifyLotRequest")
     certificate_id = data.get('certificate_id', f"CERT-{lot_id}")
 
     updated_lot = upsert_database_lot(
@@ -367,4 +364,4 @@ def certify_lot(lot_id):
         history_extra={"certificate_id": certificate_id},
     )
 
-    return jsonify(db_lot_to_payload(updated_lot))
+    return soap_response(db_lot_to_payload(updated_lot), action="CertifyLotResponse")
