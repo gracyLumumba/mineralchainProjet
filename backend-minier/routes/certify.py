@@ -20,6 +20,7 @@ from utils.analysis_rules import evaluate_consistency_rules
 from utils.blockchain_config import load_contract_config, GANACHE_URL, DEFAULT_CONTRACT_ADDRESS
 from utils.ipfs_client import upload_json_to_pinata
 from utils.transaction_manager import send_contract_transaction as send_contract_transaction_with_nonce
+from utils.request_security import verify_signed_request
 
 certify_bp = Blueprint('certify', __name__)
 AUTO_CERT_THRESHOLD = 0.00  # Demo mode: any non-fraud lot can be certified
@@ -233,8 +234,11 @@ def analyze_and_certify():
         user = get_current_user()
         if not user:
             return jsonify({"error": "Authentification requise"}), 401
+        integrity_error = verify_signed_request()
+        if integrity_error:
+            return integrity_error
 
-        data = request.get_json() or {}
+        data = request.get_json(silent=True) or {}
         
         required_fields = ['lot_id']
         missing = [f for f in required_fields if not data.get(f)]
@@ -256,6 +260,7 @@ def analyze_and_certify():
             features[col] = data.get(col, 0)
         
         ia_results = model_loader.predict(features)
+        shap_results = model_loader.explain(features, ia_results, top_n=5)
         
         mineral_type = ia_results.get('mineral', {}).get('type', 'unknown')
         mineral_conf = ia_results.get('mineral', {}).get('confidence', 0)
@@ -331,6 +336,7 @@ def analyze_and_certify():
                 "fraud_reasons": rule_check['reasons'],
                 "status": status
             },
+            "ai_explanations": shap_results,
             "composition": {
                 "cu": data.get('cu_grade_percent', 0),
                 "co": data.get('co_grade_percent', 0),
@@ -344,6 +350,10 @@ def analyze_and_certify():
                 "moisture": data.get('moisture_percent', 0),
                 "hardness": data.get('hardness_mohs', 0),
                 "weight": data.get('weight_tonnes', 0)
+            },
+            "mineral_fingerprint": {
+                "geological_origin": data.get('geological_origin') or "non renseignee",
+                "texture": data.get('texture') or "non renseignee",
             },
             "blockchain": {
                 "contract_address": CONTRACT_ADDRESS
@@ -473,19 +483,22 @@ def analyze_and_certify():
         result = {
             "success": True,
             "lot_id": lot_id,
-            "ia_result": {
+        "ia_result": {
                 "mineral_type": mineral_type,
                 "confidence": mineral_conf,
                 "impurity_level": impurity_level,
                 "is_fraud": is_fraud,
-                "status": status
+                "status": status,
+                "fingerprint": certificate["mineral_fingerprint"],
             },
+            "ai_explanations": shap_results,
             "certificate": {
                 "hash": cert_hash,
                 "ipfs_hash": ipfs_hash,
                 "ipfs_uri": ipfs_uri,
                 "gateway_url": gateway_url if ipfs_hash else None
             },
+            "mineral_fingerprint": certificate["mineral_fingerprint"],
             "blockchain": blockchain_result,
             "blockchain_error": blockchain_error,
             "ipfs_error": ipfs_error
@@ -508,6 +521,8 @@ def analyze_and_certify():
                     "density_t_m3": data.get('density_t_m3', 0),
                     "moisture_percent": data.get('moisture_percent', 0),
                     "hardness_mohs": data.get('hardness_mohs', 0),
+                    "geological_origin": data.get('geological_origin'),
+                    "texture": data.get('texture'),
                     "analyzed_at": datetime.now().isoformat(),
                     "mineral_type": mineral_type,
                     "confidence": mineral_conf,
@@ -626,10 +641,13 @@ def sync_token_certificate(token_id):
         return jsonify({"error": "Contrat non charge"}), 503
     if not ACCOUNT or not PRIVATE_KEY:
         return jsonify({"error": "Compte blockchain non configure"}), 503
+    integrity_error = verify_signed_request()
+    if integrity_error:
+        return integrity_error
 
     try:
         tid = int(token_id)
-        payload = request.get_json() or {}
+        payload = request.get_json(silent=True) or {}
         ipfs_hash = (payload.get('ipfs_hash') or '').replace('ipfs://', '').strip()
         certificate_hash = (payload.get('certificate_hash') or '').strip()
 

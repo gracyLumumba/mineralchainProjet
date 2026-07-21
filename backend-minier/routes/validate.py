@@ -8,6 +8,7 @@ from database.models import Lot, LotHistory, db
 from routes.auth import get_current_user
 from routes.lots import database_enabled, get_lot_record
 from utils.experiment_logger import record_auto_validation_run
+from utils.request_security import verify_signed_request
 from routes.certify import (
     ACCOUNT,
     CONTRACT_ADDRESS,
@@ -229,8 +230,11 @@ def regulator_certify(lot_id):
         return jsonify({"success": False, "error": "Acces reserve au regulateur"}), 403
     if not database_enabled():
         return jsonify({"success": False, "error": "PostgreSQL indisponible ou non configure"}), 503
+    integrity_error = verify_signed_request()
+    if integrity_error:
+        return integrity_error
 
-    payload = request.get_json() or {}
+    payload = request.get_json(silent=True) or {}
     status = str(payload.get('status') or '').strip().upper()
     if status not in {"AUTHENTIQUE", "SUSPECT"}:
         return jsonify({"success": False, "error": "status doit etre AUTHENTIQUE ou SUSPECT"}), 400
@@ -359,6 +363,9 @@ def auto_validate(lot_id):
             return jsonify({"success": False, "error": "Authentification requise"}), 401
 
         print(f"[AUTO_VALIDATE] User: {user.get('username')} ({user.get('role')})")
+        integrity_error = verify_signed_request()
+        if integrity_error:
+            return integrity_error
 
         if user.get('role') != 'regulator':
             print("[AUTO_VALIDATE] ERREUR: Pas regulateur")

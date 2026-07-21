@@ -4,6 +4,7 @@ import traceback
 from datetime import datetime
 
 from utils.ipfs_client import fetch_json_from_gateway, request_with_backoff, upload_json_to_pinata
+from utils.request_security import verify_signed_request
 
 
 ipfs_bp = Blueprint('ipfs', __name__)
@@ -19,6 +20,9 @@ def upload_to_ipfs():
     Upload un certificat JSON vers IPFS via Pinata uniquement.
     """
     try:
+        integrity_error = verify_signed_request()
+        if integrity_error:
+            return integrity_error
         data = request.get_json() or {}
         certificate_data = data.get('data') if 'data' in data else data
         lot_id = data.get('lot_id') or certificate_data.get('lot_id', 'unknown')
@@ -80,6 +84,9 @@ def pin_to_ipfs(ipfs_hash):
     Verifie qu'un hash IPFS est accessible via la gateway configuree.
     """
     try:
+        integrity_error = verify_signed_request()
+        if integrity_error:
+            return integrity_error
         clean_hash = ipfs_hash.replace('ipfs://', '')
         print(f"\n[IPFS] Verification pin: {clean_hash}")
         response = request_with_backoff(

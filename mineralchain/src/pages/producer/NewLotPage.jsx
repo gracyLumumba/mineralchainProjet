@@ -16,6 +16,7 @@ const DEFAULT_VALS = {
   cu_grade_percent: '', co_grade_percent: '', fe_percent: '',
   ni_percent: '', s_percent: '', silica_percent: '',
   density_t_m3: '', moisture_percent: '', hardness_mohs: '', weight_tonnes: '',
+  geological_origin: '', texture: '',
 };
 
 const genLotId = (site) => {
@@ -36,9 +37,10 @@ const normalizeIaResult = (res) => {
       impurity_level:res.ia_analysis?.impurity?.level ?? 'unknown',
       is_fraud:      res.ia_analysis?.fraud?.is_fraud ?? false,
       status:        res?.status ?? 'À VÉRIFIER',
+      fingerprint:   res?.mineral_fingerprint ?? res?.ia_result?.fingerprint ?? null,
     };
   }
-  return { mineral_type: 'unknown', confidence: 0, impurity_level: 'unknown', is_fraud: false, status: 'À VÉRIFIER' };
+  return { mineral_type: 'unknown', confidence: 0, impurity_level: 'unknown', is_fraud: false, status: 'À VÉRIFIER', fingerprint: null };
 };
 
 const normalizeTokenId = (tokenId, lotId) => {
@@ -122,6 +124,8 @@ export default function NewLotPage() {
             density_t_m3: payload.density_t_m3,
             moisture_percent: payload.moisture_percent,
             hardness_mohs: payload.hardness_mohs,
+            geological_origin: payload.geological_origin,
+            texture: payload.texture,
           });
         } catch (createErr) {
           console.warn('[BACKEND] Creation lot PostgreSQL impossible:', createErr);
@@ -139,6 +143,7 @@ export default function NewLotPage() {
         s_percent: payload.s_percent, silica_percent: payload.silica_percent,
         density_t_m3: payload.density_t_m3, moisture_percent: payload.moisture_percent,
         hardness_mohs: payload.hardness_mohs, weight_tonnes: payload.weight_tonnes,
+        geological_origin: payload.geological_origin, texture: payload.texture,
         token_id: hasBlockchain ? normalizedTokenId : null,
         tx_hash: res.blockchain?.transaction_hash || null,
         transport_status: null,
@@ -282,6 +287,11 @@ export default function NewLotPage() {
             <Field labelKey="label.weight"   name="weight_tonnes"     unit="t" required/>
           </SectionDiv>
 
+          <SectionDiv labelKey="newlot.section.fingerprint" color="var(--gold)">
+            <Field labelKey="label.geological_origin" name="geological_origin" type="text" />
+            <Field labelKey="label.texture" name="texture" type="text" />
+          </SectionDiv>
+
           <div style={{ display: 'flex', gap: 12, flexWrap: 'wrap', paddingTop: 8 }}>
             <button type="button" className="btn btn-outline" onClick={handleSubmit(d => onSubmit(d, 'analyze'))} disabled={!!mode} style={{ flex: 1, minWidth: 180 }}>
               {mode === 'analyze' ? <><Loader size={16}/> {t('newlot.analyzing')}</> : t('newlot.btn.analyze')}
@@ -321,6 +331,19 @@ export default function NewLotPage() {
                 ))}
               </div>
             </div>
+
+            {iaResult.fingerprint && (
+              <div className="card">
+                <div className="label" style={{ marginBottom: 12, display: 'block' }}>{t('newlot.section.fingerprint')}</div>
+                <div style={{ display: 'grid', gap: 10, fontSize: '0.82rem', color: 'var(--text-secondary)' }}>
+                  <div><strong>{t('label.geological_origin')} :</strong> {iaResult.fingerprint.geological_origin}</div>
+                  <div><strong>{t('label.texture')} :</strong> {iaResult.fingerprint.texture}</div>
+                  {iaResult.fingerprint.chemical_composition && (
+                    <div><strong>Composition :</strong> Cu {iaResult.fingerprint.chemical_composition.cu}% · Co {iaResult.fingerprint.chemical_composition.co}% · Fe {iaResult.fingerprint.chemical_composition.fe}%</div>
+                  )}
+                </div>
+              </div>
+            )}
 
             {result.blockchain && (
               <div className="card" style={{ border: '1px solid var(--border-active)', background: 'linear-gradient(135deg, var(--brand-dim) 0%, transparent 80%)' }}>

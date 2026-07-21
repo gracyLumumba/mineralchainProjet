@@ -22,6 +22,9 @@ CREATE TABLE IF NOT EXISTS lots (
     hardness DOUBLE PRECISION,
     weight DOUBLE PRECISION,
 
+    geological_origin VARCHAR(120),
+    texture VARCHAR(120),
+
     mineral_type VARCHAR(20),
     confidence DOUBLE PRECISION,
     impurity_level VARCHAR(20),

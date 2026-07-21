@@ -8,6 +8,8 @@ from datetime import datetime
 
 from flask import Blueprint, jsonify, request
 
+from utils.request_security import verify_signed_request
+
 auth_bp = Blueprint('auth', __name__)
 
 BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
@@ -187,7 +189,7 @@ def ensure_admin_user():
 
 @auth_bp.route('/auth/login', methods=['POST'])
 def login():
-    data = request.get_json() or {}
+    data = request.get_json(silent=True) or {}
     identifier = normalize_identifier(data.get('identifier'))
     password = str(data.get('password', ''))
 
@@ -219,7 +221,7 @@ def login():
 
 @auth_bp.route('/auth/register', methods=['POST'])
 def register():
-    data = request.get_json() or {}
+    data = request.get_json(silent=True) or {}
     full_name = str(data.get('full_name', '')).strip()
     username = str(data.get('username', '')).strip().lower()
     email = str(data.get('email', '')).strip().lower()
@@ -314,6 +316,9 @@ def approve_user(user_id):
     current_user, error_response = ensure_admin_user()
     if error_response:
         return error_response
+    integrity_error = verify_signed_request()
+    if integrity_error:
+        return integrity_error
 
     user = update_registered_user(
         user_id,
@@ -335,8 +340,11 @@ def reject_user(user_id):
     current_user, error_response = ensure_admin_user()
     if error_response:
         return error_response
+    integrity_error = verify_signed_request()
+    if integrity_error:
+        return integrity_error
 
-    payload = request.get_json() or {}
+    payload = request.get_json(silent=True) or {}
     reason = str(payload.get("reason", "")).strip() or "Demande refusee"
     user = update_registered_user(
         user_id,
@@ -358,6 +366,9 @@ def revoke_user(user_id):
     current_user, error_response = ensure_admin_user()
     if error_response:
         return error_response
+    integrity_error = verify_signed_request()
+    if integrity_error:
+        return integrity_error
 
     user = update_registered_user(
         user_id,

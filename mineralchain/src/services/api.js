@@ -23,6 +23,38 @@ function readJsonStorage(key, fallback = null) {
   }
 }
 
+function stableJsonStringify(value) {
+  if (value === null || value === undefined) return 'null';
+  if (Array.isArray(value)) return `[${value.map((item) => stableJsonStringify(item)).join(',')}]`;
+  if (typeof value === 'object') {
+    const keys = Object.keys(value).sort();
+    return `{${keys
+      .filter((key) => value[key] !== undefined)
+      .map((key) => `${JSON.stringify(key)}:${stableJsonStringify(value[key])}`)
+      .join(',')}}`;
+  }
+  return JSON.stringify(value);
+}
+
+async function sha256Hex(input) {
+  const bytes = new TextEncoder().encode(String(input));
+  const digest = await crypto.subtle.digest('SHA-256', bytes);
+  return Array.from(new Uint8Array(digest)).map((byte) => byte.toString(16).padStart(2, '0')).join('');
+}
+
+async function hmacHex(secret, message) {
+  const encoder = new TextEncoder();
+  const key = await crypto.subtle.importKey(
+    'raw',
+    encoder.encode(String(secret)),
+    { name: 'HMAC', hash: 'SHA-256' },
+    false,
+    ['sign']
+  );
+  const signature = await crypto.subtle.sign('HMAC', key, encoder.encode(String(message)));
+  return Array.from(new Uint8Array(signature)).map((byte) => byte.toString(16).padStart(2, '0')).join('');
+}
+
 async function refreshBackendTokenFromDemoSession() {
   const user = readJsonStorage(CURRENT_USER_KEY);
   const identifier = user?.username;
@@ -50,12 +82,28 @@ const API = axios.create({
   headers: { 'Content-Type': 'application/json' },
 });
 
-API.interceptors.request.use((config) => {
+API.interceptors.request.use(async (config) => {
   try {
     const token = readJsonStorage(BACKEND_TOKEN_KEY);
     if (token) {
       config.headers = config.headers || {};
       config.headers.Authorization = `Bearer ${token}`;
+      const method = String(config.method || 'get').toUpperCase();
+      if (!['GET', 'HEAD', 'OPTIONS'].includes(method)) {
+        const bodyText = typeof config.data === 'string'
+          ? config.data
+          : stableJsonStringify(config.data ?? {});
+        const timestamp = String(Date.now());
+        const nonce = (globalThis.crypto?.randomUUID ? globalThis.crypto.randomUUID() : `${Date.now()}-${Math.random().toString(36).slice(2)}`);
+        const bodyHash = await sha256Hex(bodyText);
+        const path = config.url ? `/api${config.url}` : '/api';
+        config.data = bodyText;
+        config.headers['Content-Type'] = 'application/json';
+        config.headers['X-MC-Timestamp'] = timestamp;
+        config.headers['X-MC-Nonce'] = nonce;
+        config.headers['X-MC-Body-Hash'] = bodyHash;
+        config.headers['X-MC-Signature'] = await hmacHex(token, [method, path, timestamp, nonce, bodyHash].join('\n'));
+      }
     }
   } catch (error) {
     void error;
@@ -115,7 +163,28 @@ export function simulateAnalysis(formData) {
   const confidence     = 0.78 + Math.random() * 0.20;
   const is_fraud       = Math.random() < 0.08;
   const status         = is_fraud ? 'SUSPECT' : confidence > 0.85 ? 'AUTHENTIQUE' : 'À VÉRIFIER';
-  return { lot_id: formData.lot_id, ia_result: { mineral_type, confidence, impurity_level, is_fraud, status } };
+  return {
+    lot_id: formData.lot_id,
+    ia_result: {
+      mineral_type,
+      confidence,
+      impurity_level,
+      is_fraud,
+      status,
+      fingerprint: {
+        chemical_composition: {
+          cu,
+          co,
+          fe,
+          ni: parseFloat(formData.ni_percent) || 0,
+          s: parseFloat(formData.s_percent) || 0,
+          silica: parseFloat(formData.silica_percent) || 0,
+        },
+        geological_origin: formData.geological_origin || 'non renseignee',
+        texture: formData.texture || 'non renseignee',
+      },
+    },
+  };
 }
 
 // Simulation pour mode démo EXPLICITE — jamais appelé implicitement

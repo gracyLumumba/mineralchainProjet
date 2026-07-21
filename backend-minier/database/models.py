@@ -28,6 +28,10 @@ class Lot(db.Model):
     moisture = db.Column(db.Float)
     hardness = db.Column(db.Float)
     weight = db.Column(db.Float)
+
+    # Empreinte mineralogique
+    geological_origin = db.Column(db.String(120))
+    texture = db.Column(db.String(120))
     
     # Résultats IA
     mineral_type = db.Column(db.String(20))
@@ -71,6 +75,8 @@ class Lot(db.Model):
             'moisture': self.moisture,
             'hardness': self.hardness,
             'weight': self.weight,
+            'geological_origin': self.geological_origin,
+            'texture': self.texture,
             'mineral_type': self.mineral_type,
             'confidence': self.confidence,
             'impurity_level': self.impurity_level,

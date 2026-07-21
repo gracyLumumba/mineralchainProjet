@@ -5,6 +5,8 @@ import joblib
 import numpy as np
 import pandas as pd
 
+from utils.shap_explainer import SHAP_AVAILABLE, explain_prediction
+
 FRAUD_THRESHOLD_DEFAULT = 0.30
 
 
@@ -33,6 +35,7 @@ class ModelLoader:
         self.feature_columns = None
         self.label_encoders = {}
         self.fraud_threshold_config = {}
+        self.shap_available = SHAP_AVAILABLE
 
     def load_all(self):
         """Load all AI artifacts."""
@@ -225,6 +228,48 @@ class ModelLoader:
                 results["fraud"] = {"is_fraud": False, "confidence": 0}
 
         return results
+
+    def explain(self, features_dict, prediction_results=None, top_n=5):
+        """Return compact SHAP explanations when the dependency is available."""
+        if not self.shap_available or not self.models:
+            return {}
+
+        row = {col: features_dict.get(col, 0) for col in self.feature_columns}
+        X_df = pd.DataFrame([row], columns=self.feature_columns)
+
+        if self.scaler:
+            try:
+                X_scaled = self.scaler.transform(X_df)
+                explain_frame = pd.DataFrame(X_scaled, columns=self.feature_columns)
+            except Exception:
+                explain_frame = X_df
+        else:
+            explain_frame = X_df
+
+        explanation_results = {}
+        prediction_results = prediction_results or {}
+
+        for model_name, model in self.models.items():
+            predicted_value = None
+            if model_name == "fraud":
+                fraud_info = prediction_results.get("fraud", {})
+                predicted_value = 1 if fraud_info.get("is_fraud") else 0
+            elif model_name == "mineral":
+                predicted_value = prediction_results.get("mineral", {}).get("type")
+            elif model_name == "impurity":
+                predicted_value = prediction_results.get("impurity", {}).get("level")
+
+            explanation = explain_prediction(
+                model,
+                explain_frame,
+                self.feature_columns,
+                predicted_value=predicted_value,
+                top_n=top_n,
+            )
+            if explanation:
+                explanation_results[model_name] = explanation
+
+        return explanation_results
 
 
 model_loader = ModelLoader()

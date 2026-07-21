@@ -15,6 +15,25 @@ import { CONTRACT_ADDRESS, DEFAULT_OWNER_ADDRESS } from '../config/blockchain';
 
 const BACKEND_URL  = process.env.REACT_APP_BACKEND_URL   || 'http://localhost:5000';
 const CONTRACT_ADDR = CONTRACT_ADDRESS;
+const BACKEND_TOKEN_KEY = 'mc_backend_token';
+
+function getBackendToken() {
+  try {
+    const raw = localStorage.getItem(BACKEND_TOKEN_KEY);
+    return raw ? JSON.parse(raw) : null;
+  } catch (error) {
+    void error;
+    return null;
+  }
+}
+
+function buildHeaders(extra = {}) {
+  const token = getBackendToken();
+  return {
+    ...extra,
+    ...(token ? { Authorization: `Bearer ${token}` } : {}),
+  };
+}
 
 // ════════════════════════════════════════════════════════════════════════════
 //  ÉTAT DU CONTRAT
@@ -23,6 +42,7 @@ const CONTRACT_ADDR = CONTRACT_ADDRESS;
 export async function getBlockchainStatus() {
   try {
     const res = await fetch(`${BACKEND_URL}/api/blockchain/status`, {
+      headers: buildHeaders(),
       signal: AbortSignal.timeout(6000),
     });
     if (!res.ok) throw new Error(`HTTP ${res.status}`);
@@ -71,7 +91,7 @@ export async function mintNFTOnChain(lot, ipfsHash = '', certHash = '', userWall
   try {
     const res = await fetch(`${BACKEND_URL}/api/blockchain/mint`, {
       method:  'POST',
-      headers: { 'Content-Type': 'application/json' },
+      headers: buildHeaders({ 'Content-Type': 'application/json' }),
       body:    JSON.stringify(body),
       signal:  AbortSignal.timeout(30000),
     });
@@ -128,7 +148,7 @@ export async function certifyLotComplete(lot, userWallet) {
       try {
         await fetch(`${BACKEND_URL}/api/blockchain/update-ipfs`, {
           method:  'POST',
-          headers: { 'Content-Type': 'application/json' },
+          headers: buildHeaders({ 'Content-Type': 'application/json' }),
           body:    JSON.stringify({
             token_id:         steps.blockchain.token_id,
             ipfs_hash:        ipfsResult.ipfs_hash,
@@ -153,7 +173,7 @@ export async function validateDGMROnChain(tokenId, status, validatorAddress) {
   try {
     const res = await fetch(`${BACKEND_URL}/api/blockchain/validate-dgmr`, {
       method:  'POST',
-      headers: { 'Content-Type': 'application/json' },
+      headers: buildHeaders({ 'Content-Type': 'application/json' }),
       body:    JSON.stringify({
         token_id:          tokenId,
         status,
@@ -175,7 +195,9 @@ export async function validateDGMROnChain(tokenId, status, validatorAddress) {
 
 export async function getContractTransactions() {
   try {
-    const res = await fetch(`${BACKEND_URL}/api/blockchain/transactions`);
+    const res = await fetch(`${BACKEND_URL}/api/blockchain/transactions`, {
+      headers: buildHeaders(),
+    });
     if (!res.ok) throw new Error(`HTTP ${res.status}`);
     return await res.json();
   } catch (e) {
@@ -185,7 +207,9 @@ export async function getContractTransactions() {
 
 export async function getTokenFromChain(tokenId) {
   try {
-    const res = await fetch(`${BACKEND_URL}/api/blockchain/token/${tokenId}`);
+    const res = await fetch(`${BACKEND_URL}/api/blockchain/token/${tokenId}`, {
+      headers: buildHeaders(),
+    });
     if (!res.ok) throw new Error(`Token ${tokenId} not found`);
     return await res.json();
   } catch (error) {
@@ -196,7 +220,9 @@ export async function getTokenFromChain(tokenId) {
 
 export async function verifyLotOnChain(lotId) {
   try {
-    const res = await fetch(`${BACKEND_URL}/api/blockchain/lot/${lotId}`);
+    const res = await fetch(`${BACKEND_URL}/api/blockchain/lot/${lotId}`, {
+      headers: buildHeaders(),
+    });
     if (!res.ok) throw new Error(`Lot ${lotId} not found`);
     return await res.json();
   } catch (error) {

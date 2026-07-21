@@ -124,6 +124,8 @@ try:
                     ('owner_user_id', "ALTER TABLE lots ADD COLUMN owner_user_id VARCHAR(80)"),
                     ('owner_username', "ALTER TABLE lots ADD COLUMN owner_username VARCHAR(80)"),
                     ('owner_name', "ALTER TABLE lots ADD COLUMN owner_name VARCHAR(120)"),
+                    ('geological_origin', "ALTER TABLE lots ADD COLUMN geological_origin VARCHAR(120)"),
+                    ('texture', "ALTER TABLE lots ADD COLUMN texture VARCHAR(120)"),
                     ('regulator_validated', "ALTER TABLE lots ADD COLUMN regulator_validated BOOLEAN DEFAULT FALSE"),
                     ('regulator_validated_at', "ALTER TABLE lots ADD COLUMN regulator_validated_at TIMESTAMP"),
                 ]

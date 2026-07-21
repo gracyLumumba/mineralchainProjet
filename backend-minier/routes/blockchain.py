@@ -2,7 +2,9 @@ from flask import Blueprint, request, jsonify
 from web3 import Web3
 import traceback
 
+from routes.auth import get_current_user
 from utils.blockchain_config import load_contract_config
+from utils.request_security import verify_signed_request
 from utils.transaction_manager import send_contract_transaction
 
 
@@ -27,6 +29,22 @@ def _contract_ready():
         return True
     except Exception:
         return False
+
+
+def _require_role(*allowed_roles, allow_admin=True):
+    user = get_current_user()
+    if not user:
+        return None, (jsonify({"error": "Authentification requise"}), 401)
+
+    role = str(user.get("role") or "").strip().lower()
+    allowed = {str(item).strip().lower() for item in allowed_roles if str(item).strip()}
+    if role not in allowed and not (allow_admin and role == "admin"):
+        return None, (jsonify({
+            "error": "Acces refuse",
+            "required_roles": sorted(allowed) if allowed else [],
+        }), 403)
+
+    return user, None
 
 
 def _require_blockchain_ready():
@@ -57,13 +75,20 @@ def mint_token():
         readiness_error = _require_blockchain_ready()
         if readiness_error:
             return readiness_error
+        user, auth_error = _require_role("producer")
+        if auth_error:
+            return auth_error
+        integrity_error = verify_signed_request()
+        if integrity_error:
+            return integrity_error
         data = request.get_json() or {}
         account = _account()
         if not account:
             return jsonify({"error": "Aucun compte Ganache disponible"}), 503
 
+        recipient = data.get('recipient') or account
         tx_builder = contract.functions.mintMineralToken(
-            Web3.to_checksum_address(data.get('recipient') or account),
+            Web3.to_checksum_address(recipient),
             data.get('lot_id', ''),
             data.get('site', ''),
             data.get('mineral_type', ''),
@@ -92,6 +117,7 @@ def mint_token():
             "contract_address": CONTRACT_ADDRESS,
             "timestamp": w3.eth.get_block(receipt.blockNumber).timestamp,
             "simulated": False,
+            "actor": user.get("username"),
         })
     except Exception as e:
         traceback.print_exc()
@@ -152,6 +178,12 @@ def validate_dgmr():
         readiness_error = _require_blockchain_ready()
         if readiness_error:
             return readiness_error
+        user, auth_error = _require_role("regulator")
+        if auth_error:
+            return auth_error
+        integrity_error = verify_signed_request()
+        if integrity_error:
+            return integrity_error
         payload = request.get_json() or {}
         account = _account()
         tx_builder = contract.functions.validateByDGMR(
@@ -165,6 +197,7 @@ def validate_dgmr():
             "success": receipt.status == 1,
             "transaction_hash": tx_hash.hex(),
             "block_number": receipt.blockNumber,
+            "actor": user.get("username"),
         })
     except Exception as e:
         traceback.print_exc()
@@ -177,6 +210,12 @@ def update_ipfs():
         readiness_error = _require_blockchain_ready()
         if readiness_error:
             return readiness_error
+        user, auth_error = _require_role("producer")
+        if auth_error:
+            return auth_error
+        integrity_error = verify_signed_request()
+        if integrity_error:
+            return integrity_error
         payload = request.get_json() or {}
         account = _account()
         tx_builder = contract.functions.updateIPFSHash(
@@ -190,6 +229,7 @@ def update_ipfs():
             "success": receipt.status == 1,
             "transaction_hash": tx_hash.hex(),
             "block_number": receipt.blockNumber,
+            "actor": user.get("username"),
         })
     except Exception as e:
         traceback.print_exc()
@@ -202,6 +242,9 @@ def get_transactions():
         readiness_error = _require_blockchain_ready()
         if readiness_error:
             return readiness_error
+        user, auth_error = _require_role("admin", allow_admin=True)
+        if auth_error:
+            return auth_error
         latest = w3.eth.block_number
         start = max(0, latest - 20)
         txs = []
@@ -216,6 +259,6 @@ def get_transactions():
                         "to": tx.to,
                         "value": str(tx.value),
                     })
-        return jsonify({"connected": True, "transactions": txs})
+        return jsonify({"connected": True, "transactions": txs, "actor": user.get("username")})
     except Exception as e:
         return jsonify({"connected": False, "transactions": [], "error": str(e)})

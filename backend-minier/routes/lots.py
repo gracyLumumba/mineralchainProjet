@@ -6,6 +6,7 @@ from flask import Blueprint, current_app, jsonify, request
 
 from database.models import Lot, LotHistory, db
 from routes.auth import get_current_user
+from utils.request_security import verify_signed_request
 
 lots_bp = Blueprint('lots', __name__)
 
@@ -60,6 +61,8 @@ def json_lot_to_database_payload(payload):
         "owner_user_id": payload.get('owner_user_id'),
         "owner_username": payload.get('owner_username'),
         "owner_name": payload.get('owner_name'),
+        "geological_origin": payload.get('geological_origin'),
+        "texture": payload.get('texture'),
     }
 
 
@@ -111,6 +114,8 @@ def db_lot_to_payload(lot):
         "analyzed_at": lot.analyzed_at.isoformat() if lot.analyzed_at else None,
         "status": lot.status,
         "weight": lot.weight,
+        "geological_origin": lot.geological_origin,
+        "texture": lot.texture,
         "composition": {
             "cu": lot.cu_grade,
             "co": lot.co_grade,
@@ -170,6 +175,8 @@ def upsert_database_lot(data, history_event=None, history_extra=None):
     lot.moisture = data.get('moisture_percent', data.get('moisture', lot.moisture))
     lot.hardness = data.get('hardness_mohs', data.get('hardness', lot.hardness))
     lot.analyzed_at = data.get('analyzed_at', lot.analyzed_at)
+    lot.geological_origin = data.get('geological_origin', lot.geological_origin)
+    lot.texture = data.get('texture', lot.texture)
     lot.mineral_type = data.get('mineral_type', lot.mineral_type)
     lot.confidence = data.get('confidence', lot.confidence)
     lot.impurity_level = data.get('impurity_level', lot.impurity_level)
@@ -293,6 +300,9 @@ def get_lot(lot_id):
 
 @lots_bp.route('/lots', methods=['POST'])
 def create_lot():
+    integrity_error = verify_signed_request()
+    if integrity_error:
+        return integrity_error
     data = request.get_json() or {}
     user = get_current_user()
 
@@ -328,6 +338,9 @@ def certify_lot(lot_id):
         return jsonify({"error": "Authentification requise"}), 401
     if not database_enabled():
         return database_required_response()
+    integrity_error = verify_signed_request()
+    if integrity_error:
+        return integrity_error
 
     lot = Lot.query.filter_by(lot_id=lot_id).first()
     if not lot:

@@ -13,6 +13,71 @@ const LS = {
 
 const KEYS = { users: 'mc_users', currentUser: 'mc_current_user', backendToken: 'mc_backend_token' };
 
+function stableJsonStringify(value) {
+  if (value === null || value === undefined) return 'null';
+  if (Array.isArray(value)) return `[${value.map((item) => stableJsonStringify(item)).join(',')}]`;
+  if (typeof value === 'object') {
+    const keys = Object.keys(value).sort();
+    return `{${keys
+      .filter((key) => value[key] !== undefined)
+      .map((key) => `${JSON.stringify(key)}:${stableJsonStringify(value[key])}`)
+      .join(',')}}`;
+  }
+  return JSON.stringify(value);
+}
+
+async function sha256Hex(input) {
+  const bytes = new TextEncoder().encode(String(input));
+  const digest = await crypto.subtle.digest('SHA-256', bytes);
+  return Array.from(new Uint8Array(digest)).map((byte) => byte.toString(16).padStart(2, '0')).join('');
+}
+
+async function hmacHex(secret, message) {
+  const encoder = new TextEncoder();
+  const key = await crypto.subtle.importKey(
+    'raw',
+    encoder.encode(String(secret)),
+    { name: 'HMAC', hash: 'SHA-256' },
+    false,
+    ['sign']
+  );
+  const signature = await crypto.subtle.sign('HMAC', key, encoder.encode(String(message)));
+  return Array.from(new Uint8Array(signature)).map((byte) => byte.toString(16).padStart(2, '0')).join('');
+}
+
+async function plainJsonRequest(path, payload) {
+  const response = await fetch(`${BACKEND_URL}/api${path}`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(payload),
+  });
+  const data = await response.json().catch(() => ({}));
+  return { ok: response.ok, status: response.status, data };
+}
+
+async function signedJsonRequest(path, payload, token) {
+  const body = stableJsonStringify(payload || {});
+  const timestamp = String(Date.now());
+  const nonce = crypto.randomUUID ? crypto.randomUUID() : `${Date.now()}-${Math.random().toString(36).slice(2)}`;
+  const bodyHash = await sha256Hex(body);
+  const signature = await hmacHex(token, ['POST', `/api${path}`, timestamp, nonce, bodyHash].join('\n'));
+
+  const response = await fetch(`${BACKEND_URL}/api${path}`, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      Authorization: `Bearer ${token}`,
+      'X-MC-Timestamp': timestamp,
+      'X-MC-Nonce': nonce,
+      'X-MC-Body-Hash': bodyHash,
+      'X-MC-Signature': signature,
+    },
+    body,
+  });
+  const data = await response.json().catch(() => ({}));
+  return { ok: response.ok, status: response.status, data };
+}
+
 function hashPassword(pw) {
   let h = 0;
   for (let i = 0; i < pw.length; i++) h = Math.imul(31, h) + pw.charCodeAt(i) | 0;
@@ -210,14 +275,12 @@ export function AuthProvider({ children }) {
       if (!demoPassword) return;
 
       try {
-        const response = await fetch(`${BACKEND_URL}/api/auth/login`, {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ identifier: currentUser.username, password: demoPassword }),
+        const response = await plainJsonRequest('/auth/login', {
+          identifier: currentUser.username,
+          password: demoPassword,
         });
-        const payload = await response.json();
-        if (response.ok && payload?.token) {
-          LS.set(KEYS.backendToken, payload.token);
+        if (response.ok && response.data?.token) {
+          LS.set(KEYS.backendToken, response.data.token);
           setBackendTokenVersion((version) => version + 1);
         }
       } catch (error) {
@@ -266,14 +329,9 @@ export function AuthProvider({ children }) {
 
     // Synchronise une session backend pour les routes protegÃ©es (certification, lots, etc.).
     try {
-      const response = await fetch(`${BACKEND_URL}/api/auth/login`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ identifier, password }),
-      });
-      const payload = await response.json();
-      if (response.ok && payload?.token) {
-        LS.set(KEYS.backendToken, payload.token);
+      const response = await plainJsonRequest('/auth/login', { identifier, password });
+      if (response.ok && response.data?.token) {
+        LS.set(KEYS.backendToken, response.data.token);
         setBackendTokenVersion((version) => version + 1);
       } else {
         LS.del(KEYS.backendToken);
@@ -337,8 +395,27 @@ export function AuthProvider({ children }) {
     const updated = [...allUsers, newUser];
     LS.set(KEYS.users, updated);
     setUsers(updated);
+
+    try {
+      const response = await plainJsonRequest('/auth/register', {
+        full_name: newUser.full_name,
+        username: newUser.username,
+        email: newUser.email,
+        password: formData.password,
+        role: newUser.role,
+        organization: newUser.organization,
+        site: newUser.site || '',
+        phone: formData.phone?.trim() || '',
+        note: formData.note?.trim() || '',
+      });
+      if (!response.ok) {
+        console.warn('[AUTH] Backend register unavailable:', response.data?.error || response.status);
+      }
+    } catch (error) {
+      console.warn('[AUTH] Backend register unavailable:', error);
+    }
     setIsLoading(false);
-    // Ne connecte PAS l'utilisateur â€” il doit attendre l'approbation
+    // Ne connecte PAS l'utilisateur â€“ il doit attendre l'approbation
     return true;
   }, []);
 
@@ -357,10 +434,7 @@ export function AuthProvider({ children }) {
     try {
       const token = LS.get(KEYS.backendToken);
       if (token) {
-        await fetch(`${BACKEND_URL}/api/auth/users/${userId}/approve`, {
-          method: 'POST',
-          headers: { Authorization: `Bearer ${token}` },
-        });
+        await signedJsonRequest(`/auth/users/${userId}/approve`, { user_id: userId }, token);
         await syncBackendUsers();
       }
     } catch (error) {
@@ -382,11 +456,7 @@ export function AuthProvider({ children }) {
     try {
       const token = LS.get(KEYS.backendToken);
       if (token) {
-        await fetch(`${BACKEND_URL}/api/auth/users/${userId}/reject`, {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
-          body: JSON.stringify({ reason }),
-        });
+        await signedJsonRequest(`/auth/users/${userId}/reject`, { user_id: userId, reason }, token);
         await syncBackendUsers();
       }
     } catch (error) {
@@ -407,10 +477,7 @@ export function AuthProvider({ children }) {
     try {
       const token = LS.get(KEYS.backendToken);
       if (token) {
-        await fetch(`${BACKEND_URL}/api/auth/users/${userId}/revoke`, {
-          method: 'POST',
-          headers: { Authorization: `Bearer ${token}` },
-        });
+        await signedJsonRequest(`/auth/users/${userId}/revoke`, { user_id: userId }, token);
         await syncBackendUsers();
       }
     } catch (error) {
